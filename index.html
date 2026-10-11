@@ -220,6 +220,11 @@ body{padding-bottom:170px}
       <div class="stat"><span style="color:#cbd5e1">Visitas POSPUESTAS</span><b id="stS">0</b></div>
       <div class="stat"><span>Evidencias (fotos/firmas)</span><b id="stE">0</b></div>
     </div>
+        <div class="card">
+      <label>📊 DETALLE POR CATEGORÍA — VISITAS REALIZADAS (Master)</label>
+      <div id="masterStatsBox" style="margin-top:6px">Cargando datos del Master…</div>
+      <canvas id="chartCategorias" style="width:100%;border-radius:12px;background:#0f172a;border:1px solid #334155;margin-top:10px"></canvas>
+    </div>
     <div class="card">
       <label>📊 GRÁFICA MENSUAL — ESTADO DE VISITAS</label>
       <canvas id="chartCanvas" style="width:100%;border-radius:12px;background:#0f172a;border:1px solid #334155"></canvas>
@@ -573,7 +578,7 @@ async function syncMasterNow(){
   console.log('📊 Enviando', updates.length, 'updates al Master');
   if (updates.length === 0){ toast('⚠ No hay visitas para sincronizar'); setSyncBadge('','info'); syncInProgress = false; return; }
   const startTs = Date.now();
-  try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, action: 'updateMasterSheet', updates }) }); } catch(e){}
+  try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, action: 'updateMasterSheet', updates, mesAnio: DB.month }) }); } catch(e){}
   toast('⏳ Procesando en el servidor…');
   setSyncBadge('⏳ Procesando…','info');
   const MAX_ESPERA = 5 * 60 * 1000;
@@ -650,10 +655,7 @@ async function syncToCloud(silent){
     const deletions = getDeletionsList();
     const deletedPhotos = getDeletedPhotosList();
     console.log('📊 Tombstones: ' + deletions.length + ' visitas · ' + deletedPhotos.length + ' fotos');
-    const wb = buildStyledWorkbook();
-    const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
-    const excelBase64 = arrayBufferToBase64(excelBuffer);
-    const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId(), excelBase64 });
+    const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId() });
     if (resp && resp.ok && resp.merged){ try { const merged = JSON.parse(resp.merged); applyRemoteIndex(merged); lastKnownRemoteTs = merged.updatedAt || null; liberarEspacio(); await saveLocal(); } catch(e){} }
     setSyncProgress(100); setTimeout(()=>setSyncProgress(0), 800);
     /* 🌟 Los tombstones YA se enviaron con el índice → se limpian siempre.
@@ -769,7 +771,14 @@ async function loadFromCloud(){
     updateSyncStatusBox();
     if (isDirty()) setTimeout(() => syncToCloud(true), 2000);
     return true;
-  } catch (criticalError){ driveStateReady = true; toast('⚠ Error al procesar Drive. Datos locales conservados.'); return false; }
+  } catch (criticalError){
+  driveStateReady = true;
+  console.error('❌ Error procesando Drive:', criticalError);
+  const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
+  toast('⚠ Drive: ' + detalle.slice(0,80));
+  try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, stack: (criticalError && criticalError.stack) || '', ts: new Date().toISOString() })); } catch(e){}
+  return false;
+}
 }
 
 async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
@@ -1309,9 +1318,10 @@ function renderResumen(){
   const as = document.getElementById('autoSyncSelect'); if (as) as.value = DB.autoSync || 'on';
   updateStorageInfo();
   document.getElementById('daysSummary').innerHTML = DIAS.map((d, i) => `<div style="flex:1;text-align:center"><div style="font-size:.62rem;color:var(--muted)">${d}</div><div style="font-size:1.2rem;font-weight:800;color:var(--accent)">${dayCount[i]}</div></div>`).join('');
-  initSig('sigSuper');
+   initSig('sigSuper');
   updateSyncStatusBox();
   renderMasterInfo();
+  renderMasterStats();
 }
 function updateStorageInfo(){ let bytes = 0; try{ bytes = (JSON.stringify(DB) || '').length; }catch(e){} const el = document.getElementById('storageInfo'); if (el) el.innerHTML = '📦 Local: <b style="color:var(--accent)">' + (bytes/1048576).toFixed(1) + ' MB</b>'; }
 
@@ -1848,6 +1858,121 @@ window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','wa
 setInterval(async () => { if (!document.hidden && isOnline() && !syncInProgress){ try { await callBackendRead({ action:'ping' }, 8000); } catch(e){} } }, 240000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on') syncToCloud(true); } });
 setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 60000);
+/* ============================================================
+   📊 SEGUNDA GRÁFICA — DETALLE POR CATEGORÍA (Master)
+   ============================================================ */
+const CATS = [['ZONA WIFI','#3b82f6'],['DEDICADO - ZONA WIFI','#ef4444'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['PYME','#f97316'],['ANTENA','#14b8a6'],['NODO','#60a5fa']];
+async function renderMasterStats(){
+  const box = document.getElementById('masterStatsBox');
+  if (!box) return;
+  let data = null;
+  try {
+    // ✅ manda el mes para que el backend lea "RUTA <MES>"
+    const r = await callBackendRead({ action:'getMasterStats', mesAnio: DB.month }, 12000);
+    if (r && r.ok && r.stats){ data = r; try{ localStorage.setItem('nocMasterStats', JSON.stringify(r)); }catch(e){} }
+  } catch(e){}
+  if (!data){ try { data = JSON.parse(localStorage.getItem('nocMasterStats') || 'null'); } catch(e){} }
+  const cv = document.getElementById('chartCategorias');
+  if (!data){
+    box.innerHTML = '<span style="color:var(--muted)">⚠ Master no disponible aún. Sincroniza el Master primero.</span>';
+    if (cv) cv.style.display = 'none';
+    return;
+  }
+  if (cv) cv.style.display = 'block';
+  const map = {};
+  (data.stats || []).forEach(s => { map[s.tipo] = s.count; });
+  box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.85rem">' +
+    CATS.map(c => '<tr><td style="padding:6px 8px;color:' + c[1] + ';font-weight:700">' + c[0] + '</td>' +
+      '<td style="text-align:right;padding:6px 8px;font-weight:800">' + (map[c[0]] || 0) + '</td></tr>').join('') +
+    '<tr style="border-top:1px solid #334155"><td style="padding:6px 8px;font-weight:800">TOTAL VISITAS</td>' +
+    '<td style="text-align:right;padding:6px 8px;font-weight:800;color:var(--accent)">' + (data.total || 0) + '</td></tr></table>';
+  drawChartCategorias(CATS.map(c => [c[0], map[c[0]] || 0, c[1]]));
+}
+function drawChartCategorias(data){
+  const cv = document.getElementById('chartCategorias');
+  if (!cv) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = 640, H = 340;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillText('Visitas realizadas por categoría (Master)', 16, 22);
+
+  const max = Math.max(1, ...data.map(d => d[1]));
+  const padL = 36, padR = 16, padT = 44, padB = 80;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  // Ejes
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, padT + plotH);
+  ctx.lineTo(padL + plotW, padT + plotH);
+  ctx.stroke();
+
+  // Cuadrícula horizontal + valores Y
+  ctx.strokeStyle = '#1e293b';
+  ctx.fillStyle = '#64748b';
+  ctx.font = '10px Segoe UI';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++){
+    const v = Math.round(max * i / 4);
+    const y = padT + plotH - (plotH * i / 4);
+    ctx.beginPath();
+    ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+    ctx.fillText(String(v), padL - 6, y + 3);
+  }
+
+  const slotW = plotW / data.length;
+  const barW = Math.min(56, slotW * 0.6);
+
+  data.forEach((d, i) => {
+    const cx = padL + slotW * (i + 0.5);
+    const bh = Math.max(plotH * d[1] / max, d[1] > 0 ? 4 : 1);
+    const x = cx - barW / 2;
+    const y = padT + plotH - bh;
+
+    // Barra con degradado
+    const grad = ctx.createLinearGradient(0, y, 0, y + bh);
+    grad.addColorStop(0, d[2]);
+    grad.addColorStop(1, shadeColorCats(d[2], -35));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    if (ctx.roundRect){ ctx.roundRect(x, y, barW, bh, [6, 6, 0, 0]); } else { ctx.rect(x, y, barW, bh); }
+    ctx.fill();
+
+    // Valor sobre la barra
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 14px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(d[1]), cx, y - 6);
+
+    // Etiqueta rotada abajo
+    ctx.save();
+    ctx.translate(cx, padT + plotH + 10);
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px Segoe UI';
+    ctx.textAlign = 'right';
+    ctx.fillText(d[0], 0, 0);
+    ctx.restore();
+  });
+}
+
+function shadeColorCats(hex, percent){
+  const num = parseInt(hex.replace('#',''), 16);
+  const amt = Math.round(2.55 * percent);
+  let R = (num >> 16) + amt;
+  let G = (num >> 8 & 0x00FF) + amt;
+  let B = (num & 0x0000FF) + amt;
+  R = Math.max(0, Math.min(255, R));
+  G = Math.max(0, Math.min(255, G));
+  B = Math.max(0, Math.min(255, B));
+  return '#' + (0x1000000 + R*0x10000 + G*0x100 + B).toString(16).slice(1);
+}
 </script>
 
 <script>

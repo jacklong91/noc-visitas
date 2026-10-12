@@ -655,7 +655,10 @@ async function syncToCloud(silent){
     const deletions = getDeletionsList();
     const deletedPhotos = getDeletedPhotosList();
     console.log('📊 Tombstones: ' + deletions.length + ' visitas · ' + deletedPhotos.length + ' fotos');
-    const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId() });
+    const wb = buildStyledWorkbook();
+const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
+const excelBase64 = arrayBufferToBase64(excelBuffer);
+const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId(), excelBase64 });
     if (resp && resp.ok && resp.merged){ try { const merged = JSON.parse(resp.merged); applyRemoteIndex(merged); lastKnownRemoteTs = merged.updatedAt || null; liberarEspacio(); await saveLocal(); } catch(e){} }
     setSyncProgress(100); setTimeout(()=>setSyncProgress(0), 800);
     /* 🌟 Los tombstones YA se enviaron con el índice → se limpian siempre.

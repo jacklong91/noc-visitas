@@ -348,7 +348,6 @@ function clearDeletedVisit(visitId){ if (!visitId) return; try { const deleted =
 function getDeletionsList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}')); } catch(e){ return []; } }
 function clearDeletionsList(){ try { localStorage.removeItem('nocDeletedVisits'); } catch(e){} }
 
-/* 🌟 TOMBSTONES DE FOTOS (nuevo) */
 function markPhotoDeleted(codigo, filename){
   if (!codigo || !filename) return;
   try {
@@ -389,6 +388,8 @@ function sanitizeDB(){
       if (typeof p.fechaVisita !== 'string') p.fechaVisita = '';
       if (p.fileId === undefined) p.fileId = null;
       if (p.synced === undefined) p.synced = !!(p.fileId || p.data);
+      // ✅ FIX: asegurar que visitId exista como campo (puede ser null)
+      if (p.visitId === undefined) p.visitId = null;
     });
   }
   for (const cod in DB.visits){
@@ -656,14 +657,11 @@ async function syncToCloud(silent){
     const deletedPhotos = getDeletedPhotosList();
     console.log('📊 Tombstones: ' + deletions.length + ' visitas · ' + deletedPhotos.length + ' fotos');
     const wb = buildStyledWorkbook();
-const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
-const excelBase64 = arrayBufferToBase64(excelBuffer);
-const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId(), excelBase64 });
+    const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
+    const excelBase64 = arrayBufferToBase64(excelBuffer);
+    const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId(), excelBase64 });
     if (resp && resp.ok && resp.merged){ try { const merged = JSON.parse(resp.merged); applyRemoteIndex(merged); lastKnownRemoteTs = merged.updatedAt || null; liberarEspacio(); await saveLocal(); } catch(e){} }
     setSyncProgress(100); setTimeout(()=>setSyncProgress(0), 800);
-    /* 🌟 Los tombstones YA se enviaron con el índice → se limpian siempre.
-       El flag dirty solo se limpia si TODO se subió; si fallaron archivos
-       quedan guardados offline y el sistema seguirá reintentando solo. */
     clearDeletionsList(); clearDeletedPhotosList();
     if (failed === 0){
       clearDirty();
@@ -697,7 +695,6 @@ function applyRemoteIndex(remote){
     for (const v of rArr){ if (!v || !v.id) continue; const ex = byId[v.id]; if (!ex) { byId[v.id] = v; continue; } const rTs = v.updatedAt || ''; const lTs = ex.updatedAt || ''; if (rTs >= lTs) byId[v.id] = Object.assign({}, ex, v); }
     DB.visits[cod] = Object.values(byId);
   }
-  /* 🌟 Merge de fotos respetando tombstones */
   const deletedPhotosSet = new Set(getDeletedPhotosList());
   const allPC = new Set([...Object.keys(remotePhotos), ...Object.keys(DB.photos || {})]);
   for (const cod of allPC){
@@ -705,10 +702,15 @@ function applyRemoteIndex(remote){
     for (const p of (DB.photos[cod] || [])) if (p && p.filename) map[p.filename] = p;
     for (const p of (remotePhotos[cod] || [])){
       if (!p || !p.filename) continue;
-      if (deletedPhotosSet.has(cod + '|' + p.filename)) continue; // ⛔ Respetar tombstone
+      if (deletedPhotosSet.has(cod + '|' + p.filename)) continue;
       const ex = map[p.filename];
       if (!ex) map[p.filename] = p;
-      else if (!ex.fileId && p.fileId) map[p.filename] = Object.assign({}, ex, p);
+      else {
+        // ✅ FIX: al mergear, preservar visitId del local si el remoto no lo trae
+        const merged = Object.assign({}, ex, p);
+        if (!p.visitId && ex.visitId) merged.visitId = ex.visitId;
+        map[p.filename] = merged;
+      }
     }
     DB.photos[cod] = Object.values(map);
   }
@@ -734,7 +736,8 @@ function collectPendingUploads(){
 
 function buildIndex(){
   const photosMeta = {};
-  for (const codigo in DB.photos) photosMeta[codigo] = safeArray(DB.photos[codigo]).map(p => ({ filename: p.filename, fecha: p.fecha || '', fechaVisita: p.fechaVisita || '', fileId: p.fileId || null }));
+  // ✅ FIX: incluir visitId para que las fotos viajen asociadas a su visita
+  for (const codigo in DB.photos) photosMeta[codigo] = safeArray(DB.photos[codigo]).map(p => ({ filename: p.filename, fecha: p.fecha || '', fechaVisita: p.fechaVisita || '', visitId: p.visitId || null, fileId: p.fileId || null }));
   const visitsSerializable = {};
   for (const codigo in DB.visits){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; visitsSerializable[codigo] = arr.filter(v => v && typeof v === 'object').map(v => { const vOut = { id: v.id, fecha: v.fecha||'', hora: v.hora||'', estado: v.estado||'Pendiente', obs: v.obs||'', gps: v.gps||null, days: v.days||[], updatedAt: v.updatedAt || '' }; if (v.firma && v.firma.filename) vOut.firma = { filename: v.firma.filename, fileId: v.firma.fileId || null, fechaVisita: v.firma.fechaVisita || v.fecha || '', synced: true }; return vOut; }); }
   const evidMeta = {};
@@ -775,13 +778,13 @@ async function loadFromCloud(){
     if (isDirty()) setTimeout(() => syncToCloud(true), 2000);
     return true;
   } catch (criticalError){
-  driveStateReady = true;
-  console.error('❌ Error procesando Drive:', criticalError);
-  const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
-  toast('⚠ Drive: ' + detalle.slice(0,80));
-  try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, stack: (criticalError && criticalError.stack) || '', ts: new Date().toISOString() })); } catch(e){}
-  return false;
-}
+    driveStateReady = true;
+    console.error('❌ Error procesando Drive:', criticalError);
+    const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
+    toast('⚠ Drive: ' + detalle.slice(0,80));
+    try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, stack: (criticalError && criticalError.stack) || '', ts: new Date().toISOString() })); } catch(e){}
+    return false;
+  }
 }
 
 async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
@@ -1043,13 +1046,11 @@ async function ejecutarRepararID(){
   fotos.forEach(p => { if (p && p.filename) byFN[p.filename] = p; });
   DB.photos[destino] = Object.values(byFN);
 
-  /* Tombstones: las fotos viejas no vuelven desde Drive */
   fotos.forEach(p => { if (p && p.filename) markPhotoDeleted(origen, p.filename); });
 
   delete DB.visits[origen];
   delete DB.photos[origen];
 
-  /* Asegurar que el destino existe como cliente visible */
   if (!clienteDestino){
     const base = CLIENTES.find(x => String(x.codigo).trim() === String(destino).trim());
     const nombre = base ? base.nombre : (clienteOrigen ? clienteOrigen.nombre : ('Cliente ' + destino));
@@ -1057,7 +1058,6 @@ async function ejecutarRepararID(){
     DB.customClients = (DB.customClients || []).filter(c => String(c.codigo).trim() !== String(destino).trim());
     DB.customClients.push({ codigo: String(destino), nombre, direccion, custom: true });
   }
-  /* Ocultar / quitar el origen */
   const esCustomOrigen = (DB.customClients || []).find(c => String(c.codigo).trim() === String(origen).trim());
   if (esCustomOrigen){ DB.customClients = DB.customClients.filter(c => String(c.codigo).trim() !== String(origen).trim()); }
   else if (!DB.hiddenClients.includes(origen)) DB.hiddenClients.push(origen);
@@ -1114,6 +1114,7 @@ function clearSig(id){ const c = document.getElementById(id); if (c){ c.getConte
 function addPhotos(cod, input){
   const v = getCurrentVisit(cod);
   const fechaVisita = v && v.fecha ? v.fecha : hoyYMD();
+  const visitId = v ? v.id : null;   // ✅ FIX: capturar id de la visita actual
   [...input.files].forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
@@ -1127,7 +1128,16 @@ function addPhotos(cod, input){
         const dataUrl = cv.toDataURL('image/jpeg', opt.q);
         const ahora = new Date();
         DB.photos[cod] = DB.photos[cod] || [];
-        DB.photos[cod].push({ data: dataUrl, fecha: ahora.toLocaleString('es-VE'), fechaVisita: fechaVisita, filename: buildPhotoFilename(ahora), synced: false, fileId: null });
+        // ✅ FIX: guardar visitId en la foto
+        DB.photos[cod].push({
+          data: dataUrl,
+          fecha: ahora.toLocaleString('es-VE'),
+          fechaVisita: fechaVisita,
+          visitId: visitId,
+          filename: buildPhotoFilename(ahora),
+          synced: false,
+          fileId: null
+        });
         save(); renderPhotos(cod);
       };
       img.src = e.target.result;
@@ -1136,10 +1146,31 @@ function addPhotos(cod, input){
   });
   input.value = '';
 }
+
+// ✅ FIX: renderPhotos ahora filtra por visita actual
 function renderPhotos(cod){
   const box = document.getElementById('ph-' + cod); if (!box) return;
-  const original = DB.photos[cod] || [];
-  box.innerHTML = original.map((p, i) => {
+  const v = getCurrentVisit(cod);
+  const visitId = v ? v.id : null;
+  const fechaVisita = v && v.fecha ? v.fecha : null;
+
+  const todas = DB.photos[cod] || [];
+  const indicesReales = [];
+  const filtradas = [];
+  todas.forEach((p, i) => {
+    if (!p || !p.filename) return;
+    // Es de esta visita si: (a) tiene visitId y coincide, o (b) no tiene visitId pero la fecha coincide
+    const esDeEstaVisita =
+      (p.visitId && visitId && p.visitId === visitId) ||
+      (!p.visitId && fechaVisita && p.fechaVisita === fechaVisita);
+    if (esDeEstaVisita){
+      filtradas.push(p);
+      indicesReales.push(i);
+    }
+  });
+
+  box.innerHTML = filtradas.map((p, j) => {
+    const i = indicesReales[j];  // índice real en DB.photos[cod]
     if (!p || !p.filename) return `<div class="photo-box"><div class="placeholder">⚠</div><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
     let src = null;
     if (p.fileId) src = driveThumbUrl(p.fileId, 200);
@@ -1148,12 +1179,12 @@ function renderPhotos(cod){
     return `<div class="photo-box"><div class="placeholder">⏳</div><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
   }).join('');
 }
+
 function delPhoto(cod, i){
   const arr = DB.photos[cod];
   if (!Array.isArray(arr) || !arr[i]){ toast('⚠ No encontrado'); return; }
   const p = arr[i];
   if (!confirm('¿Eliminar esta FOTO?\n\nSe moverá a la papelera de Google Drive.')) return;
-  /* 🌟 Marcar como tombstone para que no vuelva a aparecer desde Drive */
   if (p.filename) markPhotoDeleted(cod, p.filename);
   if (p.filename && p.synced) callBackendWrite({ action:'deletePhoto', codigo:cod, filename:p.filename, fecha: p.fechaVisita || '' }).catch(()=>{});
   arr.splice(i, 1);
@@ -1167,7 +1198,7 @@ function guardarVisita(cod, nombre){
   saveVisit(cod);
   const estado = v.estado;
   if (estado === 'Realizada'){
-    const fotosDeVisita = safeArray(DB.photos[cod]).filter(p => p.fechaVisita === v.fecha);
+    const fotosDeVisita = safeArray(DB.photos[cod]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha));
     if (fotosDeVisita.length === 0){ toast('⚠ Visita REALIZADA requiere foto'); return; }
   }
   if (sigData['sig-' + cod]){
@@ -1321,7 +1352,7 @@ function renderResumen(){
   const as = document.getElementById('autoSyncSelect'); if (as) as.value = DB.autoSync || 'on';
   updateStorageInfo();
   document.getElementById('daysSummary').innerHTML = DIAS.map((d, i) => `<div style="flex:1;text-align:center"><div style="font-size:.62rem;color:var(--muted)">${d}</div><div style="font-size:1.2rem;font-weight:800;color:var(--accent)">${dayCount[i]}</div></div>`).join('');
-   initSig('sigSuper');
+  initSig('sigSuper');
   updateSyncStatusBox();
   renderMasterInfo();
   renderMasterStats();
@@ -1346,7 +1377,6 @@ function buildStyledWorkbook(){
   clients.forEach(c => { const arr = getVisits(c.codigo); if (arr.length === 0){ allRows.push({ cliente: c, visit: null }); } else { arr.forEach(v => allRows.push({ cliente: c, visit: v })); } });
   const N = allRows.length; const lastRow = 4 + N;
 
-  /* ===== PALETA ===== */
   const col = {
     titleBg:'1F4E79', titleFg:'FFFFFF',
     zonaBg:'00B050',  zonaFg:'FFFFFF',
@@ -1374,9 +1404,6 @@ function buildStyledWorkbook(){
 
   const wb = XLSX.utils.book_new();
 
-  /* ============================================================
-     HOJA 1: AGENDA DE VISITAS
-     ============================================================ */
   const A = [];
   const r1 = new Array(18).fill(''); r1[0]='AGENDA DE VISITAS — NOC NIVEL 2'; r1[4]='ZONA WIFI'; A.push(r1);
   const r2 = new Array(18).fill(''); r2[0]='INSTRUCCIONES: ① Marca con "X" el día programado. ② Al realizar la visita registra FECHA y HORA, elige el ESTADO, escribe OBSERVACIONES y toma la FIRMA del cliente (opcional). ③ Fotos en Drive → "fotos/[código]_[nombre]/[fecha-visita]/".'; A.push(r2);
@@ -1411,7 +1438,6 @@ function buildStyledWorkbook(){
     {hpt:30},{hpt:42},{hpt:22},{hpt:32}
   ];
 
-  /* ===== ESTILOS HOJA 1 ===== */
   for (let R = 0; R < lastRow; R++){
     for (let Cc = 0; Cc < 18; Cc++){
       const addr = XLSX.utils.encode_cell({r:R,c:Cc});
@@ -1457,7 +1483,6 @@ function buildStyledWorkbook(){
         cell.s.border = bd();
       }
       else {
-        /* Fila de datos */
         cell.s.font = {name:'Calibri', sz:10};
         cell.s.border = bd();
 
@@ -1527,7 +1552,6 @@ function buildStyledWorkbook(){
           cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}};
         }
 
-        /* Fila alterna (sutil) en observaciones vacías */
         if (Cc === 15 && !cell.v && R % 2 === 0){
           cell.s.fill = fill(col.altBg);
         }
@@ -1536,9 +1560,6 @@ function buildStyledWorkbook(){
   }
   XLSX.utils.book_append_sheet(wb, wsA, 'Agenda de Visitas');
 
-  /* ============================================================
-     HOJA 2: EVIDENCIAS
-     ============================================================ */
   const E = [
     ['EVIDENCIAS DE VISITAS — FOTOS Y FIRMAS','','','','','',''],
     ['Ruta: "Agenda_NOC/fotos/[código]_[nombre]/[fecha-visita]/archivo".','','','','','',''],
@@ -1590,9 +1611,6 @@ function buildStyledWorkbook(){
   }
   XLSX.utils.book_append_sheet(wb, wsE, 'Evidencias');
 
-  /* ============================================================
-     HOJA 3: RESUMEN MENSUAL
-     ============================================================ */
   const R3 = [
     ['RESUMEN Y CIERRE DE MES — CONTROL DE VISITAS','','','','','',''],
     ['MES / AÑO:', DB.month || '','','','','',''],
@@ -1786,13 +1804,6 @@ function downloadChart(){
   toast('✓ Gráfica descargada');
 }
 
-/* ============================================================
-   CARGA PARCIAL — reintento de imágenes pendientes
-   ============================================================ */
-/* ============================================================
-   🧹 LIBERAR ESPACIO — borra base64 local de archivos ya en Drive
-   (requieren fileId + synced; se siguen viendo vía thumbnail de Drive)
-   ============================================================ */
 function liberarEspacio(){
   let freed = 0;
   const limpiar = p => {
@@ -1840,7 +1851,7 @@ async function initApp(){
     if (local && typeof local === 'object'){
       DB = Object.assign(DB, local);
       if (typeof DB.photos !== 'object' || DB.photos === null) DB.photos = {};
-      for (const cod in DB.photos){ if (!Array.isArray(DB.photos[cod])) { DB.photos[cod] = []; continue; } DB.photos[cod] = DB.photos[cod].filter(p => p && typeof p === 'object' && p.filename).map(p => { if (typeof p.fecha !== 'string') p.fecha = ''; if (typeof p.fechaVisita !== 'string') p.fechaVisita = ''; if (p.fileId === undefined) p.fileId = null; if (p.synced === undefined) p.synced = !!(p.fileId || p.data); return p; }); }
+      for (const cod in DB.photos){ if (!Array.isArray(DB.photos[cod])) { DB.photos[cod] = []; continue; } DB.photos[cod] = DB.photos[cod].filter(p => p && typeof p === 'object' && p.filename).map(p => { if (typeof p.fecha !== 'string') p.fecha = ''; if (typeof p.fechaVisita !== 'string') p.fechaVisita = ''; if (p.fileId === undefined) p.fileId = null; if (p.synced === undefined) p.synced = !!(p.fileId || p.data); if (p.visitId === undefined) p.visitId = null; return p; }); }
       if (typeof DB.evid !== 'object' || DB.evid === null) DB.evid = {};
     }
   } catch(e){ DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; }
@@ -1861,6 +1872,7 @@ window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','wa
 setInterval(async () => { if (!document.hidden && isOnline() && !syncInProgress){ try { await callBackendRead({ action:'ping' }, 8000); } catch(e){} } }, 240000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on') syncToCloud(true); } });
 setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 60000);
+
 /* ============================================================
    📊 SEGUNDA GRÁFICA — DETALLE POR CATEGORÍA (Master)
    ============================================================ */
@@ -1870,7 +1882,6 @@ async function renderMasterStats(){
   if (!box) return;
   let data = null;
   try {
-    // ✅ manda el mes para que el backend lea "RUTA <MES>"
     const r = await callBackendRead({ action:'getMasterStats', mesAnio: DB.month }, 12000);
     if (r && r.ok && r.stats){ data = r; try{ localStorage.setItem('nocMasterStats', JSON.stringify(r)); }catch(e){} }
   } catch(e){}
@@ -1900,23 +1911,17 @@ function drawChartCategorias(data){
   const ctx = cv.getContext('2d');
   ctx.scale(dpr, dpr);
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
-
   ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'left';
   ctx.fillText('Visitas realizadas por categoría (Master)', 16, 22);
-
   const max = Math.max(1, ...data.map(d => d[1]));
   const padL = 36, padR = 16, padT = 44, padB = 80;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-
-  // Ejes
   ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(padL, padT);
   ctx.lineTo(padL, padT + plotH);
   ctx.lineTo(padL + plotW, padT + plotH);
   ctx.stroke();
-
-  // Cuadrícula horizontal + valores Y
   ctx.strokeStyle = '#1e293b';
   ctx.fillStyle = '#64748b';
   ctx.font = '10px Segoe UI';
@@ -1928,17 +1933,13 @@ function drawChartCategorias(data){
     ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
     ctx.fillText(String(v), padL - 6, y + 3);
   }
-
   const slotW = plotW / data.length;
   const barW = Math.min(56, slotW * 0.6);
-
   data.forEach((d, i) => {
     const cx = padL + slotW * (i + 0.5);
     const bh = Math.max(plotH * d[1] / max, d[1] > 0 ? 4 : 1);
     const x = cx - barW / 2;
     const y = padT + plotH - bh;
-
-    // Barra con degradado
     const grad = ctx.createLinearGradient(0, y, 0, y + bh);
     grad.addColorStop(0, d[2]);
     grad.addColorStop(1, shadeColorCats(d[2], -35));
@@ -1946,14 +1947,10 @@ function drawChartCategorias(data){
     ctx.beginPath();
     if (ctx.roundRect){ ctx.roundRect(x, y, barW, bh, [6, 6, 0, 0]); } else { ctx.rect(x, y, barW, bh); }
     ctx.fill();
-
-    // Valor sobre la barra
     ctx.fillStyle = '#e2e8f0';
     ctx.font = 'bold 14px Segoe UI';
     ctx.textAlign = 'center';
     ctx.fillText(String(d[1]), cx, y - 6);
-
-    // Etiqueta rotada abajo
     ctx.save();
     ctx.translate(cx, padT + plotH + 10);
     ctx.rotate(-Math.PI / 4);
@@ -1964,7 +1961,6 @@ function drawChartCategorias(data){
     ctx.restore();
   });
 }
-
 function shadeColorCats(hex, percent){
   const num = parseInt(hex.replace('#',''), 16);
   const amt = Math.round(2.55 * percent);

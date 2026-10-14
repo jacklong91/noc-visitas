@@ -472,6 +472,17 @@ function updateSyncStatusBox(){
 }
 function driveThumbUrl(fileId, size){ if (!fileId) return ''; return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w' + (size || 1280); }
 
+// ✅ FIX RENDIMIENTO: solo re-renderizar la pestaña visible
+function renderActiveTab(){
+  const agenda = document.getElementById('tab-agenda');
+  const evid   = document.getElementById('tab-evid');
+  const res    = document.getElementById('tab-res');
+  if (agenda && agenda.style.display !== 'none') { renderAgenda(); return; }
+  if (evid   && evid.style.display   !== 'none') { renderEvid();   return; }
+  if (res    && res.style.display    !== 'none') { renderResumen(); return; }
+  renderAgenda();
+}
+
 function migrateVisits(){
   for (const cod in DB.visits){
     const v = DB.visits[cod];
@@ -738,11 +749,11 @@ function applyRemoteIndex(remote){
   if (remote.month) DB.month = remote.month;
   if (remote.resp) DB.resp = remote.resp;
   if (remote.comp) DB.comp = remote.comp;
-  sanitizeDB(); renderAgenda(); renderEvid(); renderResumen();
+  sanitizeDB(); renderActiveTab();
 }
 
 async function pollForUpdates(){ if (!isOnline() || syncInProgress || !driveStateReady) return; if (document.hidden) return; try { const meta = await callBackendRead({ action:'getIndexMeta' }, 8000); if (!meta || !meta.ok || !meta.exists) return; if (lastKnownRemoteTs === null){ lastKnownRemoteTs = meta.updatedAt; return; } if (meta.updatedAt !== lastKnownRemoteTs){ lastKnownRemoteTs = meta.updatedAt; if (meta.lastWriter === getDeviceId()) return; toast('🔄 Actualización de ' + (meta.lastWriter || 'otro')); await loadFromCloud(); } } catch(e){} }
-setInterval(pollForUpdates, 15000);
+setInterval(pollForUpdates, 30000);
 
 function collectPendingUploads(){
   const items = [];
@@ -787,7 +798,7 @@ async function loadFromCloud(){
     await saveLocal();
     clearDirty();
     localStorage.setItem('nocLastSync', new Date().toISOString());
-    renderAgenda(); renderEvid(); renderResumen();
+    renderActiveTab();
     driveStateReady = true;
     setSyncBadge('✓ Drive cargado','ok');
     toast('✓ Datos cargados de Drive');
@@ -875,7 +886,6 @@ function renderAgenda(){
   const list = document.getElementById('clientList');
   const scrollY = window.scrollY;
   const focusedId = document.activeElement ? document.activeElement.id : '';
-  // ✅ FIX: guardar valor y selección de textarea/input activos
   let focusedVal = null, focusedSelStart = null, focusedSelEnd = null;
   if (focusedId){
     const elF = document.getElementById(focusedId);
@@ -977,14 +987,12 @@ function renderAgenda(){
   });
 }
 
-// ✅ FIX: guardar observaciones mientras escribes sin re-renderizar
 let obsTimer = {};
 function onObsInput(cod, value){
   const v = getCurrentVisit(cod);
   if (!v) return;
   v.obs = value;
   v.updatedAt = new Date().toISOString();
-  // Guardar en disco sin re-renderizar (evita perder foco)
   if (obsTimer[cod]) clearTimeout(obsTimer[cod]);
   obsTimer[cod] = setTimeout(() => {
     saveLocal();
@@ -1654,34 +1662,43 @@ async function abrirCompartir(cod){
   compartirCtx.fotos = todasFotos;
   compartirCtx.texto = generarTextoVisita(cliente, v, todasFotos.length, cod);
   compartirCtx.blobs = [];
-  compartirCtx.blobCollage = null;
 
   document.getElementById('compartirModal').classList.add('open');
   const prev = document.getElementById('compartirPreview');
-  prev.innerHTML = '<div style="color:var(--muted);padding:40px;text-align:center">Preparando ' + todasFotos.length + ' foto(s)…</div>';
-  document.getElementById('compartirInfo').textContent = '';
   const btn = document.getElementById('btnCompartirWhats');
   btn.disabled = true; btn.style.opacity = .6; btn.textContent = '⏳ Preparando…';
 
-  // Cargar todas las fotos como blobs
-  const miniaturas = [];
-  for (let i = 0; i < todasFotos.length; i++){
-    const blob = await cargarFotoComoBlob(todasFotos[i]);
-    if (blob) compartirCtx.blobs.push(blob);
-    miniaturas.push(blob ? URL.createObjectURL(blob) : null);
-  }
-
-  // Vista previa: miniaturas + texto
+  // ✅ VISTA PREVIA: usar la fuente original (data URL o thumbnail de Drive)
+  //    Nunca usar blob URLs aquí → se rompen en Android con imágenes grandes.
   let html = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">';
-  miniaturas.forEach((u, i) => {
-    html += '<div class="comp-foto-thumb">' + (u ? '<img src="' + u + '">' : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.6rem">⚠</div>') + '</div>';
+  todasFotos.forEach(p => {
+    let src = null;
+    if (p.data) src = p.data;
+    else if (p.fileId) src = driveThumbUrl(p.fileId, 400);
+    html += '<div class="comp-foto-thumb">' +
+      (src
+        ? '<img src="' + src + '" loading="lazy" onerror="this.onerror=null;this.style.background=\'#334155\';this.removeAttribute(\'src\')">'
+        : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.6rem">⚠</div>') +
+      '</div>';
   });
   html += '</div>';
   html += '<div style="background:#0f172a;border-radius:10px;padding:12px;text-align:left;font-size:.82rem;color:var(--text);white-space:pre-wrap;line-height:1.5">' + escapeHtml(compartirCtx.texto) + '</div>';
   prev.innerHTML = html;
 
+  document.getElementById('compartirInfo').textContent = todasFotos.length + ' foto(s). Preparando envío…';
+
+  // ✅ CARGAR BLOBS EN SEGUNDO PLANO con progreso visible
+  for (let i = 0; i < todasFotos.length; i++){
+    const blob = await cargarFotoComoBlob(todasFotos[i]);
+    if (blob) compartirCtx.blobs.push(blob);
+    btn.textContent = '⏳ Preparando ' + (i + 1) + '/' + todasFotos.length + '…';
+    document.getElementById('compartirInfo').textContent =
+      (i + 1) + ' / ' + todasFotos.length + ' preparada(s)…';
+  }
+
   const nOk = compartirCtx.blobs.length;
-  document.getElementById('compartirInfo').textContent = nOk + ' de ' + todasFotos.length + ' foto(s) listas para enviar.';
+  document.getElementById('compartirInfo').textContent =
+    nOk + ' de ' + todasFotos.length + ' foto(s) listas para enviar.';
   btn.disabled = false; btn.style.opacity = 1;
   btn.textContent = '💬 Compartir por WhatsApp (' + nOk + ' fotos)';
 }
@@ -1716,29 +1733,32 @@ function generarTextoVisita(cliente, v, nFotos, cod){
 
 async function cargarFotoComoBlob(foto){
   try {
-    // Detectar tipo real por filename o data URL
     const nombre = (foto.filename || '').toLowerCase();
-    const dataStr = (foto.data || '').toLowerCase();
-    const esPng = nombre.endsWith('.png') || dataStr.indexOf('data:image/png') === 0;
+    const esPng = nombre.endsWith('.png') || (foto.data || '').indexOf('data:image/png') === 0;
     const tipo = esPng ? 'image/png' : 'image/jpeg';
 
-    // 1) Foto local (data URL)
+    // 1) Foto local: data URL → Blob SIN fetch (atob es 100% confiable en Android)
     if (foto.data){
-      const res = await fetch(foto.data);
-      const blobOrig = await res.blob();
-      // Forzar el tipo correcto → el <img> ya la podrá mostrar
-      return new Blob([blobOrig], { type: tipo });
+      const partes = foto.data.split(',');
+      const mimeMatch = partes[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : tipo;
+      const bstr = atob(partes[1]);
+      const len = bstr.length;
+      const u8 = new Uint8Array(len);
+      for (let i = 0; i < len; i++) u8[i] = bstr.charCodeAt(i);
+      return new Blob([u8], { type: mime });
     }
 
-    // 2) Foto en Drive
+    // 2) Foto en Drive: descargar como blob
     if (foto.fileId){
-      const url = 'https://drive.google.com/thumbnail?id=' + foto.fileId + '&sz=w2000';
+      const url = driveThumbUrl(foto.fileId, 2000);
       const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
       if (!res.ok) return null;
       const ct = (res.headers.get('content-type') || '').toLowerCase();
-      // Si Google devolvió HTML (error/login), descartar
       if (ct.indexOf('image/') !== 0 && ct.indexOf('octet-stream') < 0) return null;
       const blobOrig = await res.blob();
+      // Solo re-envolver si Google devolvió octet-stream sin tipo correcto
+      if (ct.indexOf('image/') === 0) return blobOrig;
       return new Blob([blobOrig], { type: tipo });
     }
     return null;
@@ -1799,13 +1819,11 @@ async function abrirWhatsAppVisita(){
       await navigator.share({ text: compartirCtx.texto });
       return;
     } catch(e){
-      if (e && e.name === 'AbortError') return; // usuario canceló, no seguir
-      // si falla, sigue al plan B
+      if (e && e.name === 'AbortError') return;
     }
   }
 
-  // 2) Fallback: usar un <a target="_blank"> real con wa.me
-  //    (WhatsApp está registrado como App Link del dominio wa.me → abre la app)
+  // 2) Fallback: <a target="_blank"> con wa.me
   const texto = encodeURIComponent(compartirCtx.texto);
   const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
@@ -1918,16 +1936,31 @@ async function initApp(){
     if (local && typeof local === 'object'){
       DB = Object.assign(DB, local);
       if (typeof DB.photos !== 'object' || DB.photos === null) DB.photos = {};
-      for (const cod in DB.photos){ if (!Array.isArray(DB.photos[cod])) { DB.photos[cod] = []; continue; } DB.photos[cod] = DB.photos[cod].filter(p => p && typeof p === 'object' && p.filename).map(p => { if (typeof p.fecha !== 'string') p.fecha = ''; if (typeof p.fechaVisita !== 'string') p.fechaVisita = ''; if (p.fileId === undefined) p.fileId = null; if (p.synced === undefined) p.synced = !!(p.fileId || p.data); if (p.visitId === undefined) p.visitId = null; return p; }); }
+      for (const cod in DB.photos){
+        if (!Array.isArray(DB.photos[cod])) { DB.photos[cod] = []; continue; }
+        DB.photos[cod] = DB.photos[cod].filter(p => p && typeof p === 'object' && p.filename).map(p => {
+          if (typeof p.fecha !== 'string') p.fecha = '';
+          if (typeof p.fechaVisita !== 'string') p.fechaVisita = '';
+          if (p.fileId === undefined) p.fileId = null;
+          if (p.synced === undefined) p.synced = !!(p.fileId || p.data);
+          if (p.visitId === undefined) p.visitId = null;
+          return p;
+        });
+      }
       if (typeof DB.evid !== 'object' || DB.evid === null) DB.evid = {};
     }
   } catch(e){ DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; }
   sanitizeDB();
   try { migrateVisits(); } catch(e){}
   sanitizeDB();
+
+  // ✅ 1. Render INMEDIATO con datos locales (la UI ya es usable)
   try { renderAgenda(); } catch(e){}
   try { if (liberarEspacio() > 0) await saveLocal(); } catch(e){}
-  try { await loadFromCloud(); } catch(err){ driveStateReady = true; }
+
+  // ✅ 2. Drive en BACKGROUND — no bloquea la UI
+  setSyncBadge('📥 Drive…','info');
+  loadFromCloud().catch(() => { driveStateReady = true; });
 }
 
 initApp();

@@ -55,6 +55,7 @@ main{padding:14px;max-width:720px;margin:0 auto}
 .form.open{display:block}
 label{display:block;font-size:.75rem;color:var(--muted);margin:10px 0 4px;font-weight:600}
 input,select,textarea{width:100%;padding:11px 12px;border-radius:10px;border:1px solid #334155;background:var(--card2);color:var(--text);font-size:.95rem;font-family:inherit}
+input[readonly]{cursor:default;opacity:.85;background:#1a2436}
 textarea{min-height:70px;resize:vertical}
 .row2{display:flex;gap:10px}
 .row2>div{flex:1}
@@ -78,7 +79,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .modal-bg.open{display:flex}
 .modal{background:var(--card);border:1px solid #334155;border-radius:16px;padding:18px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto}
 #compartirPreview img{display:block;margin:0 auto}
-.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#052e16;padding:12px 22px;border-radius:12px;font-weight:700;font-size:.88rem;z-index:100;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#052e16;padding:12px 22px;border-radius:12px;font-weight:700;font-size:.88rem;z-index:100;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:88%}
 .progress{height:4px;background:var(--card2);border-radius:2px;overflow:hidden;margin-top:8px}
 .progress>div{height:100%;background:var(--accent);transition:width .3s}
 .download-banner{position:fixed;top:64px;left:0;right:0;z-index:51;background:rgba(30,41,59,.98);border-bottom:1px solid rgba(56,189,248,.4);padding:6px 12px;display:none;align-items:center;gap:10px;font-size:.72rem;backdrop-filter:blur(6px)}
@@ -137,6 +138,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .hrow{display:flex;align-items:center;gap:10px}
 .icon-btn{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:1.15rem;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .icon-btn:active{background:rgba(255,255,255,.35)}
+.icon-btn.active{background:rgba(245,158,11,.6)}
 .top-tools{position:sticky;top:64px;z-index:48;padding-bottom:10px;background:var(--bg)}
 .search-bar{position:fixed;top:64px;left:0;right:0;z-index:80;display:none;gap:8px;padding:10px 12px;background:var(--bg);border-bottom:1px solid #334155;align-items:center}
 .search-bar.open{display:flex}
@@ -153,8 +155,8 @@ body{padding-bottom:170px}
 <body>
 <header>
   <div class="hrow"><div style="flex:1;min-width:0"><h1>📡 Registro de Visitas — NOC N2</h1>
-  <p>ZONA WIFI · Sincronizado con Drive <span id="syncBadge" style="display:none;font-size:.7rem;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;margin-left:6px"></span> <span id="activeUsersBadge" style="display:none;font-size:.7rem;background:rgba(34,197,94,.35);padding:2px 8px;border-radius:12px;margin-left:6px;cursor:pointer" onclick="showActiveUsersModal()" title="Ver técnicos conectados"></span></p>
-  </div><button class="icon-btn" onclick="toggleFiltroFechas()" title="Filtrar por fechas">📅</button><button class="icon-btn" style="margin-left:6px" onclick="toggleSearch()" title="Buscar cliente">🔍</button></div>
+  <p>ZONA WIFI · Sincronizado con Drive <span id="syncBadge" style="display:none;font-size:.7rem;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;margin-left:6px"></span> <span id="activeUsersBadge" style="display:none;font-size:.7rem;background:rgba(34,197,94,.35);padding:2px 8px;border-radius:12px;margin-left:6px;cursor:pointer" onclick="showActiveUsersModal()"></span></p>
+  </div><button class="icon-btn" id="btnFiltro" onclick="toggleFiltroFechas()" title="Filtrar por fechas">📅</button><button class="icon-btn" style="margin-left:6px" onclick="toggleSearch()" title="Buscar cliente">🔍</button></div>
 </header>
 <div class="download-banner" id="downloadBanner">
   <div class="spin"></div>
@@ -181,7 +183,7 @@ body{padding-bottom:170px}
         <button class="btn btn-gray" style="flex:1" onclick="document.getElementById('addClientForm').style.display='none';document.getElementById('addClientBtn').style.display='block'">Cancelar</button>
       </div>
     </div>
-    <div class="month-input"><input id="mesAnio" placeholder="Mes / Año (ej.: Octubre 2026)" onchange="saveMonth()"></div>
+    <div class="month-input"><input id="mesAnio" readonly title="Mes automático del sistema"></div>
     <div id="clientList"></div>
   </div>
   <div id="tab-evid" style="display:none">
@@ -203,7 +205,7 @@ body{padding-bottom:170px}
   <div id="tab-res" style="display:none">
     <div class="card">
       <label>MES / AÑO</label>
-      <input id="mesAnio2" placeholder="Ej.: Octubre 2026" onchange="saveMonth()">
+      <input id="mesAnio2" readonly title="Mes automático del sistema">
       <div style="text-align:center;margin-top:10px">
         <div style="font-size:.75rem;color:var(--muted)">% DE CUMPLIMIENTO DEL MES</div>
         <div class="big" id="pct">0%</div>
@@ -250,7 +252,7 @@ body{padding-bottom:170px}
       <div style="font-size:.72rem;color:var(--muted);margin:8px 0">Usa esto si hay IDs mezclados por un cambio de código incorrecto.</div>
       <button class="btn btn-warn btn-block" onclick="openRepairModal()">🛠️ Reparar ID de cliente</button>
       <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="diagnosticarIds()">🔍 Diagnosticar IDs y datos</button>
-      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="if(confirm('¿Vaciar la lista de fotos marcadas como eliminadas?')){clearDeletedPhotosList();toast('✓ Tombstones de fotos vaciados');}">🧹 Vaciar tombstones de fotos</button>
+      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="if(confirm('¿Vaciar la lista de fotos marcadas como eliminadas? Solo hazlo si YA sincronizaste.')){clearDeletedPhotosList();toast('✓ Tombstones de fotos vaciados');}">🧹 Vaciar tombstones de fotos</button>
     </div>
     <div class="card" style="border-left:4px solid var(--accent2)">
       <label>📋 MASTER ZONAS WIFI (Google Sheets)</label>
@@ -299,7 +301,7 @@ body{padding-bottom:170px}
       <h3 style="font-size:1rem">📅 Filtrar por rango de fechas</h3>
       <button class="btn btn-gray btn-sm" onclick="toggleFiltroFechas(false)">✕</button>
     </div>
-    <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Muestra solo los clientes con AL MENOS UNA visita en el rango seleccionado.</p>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Muestra solo los clientes que tienen AL MENOS UNA visita en el rango seleccionado.</p>
     <label>DESDE</label>
     <input type="date" id="filtroDesdeInput">
     <label style="margin-top:12px">HASTA</label>
@@ -313,9 +315,9 @@ body{padding-bottom:170px}
 <div class="modal-bg" id="gpsModal"><div class="modal"><h3 style="margin-bottom:8px">📍 Ubicación no disponible</h3><p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">El GPS está apagado o el navegador no tiene permiso.</p><button class="btn btn-primary btn-block" onclick="tryOpenLocationSettings()">⚙️ Abrir ajustes</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="closeGpsHelp()">Cerrar</button></div></div>
 <div class="modal-bg" id="historialModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 id="historialTitle" style="font-size:1rem">Historial de visitas</h3><button class="btn btn-gray btn-sm" onclick="closeHistorial()">✕</button></div><div id="historialList"></div></div></div>
 <div class="modal-bg" id="debugMasterModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔍 Diagnóstico</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('debugMasterModal').classList.remove('open')">✕</button></div><div id="debugMasterContent" style="font-size:.78rem;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow-y:auto;font-family:monospace;line-height:1.4"></div></div></div>
-<div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo" placeholder="Ej.: 3239"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre" placeholder="Nombre"><label>DIRECCIÓN</label><input id="ecDir" placeholder="Dirección"><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
-<div class="lightbox" id="lightbox"><button class="lb-close" onclick="closeLightbox()">✕</button><button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button><button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button><img id="lightboxImg" src="" alt=""><div class="lb-caption"><b id="lightboxTitle">—</b><small id="lightboxSubtitle">—</small></div></div>
-<div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID de cliente</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Usa esta herramienta cuando un cliente tenga visitas o fotos bajo un código incorrecto o duplicado.</div><label>CLIENTE ORIGEN (datos a mover)</label><select id="rpOrigen"></select><label>CLIENTE DESTINO (donde quedarán los datos)</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode" placeholder="Ej.: 16102"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
+<div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre"><label>DIRECCIÓN</label><input id="ecDir"><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
+<div class="lightbox" id="lightbox"><button class="lb-close" onclick="closeLightbox()">✕</button><button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button><button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button><img id="lightboxImg" src=""><div class="lb-caption"><b id="lightboxTitle">—</b><small id="lightboxSubtitle">—</small></div></div>
+<div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID de cliente</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Usa esto cuando un cliente tenga datos bajo un código incorrecto. Todo se consolidará bajo el destino.</div><label>CLIENTE ORIGEN</label><select id="rpOrigen"></select><label>CLIENTE DESTINO</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
 <div class="modal-bg" id="compartirModal">
   <div class="modal" style="max-width:560px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -333,7 +335,7 @@ body{padding-bottom:170px}
     <button class="btn btn-green btn-block" onclick="abrirWhatsAppVisita()" id="btnCompartirWhats" disabled style="opacity:.6">⏳ Preparando…</button>
   </div>
 </div>
-<div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial de imágenes</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después (automático al reconectar)</button></div></div>
+<div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial de imágenes</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
 <div class="toast" id="toast"></div>
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5pRjb-Pu-O3DeTUh07TfiaXG5VPdxS64RyNyioRRXhjK4HWkQoDDtEoysBqRX8NsGXQ/exec';
@@ -356,9 +358,8 @@ let filtroDesde = '';
 let filtroHasta = '';
 function isOnline(){ return navigator.onLine !== false; }
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
+function getMesAnioActual(){ const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']; const d = new Date(); return meses[d.getMonth()] + ' ' + d.getFullYear(); }
 function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 3600000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
-function isVisitDeleted(visitId){ if (!visitId) return false; try { const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); return !!deleted[visitId]; } catch(e){ return false; } }
-function clearDeletedVisit(visitId){ if (!visitId) return; try { const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); delete deleted[visitId]; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
 function getDeletionsList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}')); } catch(e){ return []; } }
 function clearDeletionsList(){ try { localStorage.removeItem('nocDeletedVisits'); } catch(e){} }
 function markPhotoDeleted(codigo, filename){ if (!codigo || !filename) return; try { const key = String(codigo).trim() + '|' + filename; const deleted = JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}'); deleted[key] = Date.now(); localStorage.setItem('nocDeletedPhotos', JSON.stringify(deleted)); } catch(e){} }
@@ -375,7 +376,7 @@ function sanitizeDB(){
   if (!Array.isArray(DB.hiddenClients)) DB.hiddenClients = [];
   if (!DB.comp) DB.comp = 'media';
   if (!DB.autoSync) DB.autoSync = 'on';
-  if (typeof DB.month !== 'string') DB.month = '';
+  if (typeof DB.month !== 'string' || !DB.month) DB.month = getMesAnioActual();
   if (typeof DB.resp !== 'string') DB.resp = '';
   for (const cod in DB.photos){
     if (!Array.isArray(DB.photos[cod])) { DB.photos[cod] = []; continue; }
@@ -416,7 +417,7 @@ async function saveLocal(){ try{ if (typeof localForage !== 'undefined'){ await 
 async function loadLocal(){ try{ if (typeof localForage !== 'undefined'){ await localForage.ready(); return await localForage.getItem('nocVisitasDB'); } }catch(e){} return null; }
 async function save(){ sanitizeDB(); await saveLocal(); markDirty(); scheduleSync(); updateSyncStatusBox(); }
 function scheduleSync(){ if (DB.autoSync === 'off') return; if (syncTimer) clearTimeout(syncTimer); setSyncBadge('⏳ Pendiente…','warn'); syncTimer = setTimeout(()=>{ syncToCloud(true); }, 8000); }
-function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2500); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',3500); }
 function showTab(id, el){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); ['agenda','evid','res'].forEach(x=>document.getElementById('tab-'+x).style.display='none'); document.getElementById('tab-'+id).style.display='block'; }
 function setTabEvid(){ evidCurrentFolder = null; renderEvid(); }
 function setTabRes(){ renderResumen(); initSig('sigSuper'); }
@@ -461,6 +462,30 @@ function getVisits(cod){ const v = DB.visits[cod]; if (!v) return []; if (!Array
 function ensureVisitsArr(cod){ if (!DB.visits[cod]) DB.visits[cod] = []; if (!Array.isArray(DB.visits[cod])) DB.visits[cod] = [DB.visits[cod]]; DB.visits[cod] = DB.visits[cod].filter(v => v && typeof v === 'object'); return DB.visits[cod]; }
 function getCurrentVisit(cod){ const arr = getVisits(cod); if (!arr.length) return null; const id = editingVisitId[cod]; if (id){ const v = arr.find(x => x.id === id); if (v) return v; } editingVisitId[cod] = arr[arr.length - 1].id; return arr[arr.length - 1]; }
 function getLatestVisit(cod){ const arr = getVisits(cod); return arr.length ? arr[arr.length - 1] : null; }
+function fechaADiaIndex(fechaYMD){ if (!fechaYMD) return -1; const partes = String(fechaYMD).split('-'); if (partes.length !== 3) return -1; const d = new Date(parseInt(partes[0],10), parseInt(partes[1],10)-1, parseInt(partes[2],10)); if (isNaN(d.getTime())) return -1; return (d.getDay() + 6) % 7; }
+function onFechaChange(cod){
+  saveVisit(cod);
+  const v = getCurrentVisit(cod);
+  if (!v || !v.fecha) return;
+  const di = fechaADiaIndex(v.fecha);
+  if (di < 0) return;
+  v.days = v.days || [];
+  if (!v.days.includes(di)){
+    v.days.push(di);
+    v.updatedAt = new Date().toISOString();
+    saveLocal();
+    markDirty();
+  }
+  const form = document.getElementById('form-' + cod);
+  if (form){
+    const cardPadre = form.closest('.card');
+    if (cardPadre){
+      const dayBtns = cardPadre.querySelectorAll('.days .day');
+      if (dayBtns[di]) dayBtns[di].classList.add('sel');
+    }
+  }
+  toast('📅 Día marcado: ' + DIAS[di]);
+}
 function newVisit(cod){
   const arr = ensureVisitsArr(cod);
   const last = arr.length ? arr[arr.length - 1] : null;
@@ -565,7 +590,7 @@ async function syncMasterNow(){
   try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, action: 'updateMasterSheet', updates, mesAnio: DB.month }) }); } catch(e){}
   toast('⏳ Procesando…');
   setSyncBadge('⏳ Procesando…','info');
-  const MAX_ESPERA = 5 * 60 * 1000;
+  const MAX_ESPERA = 3 * 60 * 1000;
   let resultado = null;
   while (Date.now() - startTs < MAX_ESPERA){
     await new Promise(r => setTimeout(r, 5000));
@@ -574,15 +599,22 @@ async function syncMasterNow(){
     try { const res = await callBackendRead({ action: 'getLastUpdateDebug' }, 15000); if (res && res.ok && res.last){ const tsResult = new Date(res.last.ts).getTime(); if (tsResult >= startTs - 5000 && res.last.status === 'done'){ resultado = res.last.result; break; } } } catch(e){}
   }
   syncInProgress = false;
-  if (!resultado){ toast('⚠ Timeout'); setSyncBadge('⚠ Timeout','warn'); return; }
+  if (!resultado){ toast('⚠ Timeout — el Master puede seguir procesando'); setSyncBadge('⚠ Timeout','warn'); return; }
   if (resultado && resultado.ok){
     const n = resultado.updated || 0;
-    if (n === 0){ toast('⚠ 0 filas — ver diagnóstico'); setSyncBadge('⚠ 0 filas','warn'); }
-    else { toast('✓ Google Sheets actualizado (' + n + ' filas)'); setSyncBadge('✓ Master OK','ok'); localStorage.setItem('nocLastMasterSync', new Date().toISOString()); renderMasterInfo(); }
+    if (n === 0){ toast('⚠ 0 filas actualizadas'); setSyncBadge('⚠ 0 filas','warn'); }
+    else { toast('✓ Master actualizado (' + n + ' filas)'); setSyncBadge('✓ Master OK','ok'); localStorage.setItem('nocLastMasterSync', new Date().toISOString()); renderMasterInfo(); }
     if (resultado.debug){ localStorage.setItem('nocLastMasterDebug', JSON.stringify(resultado.debug)); }
   } else {
-    const err = (resultado && resultado.error) || 'Error';
-    toast('⚠ ' + err); setSyncBadge('⚠ Error Master','err');
+    // ✅ FIX: errores de Drive (documento no encontrado, sin permiso) son amigables
+    const errRaw = (resultado && resultado.error) || 'Error';
+    let errAmigable = errRaw;
+    if (errRaw.indexOf('No se encuentra') !== -1 || errRaw.indexOf('documento') !== -1 || errRaw.indexOf('perdido') !== -1 || errRaw.indexOf('not found') !== -1){
+      errAmigable = 'Hoja Master no accesible. Verifica que exista y tengas permiso en Drive.';
+    } else if (errRaw.length > 80){
+      errAmigable = errRaw.slice(0, 80) + '…';
+    }
+    toast('⚠ ' + errAmigable); setSyncBadge('⚠ Master','warn');
     if (resultado && resultado.debug){ localStorage.setItem('nocLastMasterDebug', JSON.stringify(resultado.debug)); }
   }
 }
@@ -659,7 +691,7 @@ async function syncToCloud(silent){
       setSyncBadge('⚠ ' + restantes + ' pendiente(s)','warn');
       const msg = document.getElementById('partialSyncMsg');
       if (msg){
-        msg.innerHTML = 'Se cargaron <b style="color:#4ade80">' + done + ' de ' + pending.length + '</b> imágenes.<br><br>📴 El internet se interrumpió o falló la subida. Las <b style="color:#fbbf24">' + restantes + '</b> restantes quedan guardadas y se subirán al reconectar.';
+        msg.innerHTML = 'Se cargaron <b style="color:#4ade80">' + done + ' de ' + pending.length + '</b> imágenes.<br><br>📴 Las <b style="color:#fbbf24">' + restantes + '</b> restantes se subirán al reconectar.';
         document.getElementById('partialSyncModal').classList.add('open');
       }
     }
@@ -718,7 +750,6 @@ async function pollForUpdates(){
     if (meta.updatedAt !== lastKnownRemoteTs){
       lastKnownRemoteTs = meta.updatedAt;
       if (meta.lastWriter === getDeviceId()) return;
-      console.log('🔄 Actualización remota:', meta.lastWriter);
       await loadFromCloud();
     }
   } catch(e){}
@@ -743,11 +774,10 @@ function buildIndex(){
 }
 function setSyncProgress(pct){ const el = document.getElementById('syncProgress'); if (el) el.style.width = pct + '%'; }
 async function loadFromCloud(){
-  if (loadingFromCloud){ console.log('⏭ loadFromCloud ya en curso'); return false; }
+  if (loadingFromCloud) return false;
   const lastLoad = parseInt(localStorage.getItem('nocLastLoadOk') || '0', 10);
   const MIN = 3 * 60 * 1000;
   if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN)){
-    console.log('⏭ loadFromCloud cache válido');
     setSyncBadge('✓ Drive reciente','ok');
     updateSyncStatusBox();
     return true;
@@ -759,16 +789,14 @@ async function loadFromCloud(){
     updateSyncStatusBox();
     const timeoutGlobal = setTimeout(() => {
       if (!driveStateReady){
-        console.warn('⏱ timeout global 90s');
         driveStateReady = true;
         setSyncBadge('⚠ Drive lento','warn');
         updateSyncStatusBox();
-        toast('⚠ Drive tardó demasiado');
       }
     }, 90000);
     let res = null;
     try { res = await callBackendRead({ action:'getIndex' }, 80000); }
-    catch(err){ clearTimeout(timeoutGlobal); console.error('loadFromCloud error:', err); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
+    catch(err){ clearTimeout(timeoutGlobal); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
     clearTimeout(timeoutGlobal);
     if (!res || !res.ok){
       if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); updateSyncStatusBox(); return false; }
@@ -783,7 +811,7 @@ async function loadFromCloud(){
     if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('⚠ Formato inválido','warn'); updateSyncStatusBox(); return false; }
     const remoteHasData = (remote.visits && Object.keys(remote.visits).length > 0) || (remote.photosMeta && Object.keys(remote.photosMeta).length > 0);
     const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
-    if (!remoteHasData && localHasData){ driveStateReady = true; toast('⚠ Drive vacío — datos locales conservados'); setSyncBadge('⚠ Drive vacío','warn'); updateSyncStatusBox(); return false; }
+    if (!remoteHasData && localHasData){ driveStateReady = true; setSyncBadge('⚠ Drive vacío','warn'); updateSyncStatusBox(); return false; }
     try {
       applyRemoteIndex(remote);
       lastKnownRemoteTs = remote.updatedAt || new Date().toISOString();
@@ -792,21 +820,14 @@ async function loadFromCloud(){
       await saveLocal();
       localStorage.setItem('nocLastSync', new Date().toISOString());
       localStorage.setItem('nocLastLoadOk', String(Date.now()));
-      if (formsAbiertos.size === 0){
-        renderActiveTab();
-      } else {
-        console.log('⏭ Re-render pausado: forms abiertos');
-      }
+      if (formsAbiertos.size === 0) renderActiveTab();
       driveStateReady = true;
       setSyncBadge('✓ Drive cargado','ok');
-      toast('✓ Datos cargados de Drive');
       updateSyncStatusBox();
       return true;
     } catch (criticalError){
       driveStateReady = true;
-      console.error('❌ Error procesando Drive:', criticalError);
       const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
-      toast('⚠ Drive: ' + detalle.slice(0,80));
       setSyncBadge('⚠ Error','err');
       updateSyncStatusBox();
       try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, stack: (criticalError && criticalError.stack) || '', ts: new Date().toISOString() })); } catch(e){}
@@ -816,10 +837,10 @@ async function loadFromCloud(){
     loadingFromCloud = false;
   }
 }
-async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
+async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
 async function forceSyncNow(){ if (!driveStateReady){ if (!confirm('⚠ Drive NO se ha cargado. ¿Continuar?')) return; driveStateReady = true; } markDirty(); await syncToCloud(false); }
 async function reorganizeDrive(){ if (!confirm('¿Reorganizar carpetas y fechas en Drive?')) return; const clientesMap = {}; allClients().forEach(c => { clientesMap[String(c.codigo).trim()] = c.nombre; }); clientesMap['_supervisor'] = 'Supervisor NOC'; toast('🗂️ Reorganizando…'); try { await callBackendWrite({ action:'reorganizeAll', clientesMap }); await new Promise(r => setTimeout(r, 3000)); await callBackendWrite({ action:'fixDates', index: JSON.stringify(buildIndex()) }); await new Promise(r => setTimeout(r, 3000)); localStorage.removeItem('nocLastLoadOk'); await loadFromCloud(); toast('✓ Reorganización completa'); } catch(err){ toast('⚠ ' + err.message); } }
-async function rescanDriveNow(){ if (!confirm('¿Escanear Drive y agregar fotos nuevas al índice?')) return; toast('🔍 Escaneando…'); try { await callBackendWrite({ action: 'rescanDrivePhotos' }); await new Promise(r => setTimeout(r, 5000)); if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; await loadFromCloud(); toast('✓ Índice reconstruido'); } catch(err){ toast('⚠ ' + err.message); } }
+async function rescanDriveNow(){ if (!confirm('¿Escanear Drive y agregar fotos nuevas al índice?')) return; toast('🔍 Escaneando…'); try { await callBackendWrite({ action: 'rescanDrivePhotos' }); await new Promise(r => setTimeout(r, 5000)); if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; await loadFromCloud(); toast('✓ Índice reconstruido'); } catch(err){ toast('⚠ ' + err.message); } }
 async function cleanOrphanPhotos(){ if (!confirm('¿Limpiar fotos huérfanas?')) return; try { await callBackendWrite({ action:'cleanOrphans' }); await new Promise(r => setTimeout(r, 3000)); localStorage.removeItem('nocLastLoadOk'); await loadFromCloud(); toast('✓ Limpiado'); } catch(err){ toast('⚠ ' + err.message); } }
 async function fetchFileId(codigo, filename, itemRef){ if (!itemRef) throw new Error('Ref inválida'); const fecha = itemRef.fechaVisita || ''; const res = await callBackendRead({ action:'getFileId', codigo, filename, fecha }, 20000); if (!res) throw new Error('Sin respuesta'); if (!res.ok) throw new Error(res.error || 'Error'); if (!res.fileId) throw new Error('Sin fileId'); itemRef.fileId = res.fileId; if (itemRef.synced) delete itemRef.data; return res.fileId; }
 async function downloadAllPending(silent){
@@ -860,41 +881,12 @@ function clientesConVisitaEnFecha(fechaISO){
   for (const cod in DB.visits){ const arr = getVisits(cod); for (const v of arr){ if (!v || !v.fecha) continue; if (v.fecha === fechaISO || v.fecha.endsWith(sufijo)){ set.add(String(cod).trim()); break; } } }
   return set;
 }
-function fechaADiaIndex(fechaYMD){
-  if (!fechaYMD) return -1;
-  const partes = String(fechaYMD).split('-');
-  if (partes.length !== 3) return -1;
-  const d = new Date(parseInt(partes[0],10), parseInt(partes[1],10)-1, parseInt(partes[2],10));
-  if (isNaN(d.getTime())) return -1;
-  return (d.getDay() + 6) % 7;
-}
-function onFechaChange(cod){
-  saveVisit(cod);
-  const v = getCurrentVisit(cod);
-  if (!v || !v.fecha) return;
-  const di = fechaADiaIndex(v.fecha);
-  if (di < 0) return;
-  v.days = v.days || [];
-  if (!v.days.includes(di)){
-    v.days.push(di);
-    v.updatedAt = new Date().toISOString();
-    saveLocal();
-    markDirty();
-  }
-  const form = document.getElementById('form-' + cod);
-  if (form){
-    const cardPadre = form.closest('.card');
-    if (cardPadre){
-      const dayBtns = cardPadre.querySelectorAll('.days .day');
-      if (dayBtns[di]) dayBtns[di].classList.add('sel');
-    }
-  }
-  toast('📅 Día marcado: ' + DIAS[di]);
-}
 function toggleFiltroFechas(force){
   const m = document.getElementById('filtroFechasModal');
+  const btn = document.getElementById('btnFiltro');
   const open = force !== undefined ? force : !m.classList.contains('open');
   m.classList.toggle('open', open);
+  if (btn) btn.classList.toggle('active', open);
   if (open){
     document.getElementById('filtroDesdeInput').value = filtroDesde;
     document.getElementById('filtroHastaInput').value = filtroHasta;
@@ -914,8 +906,8 @@ function aplicarFiltroFechas(){
 function limpiarFiltroFechas(){
   filtroDesde = '';
   filtroHasta = '';
-  const di = document.getElementById('filtroDesdeInput'); if (di) di.value = '';
-  const hi = document.getElementById('filtroHastaInput'); if (hi) hi.value = '';
+  document.getElementById('filtroDesdeInput').value = '';
+  document.getElementById('filtroHastaInput').value = '';
   toggleFiltroFechas(false);
   renderAgenda();
   toast('✓ Filtro limpiado');
@@ -939,8 +931,6 @@ function renderAgenda(){
   let focusedVal = null, focusedSelStart = null, focusedSelEnd = null;
   if (focusedId){ const elF = document.getElementById(focusedId); if (elF && ('value' in elF)){ focusedVal = elF.value; if ('selectionStart' in elF){ focusedSelStart = elF.selectionStart; focusedSelEnd = elF.selectionEnd; } } }
   list.innerHTML = '';
-
-  // ✅ Chip visual del filtro de fechas activo
   const chipFiltroId = 'chipFiltroFechas';
   let chipFiltro = document.getElementById(chipFiltroId);
   if (filtroDesde || filtroHasta){
@@ -954,10 +944,7 @@ function renderAgenda(){
     const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
     chipFiltro.innerHTML = '<span>📅 Filtro: <b>' + desdeTxt + '</b> → <b>' + hastaTxt + '</b></span><button onclick="limpiarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
     chipFiltro.style.display = 'flex';
-  } else if (chipFiltro){
-    chipFiltro.style.display = 'none';
-  }
-
+  } else if (chipFiltro){ chipFiltro.style.display = 'none'; }
   const fechaFiltro = q ? detectarFechaBusqueda(q) : null;
   const setConVisitaFecha = fechaFiltro ? clientesConVisitaEnFecha(fechaFiltro) : null;
   const chipId = 'filtroFechaChip';
@@ -968,12 +955,8 @@ function renderAgenda(){
     chip.innerHTML = '<span>🗓️ Filtrando por fecha: <b>' + fechaFiltro.split('-').reverse().join('/') + '</b> · ' + n + ' cliente(s)</span><button onclick="document.getElementById(\'search\').value=\'\';onSearchInput();" style="background:transparent;border:none;color:var(--accent);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
     chip.style.display = 'flex';
   } else if (chip){ chip.style.display = 'none'; }
-
   allClients().filter(c => {
-    // Filtro de rango de fechas
-    if (filtroDesde || filtroHasta){
-      if (!clienteTieneVisitaEnRango(c.codigo)) return false;
-    }
+    if (filtroDesde || filtroHasta){ if (!clienteTieneVisitaEnRango(c.codigo)) return false; }
     if (!q) return true;
     if (setConVisitaFecha !== null) return setConVisitaFecha.has(String(c.codigo).trim());
     return c.nombre.toLowerCase().includes(q) || c.codigo.includes(q);
@@ -981,13 +964,9 @@ function renderAgenda(){
     const visits = getVisits(c.codigo);
     const latest = getLatestVisit(c.codigo);
     const current = getCurrentVisit(c.codigo) || latest;
-    // ✅ Auto-marcar el día de la fecha si no está marcado
     if (current && current.fecha && (!current.days || current.days.length === 0)){
       const diAuto = fechaADiaIndex(current.fecha);
-      if (diAuto >= 0){
-        current.days = [diAuto];
-        current.updatedAt = new Date().toISOString();
-      }
+      if (diAuto >= 0){ current.days = [diAuto]; current.updatedAt = new Date().toISOString(); }
     }
     const estado = latest ? (latest.estado || 'Pendiente') : 'Pendiente';
     const nFotos = safeArray(DB.photos[c.codigo]).length;
@@ -1031,8 +1010,8 @@ function renderAgenda(){
     list.appendChild(card);
     if (current){ renderPhotos(c.codigo); updatePhotoReq(c.codigo); }
   });
-  document.getElementById('mesAnio').value = DB.month || '';
-  document.getElementById('mesAnio2').value = DB.month || '';
+  document.getElementById('mesAnio').value = DB.month || getMesAnioActual();
+  document.getElementById('mesAnio2').value = DB.month || getMesAnioActual();
   document.getElementById('responsable').value = DB.resp || '';
   const as = document.getElementById('autoSyncSelect'); if (as) as.value = DB.autoSync || 'on';
   updateSyncStatusBox();
@@ -1054,9 +1033,8 @@ function onObsInput(cod, value){
 }
 function toggleDay(cod, di){ const v = getCurrentVisit(cod) || getLatestVisit(cod); if (!v){ toast('⚠ Crea una visita primero'); return; } v.days = v.days || []; const i = v.days.indexOf(di); if (i >= 0) v.days.splice(i, 1); else v.days.push(di); v.updatedAt = new Date().toISOString(); const scrollY = window.scrollY; save(); renderAgenda(); requestAnimationFrame(() => window.scrollTo(0, scrollY)); }
 function toggleForm(cod){ const f = document.getElementById('form-' + cod); const vaAbrir = !f.classList.contains('open'); const scrollY = window.scrollY; f.classList.toggle('open'); if (vaAbrir) formsAbiertos.add(cod); else formsAbiertos.delete(cod); if (vaAbrir){ requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); }); } }
-function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; v.fecha = document.getElementById('f-' + cod).value; v.hora = document.getElementById('h-' + cod).value; v.estado = document.getElementById('e-' + cod).value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
+function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; const fEl = document.getElementById('f-' + cod); if (fEl) v.fecha = fEl.value; const hEl = document.getElementById('h-' + cod); if (hEl) v.hora = hEl.value; const eEl = document.getElementById('e-' + cod); if (eEl) v.estado = eEl.value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
 function addClient(){ const cod = document.getElementById('ncCodigo').value.trim(); const nom = document.getElementById('ncNombre').value.trim(); const dir = document.getElementById('ncDir').value.trim(); if (!cod || !nom){ toast('⚠ Código y nombre obligatorios'); return; } if (allClients().some(c => c.codigo === cod)){ toast('⚠ Ya existe'); return; } DB.customClients.push({ codigo: cod, nombre: nom, direccion: dir || '—', custom: true }); DB.visits[cod] = []; save(); document.getElementById('ncCodigo').value = ''; document.getElementById('ncNombre').value = ''; document.getElementById('ncDir').value = ''; document.getElementById('addClientForm').style.display = 'none'; document.getElementById('addClientBtn').style.display = 'block'; renderAgenda(); toast('✓ Cliente agregado'); }
-function delClient(cod){ if (!confirm('¿Quitar este cliente?')) return; DB.customClients = DB.customClients.filter(c => c.codigo !== cod); delete DB.visits[cod]; delete DB.photos[cod]; callBackendWrite({ action:'deleteClientPhotos', codigo: cod }).catch(()=>{}); save(); renderAgenda(); toast('Cliente eliminado'); }
 function editClient(cod){
   const c = getClientByCode(cod);
   if (!c){ toast('⚠ Cliente no encontrado'); return; }
@@ -1094,7 +1072,6 @@ async function saveClientEdit(){
   renderAgenda();
   document.getElementById('editClientModal').classList.remove('open');
   toast('✓ Cliente actualizado');
-  if (DB.autoSync === 'on') scheduleSync();
 }
 function diagnosticarIds(){
   const lineas = ['=== DIAGNÓSTICO DE IDs ==='];
@@ -1105,7 +1082,6 @@ function diagnosticarIds(){
     if (vis > 0 || fot > 0){ const cli = getClientByCode(c); lineas.push(`#${c} "${cli ? cli.nombre : '(no encontrado)'}" | ${vis} visitas | ${fot} fotos`); }
   });
   const texto = lineas.join('\n');
-  console.log(texto);
   document.getElementById('debugMasterContent').textContent = texto;
   document.getElementById('debugMasterModal').classList.add('open');
 }
@@ -1124,9 +1100,7 @@ async function ejecutarRepararID(){
   if (destino === '__new'){ destino = document.getElementById('rpNewCode').value.trim(); if (!destino){ toast('⚠ Escribe el código nuevo'); return; } }
   if (!origen){ toast('⚠ Elige el cliente origen'); return; }
   if (String(origen).trim() === String(destino).trim()){ toast('⚠ Origen y destino deben ser distintos'); return; }
-  const clienteOrigen = getClientByCode(origen);
-  const clienteDestino = getClientByCode(destino);
-  if (!confirm('🛠️ REPARAR ID\n\nSe moverán TODAS las visitas y fotos de #' + origen + ' a #' + destino + '\n\n¿Continuar?')) return;
+  if (!confirm('🛠️ REPARAR ID\n\nSe moverán las visitas y fotos de #' + origen + ' a #' + destino + '\n\n¿Continuar?')) return;
   const visitas = (DB.visits[origen] || []).slice();
   const fotos = (DB.photos[origen] || []).slice();
   if (!DB.visits[destino]) DB.visits[destino] = [];
@@ -1143,6 +1117,8 @@ async function ejecutarRepararID(){
   fotos.forEach(p => { if (p && p.filename) markPhotoDeleted(origen, p.filename); });
   delete DB.visits[origen];
   delete DB.photos[origen];
+  const clienteOrigen = getClientByCode(origen);
+  const clienteDestino = getClientByCode(destino);
   if (!clienteDestino){
     const base = CLIENTES.find(x => String(x.codigo).trim() === String(destino).trim());
     const nombre = base ? base.nombre : (clienteOrigen ? clienteOrigen.nombre : ('Cliente ' + destino));
@@ -1271,7 +1247,6 @@ function guardarVisita(cod, nombre){
     v.firma = { data: sigData['sig-' + cod], filename: 'firma_cliente_' + fecha.replace(/-/g,'') + '.png', fechaVisita: fecha, synced: false };
     delete sigData['sig-' + cod];
   }
-  // ✅ Auto-marcar el día de la fecha al guardar
   if (v.fecha){
     const diAuto = fechaADiaIndex(v.fecha);
     if (diAuto >= 0){
@@ -1438,11 +1413,7 @@ function buildEvidenciasRows(){
 }
 function buildStyledWorkbook(){
   const clients = allClients(); const allRows = [];
-  clients.forEach(c => {
-    const arr = getVisits(c.codigo);
-    const latest = arr.length ? arr[arr.length - 1] : null;
-    allRows.push({ cliente: c, visit: latest });
-  });
+  clients.forEach(c => { const arr = getVisits(c.codigo); const latest = arr.length ? arr[arr.length - 1] : null; allRows.push({ cliente: c, visit: latest }); });
   const N = allRows.length; const lastRow = 4 + N;
   const col = {titleBg:'1F4E79',titleFg:'FFFFFF',zonaBg:'00B050',zonaFg:'FFFFFF',instrBg:'FFF2CC',instrFg:'1F4E79',secClienteBg:'2E75B6',secDiaBg:'BF8F00',secRegistroBg:'548235',headBg:'2E75B6',headFg:'FFFFFF',dayBg:'FFE699',dayFg:'7F6000',border:'808080',realBg:'C6EFCE',realFg:'006100',pendBg:'FFEB9C',pendFg:'9C6500',nreBg:'FFC7CE',nreFg:'9C0006',posBg:'D9D9D9',posFg:'333333',altBg:'F2F7FB',codeBg:'DDEBF7',zonaRowBg:'E2EFDA'};
   const bd = () => ({top:{style:'thin',color:{rgb:col.border}},bottom:{style:'thin',color:{rgb:col.border}},left:{style:'thin',color:{rgb:col.border}},right:{style:'thin',color:{rgb:col.border}}});
@@ -1599,16 +1570,14 @@ async function abrirCompartir(cod){
   html += '</div>';
   html += '<div style="background:#0f172a;border-radius:10px;padding:12px;text-align:left;font-size:.82rem;color:var(--text);white-space:pre-wrap;line-height:1.5">' + escapeHtml(compartirCtx.texto) + '</div>';
   prev.innerHTML = html;
-  document.getElementById('compartirInfo').textContent = todasFotos.length + ' foto(s). Preparando envío…';
   let fallos = 0;
   for (let i = 0; i < todasFotos.length; i++){
     const blob = await cargarFotoComoBlob(todasFotos[i]);
     if (blob) compartirCtx.blobs.push(blob); else fallos++;
     btn.textContent = '⏳ Preparando ' + (i + 1) + '/' + todasFotos.length + '…';
-    document.getElementById('compartirInfo').textContent = (i + 1) + ' / ' + todasFotos.length + ' preparada(s)' + (fallos ? ' · ' + fallos + ' con error' : '') + '…';
   }
   const nOk = compartirCtx.blobs.length;
-  document.getElementById('compartirInfo').textContent = nOk + ' de ' + todasFotos.length + ' foto(s) listas para enviar.';
+  document.getElementById('compartirInfo').textContent = nOk + ' de ' + todasFotos.length + ' foto(s) listas' + (fallos ? ' · ' + fallos + ' con error' : '');
   btn.disabled = false; btn.style.opacity = 1;
   btn.textContent = '💬 Compartir por WhatsApp (' + nOk + ' fotos)';
 }
@@ -1661,7 +1630,7 @@ async function cargarFotoComoBlob(foto){
       return new Blob([blobOrig], { type: tipo });
     }
     return null;
-  } catch(e){ console.warn('No se pudo cargar foto', foto.filename, e.message || e); return null; }
+  } catch(e){ return null; }
 }
 async function copiarTextoVisita(){
   try { await navigator.clipboard.writeText(compartirCtx.texto); toast('✓ Texto copiado'); }
@@ -1706,7 +1675,7 @@ async function abrirWhatsAppVisita(){
   a.click();
   setTimeout(() => document.body.removeChild(a), 1000);
 }
-function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); filtroDesde = ''; filtroHasta = ''; renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
+function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
 let searchDebounce = null;
 function toggleSearch(force){ const bar = document.getElementById('searchBar'); const open = (force !== undefined) ? force : !bar.classList.contains('open'); bar.classList.toggle('open', open); if (open){ const inp = document.getElementById('search'); setTimeout(() => { inp.focus(); inp.select(); }, 60); } }
 function onSearchInput(){ if (searchDebounce) clearTimeout(searchDebounce); searchDebounce = setTimeout(renderAgenda, 200); }
@@ -1758,7 +1727,6 @@ function closeGpsHelp(){ document.getElementById('gpsModal').classList.remove('o
 function tryOpenLocationSettings(){ window.location.href = 'intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end'; }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && pendingGPS){ const cod = pendingGPS; pendingGPS = null; closeGpsHelp(); captureGPS(cod); } });
 function captureGPS(cod){ const info = document.getElementById('gpsInfo-' + cod); const btn = document.getElementById('gpsBtn-' + cod); if (!navigator.geolocation) return; btn.textContent = '⏳...'; btn.disabled = true; const onExito = pos => { const v = getCurrentVisit(cod); if (!v) return; v.gps = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy || 0, time: new Date().toLocaleString('es-VE') }; v.updatedAt = new Date().toISOString(); save(); info.innerHTML = '✓ ' + v.gps.lat.toFixed(6) + ', ' + v.gps.lng.toFixed(6); btn.textContent = '📍 Actualizar'; btn.disabled = false; }; navigator.geolocation.getCurrentPosition(onExito, () => openGpsHelp(cod), { enableHighAccuracy:true, timeout:30000, maximumAge:60000 }); }
-function saveMonth(){ DB.month = document.getElementById('mesAnio').value; document.getElementById('mesAnio2').value = DB.month; save(); }
 function saveResp(){ DB.resp = document.getElementById('responsable').value; save(); sendHeartbeat(); }
 function saveComp(){ DB.comp = document.getElementById('compSelect').value; save(); toast('🗜️ ' + DB.comp); }
 function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
@@ -1782,7 +1750,8 @@ async function initApp(){
       }
       if (typeof DB.evid !== 'object' || DB.evid === null) DB.evid = {};
     }
-  } catch(e){ DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; }
+  } catch(e){ DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; }
+  if (!DB.month) DB.month = getMesAnioActual();
   sanitizeDB();
   try { migrateVisits(); } catch(e){}
   sanitizeDB();
@@ -1794,7 +1763,7 @@ async function initApp(){
 initApp();
 setInterval(sendHeartbeat, 60000);
 setTimeout(sendHeartbeat, 5000);
-window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); setTimeout(() => { loadFromCloud().then(() => { if (isDirty()){ toast('📤 Subiendo imágenes pendientes…'); syncToCloud(true); } }); sendHeartbeat(); }, 5000); });
+window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); setTimeout(() => { loadFromCloud().then(() => { if (isDirty()){ syncToCloud(true); } }); sendHeartbeat(); }, 5000); });
 window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','warn'); updateActiveUsersBadge(0); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on' && !syncInProgress) syncToCloud(true); } });
 setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 120000);

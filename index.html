@@ -776,40 +776,104 @@ function buildIndex(){
 function setSyncProgress(pct){ const el = document.getElementById('syncProgress'); if (el) el.style.width = pct + '%'; }
 
 async function loadFromCloud(){
-  if (!isOnline()){ driveStateReady = true; setSyncBadge('📴 Sin conexión','warn'); return false; }
-  setSyncBadge('📥 Cargando Drive…','info');
-  let res;
-  try { res = await callBackendRead({ action:'getIndex' }, 30000); } catch(err){ setSyncBadge('⚠ Error red','err'); driveStateReady = true; return false; }
-  if (!res || !res.ok){
-    if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); return false; }
-    setSyncBadge('⚠ Error','err'); driveStateReady = true; return false;
+  if (!isOnline()){
+    driveStateReady = true;
+    setSyncBadge('📴 Sin conexión','warn');
+    updateSyncStatusBox();
+    return false;
   }
+  setSyncBadge('📥 Cargando Drive…','info');
+  updateSyncStatusBox();
+
+  // ✅ TIMEOUT GLOBAL: si en 60s no responde, marcar listo con datos locales
+  const timeoutGlobal = setTimeout(() => {
+    if (!driveStateReady){
+      console.warn('⏱ loadFromCloud: timeout global 60s');
+      driveStateReady = true;
+      setSyncBadge('⚠ Drive lento','warn');
+      updateSyncStatusBox();
+      toast('⚠ Drive tardó demasiado — usando datos locales');
+    }
+  }, 60000);
+
+  let res;
+  try {
+    res = await callBackendRead({ action:'getIndex' }, 30000);
+  } catch(err){
+    clearTimeout(timeoutGlobal);
+    console.error('loadFromCloud error:', err);
+    setSyncBadge('⚠ Error red','err');
+    driveStateReady = true;
+    updateSyncStatusBox();
+    return false;
+  }
+  clearTimeout(timeoutGlobal);
+
+  if (!res || !res.ok){
+    if (res && (res.error || '').indexOf('No hay') !== -1){
+      driveStateReady = true;
+      setSyncBadge('✓ Drive vacío','ok');
+      updateSyncStatusBox();
+      return false;
+    }
+    setSyncBadge('⚠ Error: ' + (res && res.error ? res.error.slice(0,30) : 'sin respuesta'),'err');
+    driveStateReady = true;
+    updateSyncStatusBox();
+    return false;
+  }
+
   let remote;
-  try { remote = JSON.parse(res.content); } catch(e){ driveStateReady = true; return false; }
-  if (!remote || typeof remote !== 'object'){ driveStateReady = true; return false; }
+  try { remote = JSON.parse(res.content); }
+  catch(e){
+    driveStateReady = true;
+    setSyncBadge('⚠ Error JSON','err');
+    updateSyncStatusBox();
+    return false;
+  }
+
+  if (!remote || typeof remote !== 'object'){
+    driveStateReady = true;
+    setSyncBadge('⚠ Formato inválido','warn');
+    updateSyncStatusBox();
+    return false;
+  }
+
   const remoteHasData = (remote.visits && Object.keys(remote.visits).length > 0) || (remote.photosMeta && Object.keys(remote.photosMeta).length > 0);
   const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
-  if (!remoteHasData && localHasData){ driveStateReady = true; toast('⚠ Drive vacío — tus datos locales se conservan'); return false; }
+
+  if (!remoteHasData && localHasData){
+    driveStateReady = true;
+    toast('⚠ Drive vacío — tus datos locales se conservan');
+    setSyncBadge('⚠ Drive vacío','warn');
+    updateSyncStatusBox();
+    return false;
+  }
+
   try {
     applyRemoteIndex(remote);
     lastKnownRemoteTs = remote.updatedAt || new Date().toISOString();
     migrateVisits();
     sanitizeDB();
     await saveLocal();
-    clearDirty();
     localStorage.setItem('nocLastSync', new Date().toISOString());
     renderActiveTab();
     driveStateReady = true;
     setSyncBadge('✓ Drive cargado','ok');
     toast('✓ Datos cargados de Drive');
     updateSyncStatusBox();
-    if (isDirty()) setTimeout(() => syncToCloud(true), 2000);
+
+    setTimeout(() => {
+      const hayPendientes = isDirty() || collectPendingUploads().length > 0;
+      if (hayPendientes){ console.log('📤 Flush post-Drive'); syncToCloud(true); }
+    }, 2500);
     return true;
   } catch (criticalError){
     driveStateReady = true;
     console.error('❌ Error procesando Drive:', criticalError);
     const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
     toast('⚠ Drive: ' + detalle.slice(0,80));
+    setSyncBadge('⚠ Error','err');
+    updateSyncStatusBox();
     try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, stack: (criticalError && criticalError.stack) || '', ts: new Date().toISOString() })); } catch(e){}
     return false;
   }

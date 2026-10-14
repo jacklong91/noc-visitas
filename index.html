@@ -154,7 +154,7 @@ body{padding-bottom:170px}
 <header>
   <div class="hrow"><div style="flex:1;min-width:0"><h1>📡 Registro de Visitas — NOC N2</h1>
   <p>ZONA WIFI · Sincronizado con Drive <span id="syncBadge" style="display:none;font-size:.7rem;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;margin-left:6px"></span> <span id="activeUsersBadge" style="display:none;font-size:.7rem;background:rgba(34,197,94,.35);padding:2px 8px;border-radius:12px;margin-left:6px;cursor:pointer" onclick="showActiveUsersModal()" title="Ver técnicos conectados"></span></p>
-  </div><button class="icon-btn" onclick="toggleSearch()" title="Buscar cliente">🔍</button></div>
+  </div><button class="icon-btn" onclick="toggleFiltroFechas()" title="Filtrar por fechas">📅</button><button class="icon-btn" style="margin-left:6px" onclick="toggleSearch()" title="Buscar cliente">🔍</button></div>
 </header>
 <div class="download-banner" id="downloadBanner">
   <div class="spin"></div>
@@ -250,7 +250,7 @@ body{padding-bottom:170px}
       <div style="font-size:.72rem;color:var(--muted);margin:8px 0">Usa esto si hay IDs mezclados por un cambio de código incorrecto.</div>
       <button class="btn btn-warn btn-block" onclick="openRepairModal()">🛠️ Reparar ID de cliente</button>
       <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="diagnosticarIds()">🔍 Diagnosticar IDs y datos</button>
-      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="if(confirm('¿Vaciar la lista de fotos marcadas como eliminadas? Solo hazlo si YA sincronizaste.')){clearDeletedPhotosList();toast('✓ Tombstones de fotos vaciados');}">🧹 Vaciar tombstones de fotos</button>
+      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="if(confirm('¿Vaciar la lista de fotos marcadas como eliminadas?')){clearDeletedPhotosList();toast('✓ Tombstones de fotos vaciados');}">🧹 Vaciar tombstones de fotos</button>
     </div>
     <div class="card" style="border-left:4px solid var(--accent2)">
       <label>📋 MASTER ZONAS WIFI (Google Sheets)</label>
@@ -293,12 +293,29 @@ body{padding-bottom:170px}
   <div class="tab" onclick="setTabEvid();showTab('evid',this)">📷<br>Evidencias</div>
   <div class="tab" onclick="setTabRes();showTab('res',this)">📊<br>Resumen</div>
 </div>
+<div class="modal-bg" id="filtroFechasModal">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:1rem">📅 Filtrar por rango de fechas</h3>
+      <button class="btn btn-gray btn-sm" onclick="toggleFiltroFechas(false)">✕</button>
+    </div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Muestra solo los clientes con AL MENOS UNA visita en el rango seleccionado.</p>
+    <label>DESDE</label>
+    <input type="date" id="filtroDesdeInput">
+    <label style="margin-top:12px">HASTA</label>
+    <input type="date" id="filtroHastaInput">
+    <div class="row2" style="margin-top:16px">
+      <button class="btn btn-primary" style="flex:2" onclick="aplicarFiltroFechas()">✓ Aplicar</button>
+      <button class="btn btn-gray" style="flex:1" onclick="limpiarFiltroFechas()">Limpiar</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="gpsModal"><div class="modal"><h3 style="margin-bottom:8px">📍 Ubicación no disponible</h3><p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">El GPS está apagado o el navegador no tiene permiso.</p><button class="btn btn-primary btn-block" onclick="tryOpenLocationSettings()">⚙️ Abrir ajustes</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="closeGpsHelp()">Cerrar</button></div></div>
 <div class="modal-bg" id="historialModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 id="historialTitle" style="font-size:1rem">Historial de visitas</h3><button class="btn btn-gray btn-sm" onclick="closeHistorial()">✕</button></div><div id="historialList"></div></div></div>
 <div class="modal-bg" id="debugMasterModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔍 Diagnóstico</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('debugMasterModal').classList.remove('open')">✕</button></div><div id="debugMasterContent" style="font-size:.78rem;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow-y:auto;font-family:monospace;line-height:1.4"></div></div></div>
 <div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo" placeholder="Ej.: 3239"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre" placeholder="Nombre"><label>DIRECCIÓN</label><input id="ecDir" placeholder="Dirección"><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
 <div class="lightbox" id="lightbox"><button class="lb-close" onclick="closeLightbox()">✕</button><button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button><button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button><img id="lightboxImg" src="" alt=""><div class="lb-caption"><b id="lightboxTitle">—</b><small id="lightboxSubtitle">—</small></div></div>
-<div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID de cliente</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Usa esta herramienta cuando un cliente tenga visitas o fotos bajo un código incorrecto o duplicado. Todo se consolidará bajo el código destino y el origen quedará oculto.</div><label>CLIENTE ORIGEN (datos a mover)</label><select id="rpOrigen"></select><label>CLIENTE DESTINO (donde quedarán los datos)</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode" placeholder="Ej.: 16102"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
+<div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID de cliente</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Usa esta herramienta cuando un cliente tenga visitas o fotos bajo un código incorrecto o duplicado.</div><label>CLIENTE ORIGEN (datos a mover)</label><select id="rpOrigen"></select><label>CLIENTE DESTINO (donde quedarán los datos)</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode" placeholder="Ej.: 16102"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
 <div class="modal-bg" id="compartirModal">
   <div class="modal" style="max-width:560px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -335,6 +352,8 @@ let activeUsersCache = [];
 let compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null };
 let formsAbiertos = new Set();
 let loadingFromCloud = false;
+let filtroDesde = '';
+let filtroHasta = '';
 function isOnline(){ return navigator.onLine !== false; }
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
 function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 3600000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
@@ -538,13 +557,13 @@ async function syncMasterNow(){
   if (!driveStateReady){ toast('⏳ Esperando Drive…'); return; }
   if (syncInProgress){ toast('⏳ Sincronización en curso'); return; }
   syncInProgress = true;
-  toast('📤 Enviando al Master… (puede tardar 2-3 min)');
+  toast('📤 Enviando al Master…');
   setSyncBadge('📤 Master…','info');
   const updates = collectMasterUpdates();
   if (updates.length === 0){ toast('⚠ No hay visitas para sincronizar'); setSyncBadge('','info'); syncInProgress = false; return; }
   const startTs = Date.now();
   try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, action: 'updateMasterSheet', updates, mesAnio: DB.month }) }); } catch(e){}
-  toast('⏳ Procesando en el servidor…');
+  toast('⏳ Procesando…');
   setSyncBadge('⏳ Procesando…','info');
   const MAX_ESPERA = 5 * 60 * 1000;
   let resultado = null;
@@ -640,7 +659,7 @@ async function syncToCloud(silent){
       setSyncBadge('⚠ ' + restantes + ' pendiente(s)','warn');
       const msg = document.getElementById('partialSyncMsg');
       if (msg){
-        msg.innerHTML = 'Se cargaron <b style="color:#4ade80">' + done + ' de ' + pending.length + '</b> imágenes.<br><br>📴 El internet se interrumpió o falló la subida. Las <b style="color:#fbbf24">' + restantes + '</b> restantes quedan guardadas en este dispositivo y se subirán al reconectar.';
+        msg.innerHTML = 'Se cargaron <b style="color:#4ade80">' + done + ' de ' + pending.length + '</b> imágenes.<br><br>📴 El internet se interrumpió o falló la subida. Las <b style="color:#fbbf24">' + restantes + '</b> restantes quedan guardadas y se subirán al reconectar.';
         document.getElementById('partialSyncModal').classList.add('open');
       }
     }
@@ -744,7 +763,7 @@ async function loadFromCloud(){
         driveStateReady = true;
         setSyncBadge('⚠ Drive lento','warn');
         updateSyncStatusBox();
-        toast('⚠ Drive tardó demasiado — usando datos locales');
+        toast('⚠ Drive tardó demasiado');
       }
     }, 90000);
     let res = null;
@@ -872,6 +891,46 @@ function onFechaChange(cod){
   }
   toast('📅 Día marcado: ' + DIAS[di]);
 }
+function toggleFiltroFechas(force){
+  const m = document.getElementById('filtroFechasModal');
+  const open = force !== undefined ? force : !m.classList.contains('open');
+  m.classList.toggle('open', open);
+  if (open){
+    document.getElementById('filtroDesdeInput').value = filtroDesde;
+    document.getElementById('filtroHastaInput').value = filtroHasta;
+  }
+}
+function aplicarFiltroFechas(){
+  const d = document.getElementById('filtroDesdeInput').value;
+  const h = document.getElementById('filtroHastaInput').value;
+  if (!d && !h){ toast('⚠ Selecciona al menos una fecha'); return; }
+  if (d && h && d > h){ toast('⚠ La fecha DESDE no puede ser mayor que HASTA'); return; }
+  filtroDesde = d;
+  filtroHasta = h;
+  toggleFiltroFechas(false);
+  renderAgenda();
+  toast('✓ Filtro aplicado');
+}
+function limpiarFiltroFechas(){
+  filtroDesde = '';
+  filtroHasta = '';
+  const di = document.getElementById('filtroDesdeInput'); if (di) di.value = '';
+  const hi = document.getElementById('filtroHastaInput'); if (hi) hi.value = '';
+  toggleFiltroFechas(false);
+  renderAgenda();
+  toast('✓ Filtro limpiado');
+}
+function clienteTieneVisitaEnRango(cod){
+  if (!filtroDesde && !filtroHasta) return true;
+  const arr = getVisits(cod);
+  for (const v of arr){
+    if (!v || !v.fecha) continue;
+    if (filtroDesde && v.fecha < filtroDesde) continue;
+    if (filtroHasta && v.fecha > filtroHasta) continue;
+    return true;
+  }
+  return false;
+}
 function renderAgenda(){
   const q = (document.getElementById('search').value || '').toLowerCase();
   const list = document.getElementById('clientList');
@@ -880,6 +939,25 @@ function renderAgenda(){
   let focusedVal = null, focusedSelStart = null, focusedSelEnd = null;
   if (focusedId){ const elF = document.getElementById(focusedId); if (elF && ('value' in elF)){ focusedVal = elF.value; if ('selectionStart' in elF){ focusedSelStart = elF.selectionStart; focusedSelEnd = elF.selectionEnd; } } }
   list.innerHTML = '';
+
+  // ✅ Chip visual del filtro de fechas activo
+  const chipFiltroId = 'chipFiltroFechas';
+  let chipFiltro = document.getElementById(chipFiltroId);
+  if (filtroDesde || filtroHasta){
+    if (!chipFiltro){
+      chipFiltro = document.createElement('div');
+      chipFiltro.id = chipFiltroId;
+      chipFiltro.style.cssText = 'background:rgba(245,158,11,.15);border:1px solid var(--warn);color:var(--warn);padding:8px 12px;border-radius:10px;font-size:.78rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between';
+      list.parentNode.insertBefore(chipFiltro, list);
+    }
+    const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
+    const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
+    chipFiltro.innerHTML = '<span>📅 Filtro: <b>' + desdeTxt + '</b> → <b>' + hastaTxt + '</b></span><button onclick="limpiarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
+    chipFiltro.style.display = 'flex';
+  } else if (chipFiltro){
+    chipFiltro.style.display = 'none';
+  }
+
   const fechaFiltro = q ? detectarFechaBusqueda(q) : null;
   const setConVisitaFecha = fechaFiltro ? clientesConVisitaEnFecha(fechaFiltro) : null;
   const chipId = 'filtroFechaChip';
@@ -890,7 +968,12 @@ function renderAgenda(){
     chip.innerHTML = '<span>🗓️ Filtrando por fecha: <b>' + fechaFiltro.split('-').reverse().join('/') + '</b> · ' + n + ' cliente(s)</span><button onclick="document.getElementById(\'search\').value=\'\';onSearchInput();" style="background:transparent;border:none;color:var(--accent);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
     chip.style.display = 'flex';
   } else if (chip){ chip.style.display = 'none'; }
+
   allClients().filter(c => {
+    // Filtro de rango de fechas
+    if (filtroDesde || filtroHasta){
+      if (!clienteTieneVisitaEnRango(c.codigo)) return false;
+    }
     if (!q) return true;
     if (setConVisitaFecha !== null) return setConVisitaFecha.has(String(c.codigo).trim());
     return c.nombre.toLowerCase().includes(q) || c.codigo.includes(q);
@@ -898,6 +981,14 @@ function renderAgenda(){
     const visits = getVisits(c.codigo);
     const latest = getLatestVisit(c.codigo);
     const current = getCurrentVisit(c.codigo) || latest;
+    // ✅ Auto-marcar el día de la fecha si no está marcado
+    if (current && current.fecha && (!current.days || current.days.length === 0)){
+      const diAuto = fechaADiaIndex(current.fecha);
+      if (diAuto >= 0){
+        current.days = [diAuto];
+        current.updatedAt = new Date().toISOString();
+      }
+    }
     const estado = latest ? (latest.estado || 'Pendiente') : 'Pendiente';
     const nFotos = safeArray(DB.photos[c.codigo]).length;
     const card = document.createElement('div');
@@ -1180,6 +1271,14 @@ function guardarVisita(cod, nombre){
     v.firma = { data: sigData['sig-' + cod], filename: 'firma_cliente_' + fecha.replace(/-/g,'') + '.png', fechaVisita: fecha, synced: false };
     delete sigData['sig-' + cod];
   }
+  // ✅ Auto-marcar el día de la fecha al guardar
+  if (v.fecha){
+    const diAuto = fechaADiaIndex(v.fecha);
+    if (diAuto >= 0){
+      v.days = v.days || [];
+      if (!v.days.includes(diAuto)) v.days.push(diAuto);
+    }
+  }
   v.updatedAt = new Date().toISOString();
   const scrollY = window.scrollY;
   save();
@@ -1339,7 +1438,11 @@ function buildEvidenciasRows(){
 }
 function buildStyledWorkbook(){
   const clients = allClients(); const allRows = [];
-  clients.forEach(c => { const arr = getVisits(c.codigo); if (arr.length === 0){ allRows.push({ cliente: c, visit: null }); } else { arr.forEach(v => allRows.push({ cliente: c, visit: v })); } });
+  clients.forEach(c => {
+    const arr = getVisits(c.codigo);
+    const latest = arr.length ? arr[arr.length - 1] : null;
+    allRows.push({ cliente: c, visit: latest });
+  });
   const N = allRows.length; const lastRow = 4 + N;
   const col = {titleBg:'1F4E79',titleFg:'FFFFFF',zonaBg:'00B050',zonaFg:'FFFFFF',instrBg:'FFF2CC',instrFg:'1F4E79',secClienteBg:'2E75B6',secDiaBg:'BF8F00',secRegistroBg:'548235',headBg:'2E75B6',headFg:'FFFFFF',dayBg:'FFE699',dayFg:'7F6000',border:'808080',realBg:'C6EFCE',realFg:'006100',pendBg:'FFEB9C',pendFg:'9C6500',nreBg:'FFC7CE',nreFg:'9C0006',posBg:'D9D9D9',posFg:'333333',altBg:'F2F7FB',codeBg:'DDEBF7',zonaRowBg:'E2EFDA'};
   const bd = () => ({top:{style:'thin',color:{rgb:col.border}},bottom:{style:'thin',color:{rgb:col.border}},left:{style:'thin',color:{rgb:col.border}},right:{style:'thin',color:{rgb:col.border}}});
@@ -1603,7 +1706,7 @@ async function abrirWhatsAppVisita(){
   a.click();
   setTimeout(() => document.body.removeChild(a), 1000);
 }
-function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
+function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); filtroDesde = ''; filtroHasta = ''; renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
 let searchDebounce = null;
 function toggleSearch(force){ const bar = document.getElementById('searchBar'); const open = (force !== undefined) ? force : !bar.classList.contains('open'); bar.classList.toggle('open', open); if (open){ const inp = document.getElementById('search'); setTimeout(() => { inp.focus(); inp.select(); }, 60); } }
 function onSearchInput(){ if (searchDebounce) clearTimeout(searchDebounce); searchDebounce = setTimeout(renderAgenda, 200); }

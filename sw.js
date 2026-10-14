@@ -1,5 +1,5 @@
 /* Service Worker — Registro de Visitas NOC N2 */
-const CACHE = 'noc-n2-v6';
+const CACHE = 'noc-n2-v6.1';
 const SHELL = [
   './',
   './index.html',

@@ -1688,12 +1688,14 @@ async function abrirCompartir(cod){
   document.getElementById('compartirInfo').textContent = todasFotos.length + ' foto(s). Preparando envío…';
 
   // ✅ CARGAR BLOBS EN SEGUNDO PLANO con progreso visible
+   let fallos = 0;
   for (let i = 0; i < todasFotos.length; i++){
     const blob = await cargarFotoComoBlob(todasFotos[i]);
     if (blob) compartirCtx.blobs.push(blob);
+    else fallos++;
     btn.textContent = '⏳ Preparando ' + (i + 1) + '/' + todasFotos.length + '…';
     document.getElementById('compartirInfo').textContent =
-      (i + 1) + ' / ' + todasFotos.length + ' preparada(s)…';
+      (i + 1) + ' / ' + todasFotos.length + ' preparada(s)' + (fallos ? ' · ' + fallos + ' con error' : '') + '…';
   }
 
   const nOk = compartirCtx.blobs.length;
@@ -1737,7 +1739,7 @@ async function cargarFotoComoBlob(foto){
     const esPng = nombre.endsWith('.png') || (foto.data || '').indexOf('data:image/png') === 0;
     const tipo = esPng ? 'image/png' : 'image/jpeg';
 
-    // 1) Foto local: data URL → Blob SIN fetch (atob es 100% confiable en Android)
+    // 1) Foto local: data URL → Blob SIN fetch (100% confiable)
     if (foto.data){
       const partes = foto.data.split(',');
       const mimeMatch = partes[0].match(/:(.*?);/);
@@ -1749,21 +1751,34 @@ async function cargarFotoComoBlob(foto){
       return new Blob([u8], { type: mime });
     }
 
-    // 2) Foto en Drive: descargar como blob
+    // 2) Foto en Drive: usar PROXY CORS (images.weserv.nl)
+    //    Google Drive NO devuelve CORS → fetch directo falla siempre.
     if (foto.fileId){
-      const url = driveThumbUrl(foto.fileId, 2000);
-      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
-      if (!res.ok) return null;
-      const ct = (res.headers.get('content-type') || '').toLowerCase();
-      if (ct.indexOf('image/') !== 0 && ct.indexOf('octet-stream') < 0) return null;
+      // El proxy necesita la URL de Drive URL-encoded
+      const driveUrl = 'https://drive.google.com/thumbnail?id=' + foto.fileId + '&sz=w2000';
+      const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(driveUrl.replace(/^https?:\/\//, '')) + '&w=1600&output=jpg&q=82';
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout
+
+      const res = await fetch(proxyUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!res.ok){
+        console.warn('Proxy falló para', foto.filename, res.status);
+        return null;
+      }
+
       const blobOrig = await res.blob();
-      // Solo re-envolver si Google devolvió octet-stream sin tipo correcto
-      if (ct.indexOf('image/') === 0) return blobOrig;
+      if (!blobOrig || blobOrig.size < 100){
+        console.warn('Blob vacío para', foto.filename);
+        return null;
+      }
       return new Blob([blobOrig], { type: tipo });
     }
     return null;
   } catch(e){
-    console.warn('No se pudo cargar foto', foto.filename, e);
+    console.warn('No se pudo cargar foto', foto.filename, e.message || e);
     return null;
   }
 }

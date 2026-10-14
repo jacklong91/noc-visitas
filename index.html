@@ -78,6 +78,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-bg.open{display:flex}
 .modal{background:var(--card);border:1px solid #334155;border-radius:16px;padding:18px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto}
+#compartirPreview img{display:block;margin:0 auto}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#052e16;padding:12px 22px;border-radius:12px;font-weight:700;font-size:.88rem;z-index:100;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)}
 .progress{height:4px;background:var(--card2);border-radius:2px;overflow:hidden;margin-top:8px}
 .progress>div{height:100%;background:var(--accent);transition:width .3s}
@@ -146,6 +147,8 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .bottom-nav .tab.active{border-bottom-color:transparent;border-top-color:var(--accent)}
 .export-bar{bottom:57px}
 body{padding-bottom:170px}
+.comp-foto-thumb{display:inline-block;position:relative;width:64px;height:64px;margin:2px;border-radius:8px;overflow:hidden;background:var(--card2)}
+.comp-foto-thumb img{width:100%;height:100%;object-fit:cover}
 </style>
 </head>
 <body>
@@ -316,6 +319,24 @@ body{padding-bottom:170px}
 
 <div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID de cliente</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Usa esta herramienta cuando un cliente tenga visitas o fotos bajo un código incorrecto o duplicado. Todo se consolidará bajo el código destino y el origen quedará oculto.</div><label>CLIENTE ORIGEN (datos a mover)</label><select id="rpOrigen"></select><label>CLIENTE DESTINO (donde quedarán los datos)</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode" placeholder="Ej.: 16102"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
 
+<div class="modal-bg" id="compartirModal">
+  <div class="modal" style="max-width:560px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:1rem">📤 Compartir visita</h3>
+      <button class="btn btn-gray btn-sm" onclick="cerrarCompartir()">✕</button>
+    </div>
+    <div id="compartirPreview" style="max-height:55vh;overflow-y:auto;margin-bottom:12px;background:#0b1220;border-radius:10px;padding:10px">
+      <div style="color:var(--muted);padding:40px;text-align:center">Preparando fotos…</div>
+    </div>
+    <div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;text-align:center" id="compartirInfo"></div>
+    <div class="row2" style="margin-bottom:8px">
+      <button class="btn btn-gray" style="flex:1" onclick="copiarTextoVisita()">📋 Copiar texto</button>
+      <button class="btn btn-primary" style="flex:1" onclick="descargarZipVisita()">📦 Descargar ZIP</button>
+    </div>
+    <button class="btn btn-green btn-block" onclick="abrirWhatsAppVisita()" id="btnCompartirWhats" disabled style="opacity:.6">⏳ Preparando…</button>
+  </div>
+</div>
+
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial de imágenes</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después (automático al reconectar)</button></div></div>
 
 <div class="toast" id="toast"></div>
@@ -336,6 +357,11 @@ let editingVisitId = {};
 let driveStateReady = false;
 let lastKnownRemoteTs = null;
 let activeUsersCache = [];
+let compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null };
+
+// ✅ FIX FORMULARIO: mantener abiertos los forms tras render
+let formsAbiertos = new Set();
+
 function isOnline(){ return navigator.onLine !== false; }
 
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
@@ -386,7 +412,7 @@ function sanitizeDB(){
       if (typeof p.fechaVisita !== 'string') p.fechaVisita = '';
       if (p.fileId === undefined) p.fileId = null;
       if (p.synced === undefined) p.synced = !!(p.fileId || p.data);
-      if (p.visitId === undefined) p.visitId = null;   // ✅ FIX
+      if (p.visitId === undefined) p.visitId = null;
     });
   }
   for (const cod in DB.visits){
@@ -469,6 +495,7 @@ function newVisit(cod){
   const nv = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: '', hora: '', estado: 'Pendiente', obs: '', gps: null, days: last ? (last.days || []).slice() : [], updatedAt: new Date().toISOString() };
   arr.push(nv);
   editingVisitId[cod] = nv.id;
+  formsAbiertos.add(cod);
   const scrollY = window.scrollY;
   save();
   renderAgenda();
@@ -501,6 +528,7 @@ function deleteVisit(cod, visitId){
 
 function switchVisit(cod, visitId){
   editingVisitId[cod] = visitId;
+  formsAbiertos.add(cod);
   const scrollY = window.scrollY;
   renderAgenda();
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
@@ -563,9 +591,6 @@ async function sendHeartbeat(){ if (!isOnline()) return; try { const res = await
 function updateActiveUsersBadge(count){ const el = document.getElementById('activeUsersBadge'); if (!el) return; if (!count || count <= 0){ el.style.display = 'none'; return; } if (count === 1){ el.textContent = '👤 Solo tú'; } else { el.textContent = '👥 ' + count + ' técnicos'; } el.style.display = 'inline-block'; }
 function showActiveUsersModal(){ const modal = document.getElementById('historialModal'); const title = document.getElementById('historialTitle'); const list = document.getElementById('historialList'); title.textContent = '👥 Técnicos conectados (' + activeUsersCache.length + ')'; list.innerHTML = ''; if (!activeUsersCache.length){ list.innerHTML = '<div class="empty">Nadie más</div>'; } else { activeUsersCache.forEach(u => { const row = document.createElement('div'); row.className = 'card'; row.style.padding = '10px'; row.style.marginBottom = '8px'; row.innerHTML = '<b>📱 ' + (u.name || 'Dispositivo') + '</b>' + (u.user ? '<br><small style="color:var(--muted)">👤 ' + u.user + '</small>' : ''); list.appendChild(row); }); } modal.classList.add('open'); }
 
-/* ============================================================
-   MASTER SHEET
-   ============================================================ */
 async function syncMasterNow(){
   if (!driveStateReady){ toast('⏳ Esperando Drive…'); return; }
   if (syncInProgress){ toast('⏳ Sincronización en curso'); return; }
@@ -623,9 +648,6 @@ function collectMasterUpdates(){
 
 function renderMasterInfo(){ const el = document.getElementById('masterInfo'); if (!el) return; const lastSync = localStorage.getItem('nocLastMasterSync'); if (!lastSync){ el.innerHTML = '<span style="color:var(--warn)">⚠ Sin sincronizar</span>'; } else { el.innerHTML = '✓ Sincronizado · ' + new Date(lastSync).toLocaleString('es-VE'); } }
 
-/* ============================================================
-   SYNC SUBIR — CON TOMBSTONES DE FOTOS
-   ============================================================ */
 async function syncToCloud(silent){
   if (syncInProgress) return;
   if (!isOnline()){ setSyncBadge('📴 Sin conexión','warn'); return; }
@@ -704,7 +726,7 @@ function applyRemoteIndex(remote){
       if (!ex) map[p.filename] = p;
       else {
         const merged = Object.assign({}, ex, p);
-        if (!p.visitId && ex.visitId) merged.visitId = ex.visitId;   // ✅ FIX: preservar visitId
+        if (!p.visitId && ex.visitId) merged.visitId = ex.visitId;
         map[p.filename] = merged;
       }
     }
@@ -732,7 +754,6 @@ function collectPendingUploads(){
 
 function buildIndex(){
   const photosMeta = {};
-  // ✅ FIX: incluir visitId
   for (const codigo in DB.photos) photosMeta[codigo] = safeArray(DB.photos[codigo]).map(p => ({ filename: p.filename, fecha: p.fecha || '', fechaVisita: p.fechaVisita || '', visitId: p.visitId || null, fileId: p.fileId || null }));
   const visitsSerializable = {};
   for (const codigo in DB.visits){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; visitsSerializable[codigo] = arr.filter(v => v && typeof v === 'object').map(v => { const vOut = { id: v.id, fecha: v.fecha||'', hora: v.hora||'', estado: v.estado||'Pendiente', obs: v.obs||'', gps: v.gps||null, days: v.days||[], updatedAt: v.updatedAt || '' }; if (v.firma && v.firma.filename) vOut.firma = { filename: v.firma.filename, fileId: v.firma.fileId || null, fechaVisita: v.firma.fechaVisita || v.fecha || '', synced: true }; return vOut; }); }
@@ -809,16 +830,10 @@ async function downloadAllPending(silent){
 async function downloadAllPhotos(){ await downloadAllPending(false); }
 async function downloadOne(codigo, filename, ev){ if (ev) ev.stopPropagation(); let itemRef = null; if (codigo === '_supervisor') itemRef = DB.evid['super_sig']; else { const lista = safeArray(DB.photos[codigo], true); itemRef = lista.find(p => p && p.filename === filename); if (!itemRef){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; for (const v of arr){ if (v && v.firma && typeof v.firma === 'object' && v.firma.filename === filename){ itemRef = v.firma; break; } } } } if (!itemRef){ toast('⚠ No encontrado'); return; } try { await fetchFileId(codigo, filename, itemRef); await saveLocal(); toast('✓ Lista'); if (evidCurrentFolder) renderEvidFolderContent(evidCurrentFolder); renderEvid(); } catch(err){ toast('⚠ ' + err.message); } }
 
-/* ============================================================
-   AGENDA
-   ============================================================ */
 function allClients(){ const hidden = new Set(DB.hiddenClients || []); return CLIENTES.filter(c => !hidden.has(c.codigo)).concat(DB.customClients || []); }
 function statusClass(e){ return e === 'Realizada' ? 'r' : e === 'Pendiente' ? 'p' : e === 'No Realizada' ? 'n' : 's'; }
 function getClientByCode(cod){ const c = (DB.customClients || []).find(x => String(x.codigo).trim() === String(cod).trim()); if (c) return c; return CLIENTES.find(x => String(x.codigo).trim() === String(cod).trim()) || null; }
 
-/* ============================================================
-   🗓️ FILTRO FECHA — utilidades
-   ============================================================ */
 function detectarFechaBusqueda(q){
   if (!q) return null;
   const s = String(q).trim();
@@ -860,13 +875,20 @@ function renderAgenda(){
   const list = document.getElementById('clientList');
   const scrollY = window.scrollY;
   const focusedId = document.activeElement ? document.activeElement.id : '';
+  // ✅ FIX: guardar valor y selección de textarea/input activos
+  let focusedVal = null, focusedSelStart = null, focusedSelEnd = null;
+  if (focusedId){
+    const elF = document.getElementById(focusedId);
+    if (elF && ('value' in elF)){
+      focusedVal = elF.value;
+      if ('selectionStart' in elF){ focusedSelStart = elF.selectionStart; focusedSelEnd = elF.selectionEnd; }
+    }
+  }
   list.innerHTML = '';
 
-  // 🗓️ FILTRO FECHA
   const fechaFiltro = q ? detectarFechaBusqueda(q) : null;
   const setConVisitaFecha = fechaFiltro ? clientesConVisitaEnFecha(fechaFiltro) : null;
 
-  // Chip visual indicando filtro fecha
   const chipId = 'filtroFechaChip';
   let chip = document.getElementById(chipId);
   if (fechaFiltro){
@@ -901,6 +923,7 @@ function renderAgenda(){
     const nVisitas = visits.length;
     const idxActual = current ? (visits.indexOf(current) + 1) : 0;
     const fechaActual = current && current.fecha ? current.fecha.split('-').reverse().join('/') : 'Sin fecha';
+    const formAbierto = formsAbiertos.has(c.codigo);
     card.innerHTML = `
       <div class="top"><div><span class="code">#${c.codigo}</span><h3>${c.nombre}</h3></div><span class="badge ${statusClass(estado)}">${estado.toUpperCase()}</span></div>
       <div class="dir">📍 ${c.direccion}</div>
@@ -912,12 +935,13 @@ function renderAgenda(){
         <button class="btn btn-gray" onclick="showVisitsHistory('${c.codigo}')">📋 ${nVisitas}</button>
         <button class="btn btn-gray" style="max-width:44px" onclick="editClient('${c.codigo}')" title="Editar cliente">🔧</button>
       </div>
+      ${current && current.fecha ? `<button class="btn btn-warn btn-block btn-sm" style="margin-top:8px" onclick="abrirCompartir('${c.codigo}')">📤 Compartir visita</button>` : ''}
       ${nFotos?`<span style="font-size:.75rem;color:var(--accent);margin-left:8px">📷 ${nFotos}</span>`:''}
-      <div class="form" id="form-${c.codigo}">
+      <div class="form ${formAbierto ? 'open' : ''}" id="form-${c.codigo}">
         ${current ? `
         <div class="row2"><div><label>FECHA DE VISITA 📅</label><input type="date" id="f-${c.codigo}" value="${current.fecha||''}" onchange="saveVisit('${c.codigo}')"></div><div><label>HORA</label><input type="time" id="h-${c.codigo}" value="${current.hora||''}" onchange="saveVisit('${c.codigo}')"></div></div>
         <label>ESTADO</label><select id="e-${c.codigo}" onchange="saveVisit('${c.codigo}')">${['Pendiente','Realizada','No Realizada','Pospuesta'].map(o=>`<option ${o===current.estado?'selected':''}>${o}</option>`).join('')}</select>
-        <label>OBSERVACIONES</label><textarea id="o-${c.codigo}" placeholder="..." onchange="saveVisit('${c.codigo}')">${current.obs||''}</textarea>
+        <label>OBSERVACIONES</label><textarea id="o-${c.codigo}" placeholder="..." oninput="onObsInput('${c.codigo}', this.value)">${current.obs||''}</textarea>
         <label>FIRMA DEL CLIENTE</label><canvas class="sig" id="sig-${c.codigo}"></canvas>
         <button class="btn btn-gray" style="margin:6px 0" onclick="clearSig('sig-${c.codigo}')">Limpiar firma</button>
         <div style="font-size:.75rem;color:#4ade80">${current.firma && current.firma.filename ? '✓ Firma guardada' : ''}</div>
@@ -938,12 +962,47 @@ function renderAgenda(){
   const as = document.getElementById('autoSyncSelect'); if (as) as.value = DB.autoSync || 'on';
   updateSyncStatusBox();
   document.querySelectorAll('.form.open').forEach(f => { const cid = f.id.replace('form-', ''); requestAnimationFrame(() => setTimeout(() => initSig('sig-' + cid), 80)); });
-  requestAnimationFrame(() => { window.scrollTo(0, scrollY); if (focusedId){ const el = document.getElementById(focusedId); if (el) el.focus({ preventScroll: true }); } });
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollY);
+    if (focusedId){
+      const el2 = document.getElementById(focusedId);
+      if (el2 && ('value' in el2)){
+        if (focusedVal !== null) el2.value = focusedVal;
+        if (focusedSelStart !== null && 'setSelectionRange' in el2){
+          try { el2.setSelectionRange(focusedSelStart, focusedSelEnd); } catch(e){}
+        }
+        el2.focus({ preventScroll: true });
+      }
+    }
+  });
+}
+
+// ✅ FIX: guardar observaciones mientras escribes sin re-renderizar
+let obsTimer = {};
+function onObsInput(cod, value){
+  const v = getCurrentVisit(cod);
+  if (!v) return;
+  v.obs = value;
+  v.updatedAt = new Date().toISOString();
+  // Guardar en disco sin re-renderizar (evita perder foco)
+  if (obsTimer[cod]) clearTimeout(obsTimer[cod]);
+  obsTimer[cod] = setTimeout(() => {
+    saveLocal();
+    markDirty();
+  }, 800);
+  formsAbiertos.add(cod);
 }
 
 function toggleDay(cod, di){ const v = getCurrentVisit(cod) || getLatestVisit(cod); if (!v){ toast('⚠ Crea una visita primero'); return; } v.days = v.days || []; const i = v.days.indexOf(di); if (i >= 0) v.days.splice(i, 1); else v.days.push(di); v.updatedAt = new Date().toISOString(); const scrollY = window.scrollY; save(); renderAgenda(); requestAnimationFrame(() => window.scrollTo(0, scrollY)); }
-function toggleForm(cod){ const f = document.getElementById('form-' + cod); const vaAbrir = !f.classList.contains('open'); const scrollY = window.scrollY; f.classList.toggle('open'); if (vaAbrir){ requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); }); } }
-function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; v.fecha = document.getElementById('f-' + cod).value; v.hora = document.getElementById('h-' + cod).value; v.estado = document.getElementById('e-' + cod).value; v.obs = document.getElementById('o-' + cod).value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
+function toggleForm(cod){
+  const f = document.getElementById('form-' + cod);
+  const vaAbrir = !f.classList.contains('open');
+  const scrollY = window.scrollY;
+  f.classList.toggle('open');
+  if (vaAbrir) formsAbiertos.add(cod); else formsAbiertos.delete(cod);
+  if (vaAbrir){ requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); }); }
+}
+function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; v.fecha = document.getElementById('f-' + cod).value; v.hora = document.getElementById('h-' + cod).value; v.estado = document.getElementById('e-' + cod).value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
 function addClient(){ const cod = document.getElementById('ncCodigo').value.trim(); const nom = document.getElementById('ncNombre').value.trim(); const dir = document.getElementById('ncDir').value.trim(); if (!cod || !nom){ toast('⚠ Código y nombre obligatorios'); return; } if (allClients().some(c => c.codigo === cod)){ toast('⚠ Ya existe'); return; } DB.customClients.push({ codigo: cod, nombre: nom, direccion: dir || '—', custom: true }); DB.visits[cod] = []; save(); document.getElementById('ncCodigo').value = ''; document.getElementById('ncNombre').value = ''; document.getElementById('ncDir').value = ''; document.getElementById('addClientForm').style.display = 'none'; document.getElementById('addClientBtn').style.display = 'block'; renderAgenda(); toast('✓ Cliente agregado'); }
 function delClient(cod){ if (!confirm('¿Quitar este cliente?')) return; DB.customClients = DB.customClients.filter(c => c.codigo !== cod); delete DB.visits[cod]; delete DB.photos[cod]; callBackendWrite({ action:'deleteClientPhotos', codigo: cod }).catch(()=>{}); save(); renderAgenda(); toast('Cliente eliminado'); }
 
@@ -1156,6 +1215,7 @@ function addPhotos(cod, input){
   const v = getCurrentVisit(cod);
   const fechaVisita = v && v.fecha ? v.fecha : hoyYMD();
   const visitId = v ? v.id : null;
+  formsAbiertos.add(cod);
   [...input.files].forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
@@ -1394,21 +1454,7 @@ function buildStyledWorkbook(){
   clients.forEach(c => { const arr = getVisits(c.codigo); if (arr.length === 0){ allRows.push({ cliente: c, visit: null }); } else { arr.forEach(v => allRows.push({ cliente: c, visit: v })); } });
   const N = allRows.length; const lastRow = 4 + N;
 
-  const col = {
-    titleBg:'1F4E79', titleFg:'FFFFFF',
-    zonaBg:'00B050',  zonaFg:'FFFFFF',
-    instrBg:'FFF2CC', instrFg:'1F4E79',
-    secClienteBg:'2E75B6', secDiaBg:'BF8F00', secRegistroBg:'548235',
-    headBg:'2E75B6', headFg:'FFFFFF',
-    dayBg:'FFE699', dayFg:'7F6000',
-    border:'808080',
-    realBg:'C6EFCE', realFg:'006100',
-    pendBg:'FFEB9C', pendFg:'9C6500',
-    nreBg:'FFC7CE',  nreFg:'9C0006',
-    posBg:'D9D9D9',  posFg:'333333',
-    altBg:'F2F7FB',  codeBg:'DDEBF7', zonaRowBg:'E2EFDA'
-  };
-
+  const col = {titleBg:'1F4E79',titleFg:'FFFFFF',zonaBg:'00B050',zonaFg:'FFFFFF',instrBg:'FFF2CC',instrFg:'1F4E79',secClienteBg:'2E75B6',secDiaBg:'BF8F00',secRegistroBg:'548235',headBg:'2E75B6',headFg:'FFFFFF',dayBg:'FFE699',dayFg:'7F6000',border:'808080',realBg:'C6EFCE',realFg:'006100',pendBg:'FFEB9C',pendFg:'9C6500',nreBg:'FFC7CE',nreFg:'9C0006',posBg:'D9D9D9',posFg:'333333',altBg:'F2F7FB',codeBg:'DDEBF7',zonaRowBg:'E2EFDA'};
   const bd = () => ({top:{style:'thin',color:{rgb:col.border}},bottom:{style:'thin',color:{rgb:col.border}},left:{style:'thin',color:{rgb:col.border}},right:{style:'thin',color:{rgb:col.border}}});
   const fill  = rgb => ({ patternType:'solid', fgColor:{rgb} });
   const center= { horizontal:'center', vertical:'center', wrapText:true };
@@ -1441,8 +1487,7 @@ function buildStyledWorkbook(){
     for (let Cc = 0; Cc < 18; Cc++){
       const addr = XLSX.utils.encode_cell({r:R,c:Cc});
       if (!wsA[addr]) wsA[addr] = {t:'s', v:''};
-      const cell = wsA[addr];
-      cell.s = cell.s || {};
+      const cell = wsA[addr]; cell.s = cell.s || {};
       if (R === 0){
         if (Cc < 4){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:col.titleFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
         else { cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'right', vertical:'center'}; }
@@ -1592,7 +1637,180 @@ async function importarDatos(input){
   input.value = '';
 }
 
-function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
+/* ============================================================
+   📤 COMPARTIR VISITA — con TODAS las fotos por WhatsApp
+   ============================================================ */
+async function abrirCompartir(cod){
+  const v = getCurrentVisit(cod);
+  if (!v){ toast('⚠ No hay visita activa'); return; }
+  if (!v.fecha){ toast('⚠ La visita no tiene fecha'); return; }
+  const cliente = getClientByCode(cod);
+  const todasFotos = safeArray(DB.photos[cod]).filter(p =>
+    (p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)
+  ).filter(p => p.fileId || p.data);
+
+  compartirCtx.cod = cod;
+  compartirCtx.visitId = v.id;
+  compartirCtx.fotos = todasFotos;
+  compartirCtx.texto = generarTextoVisita(cliente, v, todasFotos.length, cod);
+  compartirCtx.blobs = [];
+  compartirCtx.blobCollage = null;
+
+  document.getElementById('compartirModal').classList.add('open');
+  const prev = document.getElementById('compartirPreview');
+  prev.innerHTML = '<div style="color:var(--muted);padding:40px;text-align:center">Preparando ' + todasFotos.length + ' foto(s)…</div>';
+  document.getElementById('compartirInfo').textContent = '';
+  const btn = document.getElementById('btnCompartirWhats');
+  btn.disabled = true; btn.style.opacity = .6; btn.textContent = '⏳ Preparando…';
+
+  // Cargar todas las fotos como blobs
+  const miniaturas = [];
+  for (let i = 0; i < todasFotos.length; i++){
+    const blob = await cargarFotoComoBlob(todasFotos[i]);
+    if (blob) compartirCtx.blobs.push(blob);
+    miniaturas.push(blob ? URL.createObjectURL(blob) : null);
+  }
+
+  // Vista previa: miniaturas + texto
+  let html = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">';
+  miniaturas.forEach((u, i) => {
+    html += '<div class="comp-foto-thumb">' + (u ? '<img src="' + u + '">' : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.6rem">⚠</div>') + '</div>';
+  });
+  html += '</div>';
+  html += '<div style="background:#0f172a;border-radius:10px;padding:12px;text-align:left;font-size:.82rem;color:var(--text);white-space:pre-wrap;line-height:1.5">' + escapeHtml(compartirCtx.texto) + '</div>';
+  prev.innerHTML = html;
+
+  const nOk = compartirCtx.blobs.length;
+  document.getElementById('compartirInfo').textContent = nOk + ' de ' + todasFotos.length + ' foto(s) listas para enviar.';
+  btn.disabled = false; btn.style.opacity = 1;
+  btn.textContent = '💬 Compartir por WhatsApp (' + nOk + ' fotos)';
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function cerrarCompartir(){
+  document.getElementById('compartirModal').classList.remove('open');
+  compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null };
+}
+
+function generarTextoVisita(cliente, v, nFotos, cod){
+  const fecha = v.fecha ? v.fecha.split('-').reverse().join('/') : '';
+  const hora = v.hora || '--:--';
+  const estado = v.estado || 'Pendiente';
+  const nombre = cliente ? cliente.nombre : 'Cliente ' + (cod || '');
+  const codigo = cliente ? cliente.codigo : cod;
+  const dir = cliente && cliente.direccion ? cliente.direccion : '';
+  const obs = v.obs || '(sin observaciones)';
+  let txt = '';
+  txt += '📋 VISITA NOC N2\n\n';
+  txt += '👤 Cliente: ' + nombre + '\n';
+  txt += '🔢 Código: #' + codigo + '\n';
+  if (dir) txt += '📍 Dirección: ' + dir + '\n';
+  txt += '📅 Fecha: ' + fecha + '\n';
+  txt += '⏰ Hora: ' + hora + '\n';
+  txt += '✅ Estado: ' + estado + '\n';
+  if (nFotos > 0) txt += '📷 Fotos: ' + nFotos + '\n';
+  txt += '\n📝 Observaciones:\n' + obs + '\n';
+  return txt;
+}
+
+async function cargarFotoComoBlob(foto){
+  try {
+    // Foto local (data URL) → blob directo
+    if (foto.data){
+      const res = await fetch(foto.data);
+      return await res.blob();
+    }
+    // Foto en Drive → descargar como blob
+    if (foto.fileId){
+      const url = 'https://drive.google.com/thumbnail?id=' + foto.fileId + '&sz=w2000';
+      const res = await fetch(url);
+      if (res.ok) return await res.blob();
+    }
+    return null;
+  } catch(e){
+    console.warn('No se pudo cargar foto', foto.filename, e);
+    return null;
+  }
+}
+
+async function copiarTextoVisita(){
+  try {
+    await navigator.clipboard.writeText(compartirCtx.texto);
+    toast('✓ Texto copiado');
+  } catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = compartirCtx.texto;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('✓ Texto copiado'); } catch(err){ toast('⚠ No se pudo copiar'); }
+    document.body.removeChild(ta);
+  }
+}
+
+async function descargarZipVisita(){
+  const cod = compartirCtx.cod;
+  const v = getCurrentVisit(cod);
+  const cliente = getClientByCode(cod);
+  const zip = new JSZip();
+  zip.file('visita.txt', compartirCtx.texto);
+  const fecha = v && v.fecha ? v.fecha : 'sin-fecha';
+  for (let i = 0; i < compartirCtx.blobs.length; i++){
+    zip.file('foto_' + String(i+1).padStart(2,'0') + '.jpg', compartirCtx.blobs[i]);
+  }
+  const blob = await zip.generateAsync({ type:'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Visita_' + (cliente ? cliente.codigo : cod) + '_' + fecha + '.zip';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  toast('✓ ZIP descargado');
+}
+
+async function abrirWhatsAppVisita(){
+  // 1) Web Share API — preferido: manda TODAS las fotos + texto
+  if (navigator.share){
+    try {
+      if (compartirCtx.blobs && compartirCtx.blobs.length){
+        const files = [];
+        for (let i = 0; i < compartirCtx.blobs.length; i++){
+          const b = compartirCtx.blobs[i];
+          files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
+        }
+        if (!navigator.canShare || navigator.canShare({ files })){
+          await navigator.share({ text: compartirCtx.texto, files });
+          return;
+        }
+      }
+      await navigator.share({ text: compartirCtx.texto });
+      return;
+    } catch(e){
+      if (e && e.name === 'AbortError') return; // usuario canceló, no seguir
+      // si falla, sigue al plan B
+    }
+  }
+
+  // 2) Fallback: usar un <a target="_blank"> real con wa.me
+  //    (WhatsApp está registrado como App Link del dominio wa.me → abre la app)
+  const texto = encodeURIComponent(compartirCtx.texto);
+  const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.rel = 'noopener noreferrer';
+  if (esMovil){
+    a.href = 'https://wa.me/?text=' + texto;
+    a.target = '_blank';
+  } else {
+    a.href = 'https://web.whatsapp.com/send?text=' + texto;
+    a.target = '_blank';
+  }
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 1000);
+}
+
+function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
 
 let searchDebounce = null;
 function toggleSearch(force){

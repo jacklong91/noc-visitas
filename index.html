@@ -11,7 +11,6 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-
 <title>Registro de Visitas — NOC N2 | Zona WiFi</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -157,19 +156,16 @@ body{padding-bottom:170px}
   <p>ZONA WIFI · Sincronizado con Drive <span id="syncBadge" style="display:none;font-size:.7rem;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;margin-left:6px"></span> <span id="activeUsersBadge" style="display:none;font-size:.7rem;background:rgba(34,197,94,.35);padding:2px 8px;border-radius:12px;margin-left:6px;cursor:pointer" onclick="showActiveUsersModal()" title="Ver técnicos conectados"></span></p>
   </div><button class="icon-btn" onclick="toggleSearch()" title="Buscar cliente">🔍</button></div>
 </header>
-
 <div class="download-banner" id="downloadBanner">
   <div class="spin"></div>
   <span class="text" id="downloadBannerText">Descargando…</span>
   <div class="prog"><div id="downloadBannerProgress" style="width:0%"></div></div>
   <button class="close-btn" onclick="dismissBanner()">✕</button>
 </div>
-
 <div class="search-bar" id="searchBar">
   <input class="search" id="search" placeholder="🔍 Cliente, código o fecha (12/10/2026)" oninput="onSearchInput()">
   <button class="btn btn-gray" style="padding:10px 14px;flex-shrink:0" onclick="toggleSearch(false)">✕</button>
 </div>
-
 <main>
   <div id="tab-agenda">
     <div class="top-tools">
@@ -188,7 +184,6 @@ body{padding-bottom:170px}
     <div class="month-input"><input id="mesAnio" placeholder="Mes / Año (ej.: Octubre 2026)" onchange="saveMonth()"></div>
     <div id="clientList"></div>
   </div>
-
   <div id="tab-evid" style="display:none">
     <div id="evidFoldersView">
       <div class="empty" id="evidEmpty">No hay evidencias registradas todavía.</div>
@@ -205,7 +200,6 @@ body{padding-bottom:170px}
       <div class="empty" id="evidFolderEmpty" style="display:none">Esta carpeta está vacía.</div>
     </div>
   </div>
-
   <div id="tab-res" style="display:none">
     <div class="card">
       <label>MES / AÑO</label>
@@ -251,24 +245,19 @@ body{padding-bottom:170px}
       <canvas class="sig" id="sigSuper"></canvas>
       <button class="btn btn-gray" style="margin-top:6px" onclick="clearSig('sigSuper')">Limpiar firma</button>
     </div>
-
     <div class="card" style="border-left:4px solid var(--danger)">
       <label>🛠️ HERRAMIENTAS DE REPARACIÓN</label>
-      <div style="font-size:.72rem;color:var(--muted);margin:8px 0">
-        Usa esto si hay IDs mezclados por un cambio de código incorrecto.
-      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin:8px 0">Usa esto si hay IDs mezclados por un cambio de código incorrecto.</div>
       <button class="btn btn-warn btn-block" onclick="openRepairModal()">🛠️ Reparar ID de cliente</button>
       <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="diagnosticarIds()">🔍 Diagnosticar IDs y datos</button>
       <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="if(confirm('¿Vaciar la lista de fotos marcadas como eliminadas? Solo hazlo si YA sincronizaste.')){clearDeletedPhotosList();toast('✓ Tombstones de fotos vaciados');}">🧹 Vaciar tombstones de fotos</button>
     </div>
-
     <div class="card" style="border-left:4px solid var(--accent2)">
       <label>📋 MASTER ZONAS WIFI (Google Sheets)</label>
       <div id="masterInfo" style="font-size:.8rem;color:var(--muted);margin:8px 0 10px">Cargando…</div>
       <button class="btn btn-primary btn-block" onclick="syncMasterNow()">🔄 Sincronizar Master ahora</button>
       <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="showLastMasterDebug()">🔍 Ver último diagnóstico</button>
     </div>
-
     <div class="card" style="border-left:4px solid var(--accent)">
       <label>☁️ SINCRONIZACIÓN</label>
       <div id="syncStatusBox" style="font-size:.8rem;color:var(--muted);line-height:1.6">
@@ -292,7 +281,6 @@ body{padding-bottom:170px}
     </div>
   </div>
 </main>
-
 <div class="export-bar">
   <label class="btn btn-gray" style="padding:13px; text-align:center; flex:1; cursor:pointer;">📂 Importar<input type="file" accept=".xlsx, .xls, .zip, .json" style="display:none" onchange="importarDatos(this)"></label>
   <button class="btn btn-green" onclick="exportExcel()">⬇️ Excel</button>
@@ -300,25 +288,17 @@ body{padding-bottom:170px}
   <button class="btn btn-primary" id="syncBarBtn" onclick="forceSyncNow()">☁️ Sync</button>
   <button class="btn btn-red" onclick="resetAll()">🗑️</button>
 </div>
-
 <div class="bottom-nav">
   <div class="tab active" onclick="showTab('agenda',this)">📋<br>Agenda</div>
   <div class="tab" onclick="setTabEvid();showTab('evid',this)">📷<br>Evidencias</div>
   <div class="tab" onclick="setTabRes();showTab('res',this)">📊<br>Resumen</div>
 </div>
-
 <div class="modal-bg" id="gpsModal"><div class="modal"><h3 style="margin-bottom:8px">📍 Ubicación no disponible</h3><p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">El GPS está apagado o el navegador no tiene permiso.</p><button class="btn btn-primary btn-block" onclick="tryOpenLocationSettings()">⚙️ Abrir ajustes</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="closeGpsHelp()">Cerrar</button></div></div>
-
 <div class="modal-bg" id="historialModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 id="historialTitle" style="font-size:1rem">Historial de visitas</h3><button class="btn btn-gray btn-sm" onclick="closeHistorial()">✕</button></div><div id="historialList"></div></div></div>
-
 <div class="modal-bg" id="debugMasterModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔍 Diagnóstico</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('debugMasterModal').classList.remove('open')">✕</button></div><div id="debugMasterContent" style="font-size:.78rem;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow-y:auto;font-family:monospace;line-height:1.4"></div></div></div>
-
 <div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo" placeholder="Ej.: 3239"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre" placeholder="Nombre"><label>DIRECCIÓN</label><input id="ecDir" placeholder="Dirección"><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
-
 <div class="lightbox" id="lightbox"><button class="lb-close" onclick="closeLightbox()">✕</button><button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button><button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button><img id="lightboxImg" src="" alt=""><div class="lb-caption"><b id="lightboxTitle">—</b><small id="lightboxSubtitle">—</small></div></div>
-
 <div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID de cliente</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Usa esta herramienta cuando un cliente tenga visitas o fotos bajo un código incorrecto o duplicado. Todo se consolidará bajo el código destino y el origen quedará oculto.</div><label>CLIENTE ORIGEN (datos a mover)</label><select id="rpOrigen"></select><label>CLIENTE DESTINO (donde quedarán los datos)</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode" placeholder="Ej.: 16102"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
-
 <div class="modal-bg" id="compartirModal">
   <div class="modal" style="max-width:560px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -336,19 +316,14 @@ body{padding-bottom:170px}
     <button class="btn btn-green btn-block" onclick="abrirWhatsAppVisita()" id="btnCompartirWhats" disabled style="opacity:.6">⏳ Preparando…</button>
   </div>
 </div>
-
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial de imágenes</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después (automático al reconectar)</button></div></div>
-
 <div class="toast" id="toast"></div>
-
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5pRjb-Pu-O3DeTUh07TfiaXG5VPdxS64RyNyioRRXhjK4HWkQoDDtEoysBqRX8NsGXQ/exec';
 const TOKEN_SECRETO   = 'noc-zonawifi-2026-a8f3k9x2';
-
 const CLIENTES = [{"codigo":"2881","nombre":"PLAZA LOS ROBLES","direccion":"Los Robles"},{"codigo":"2025","nombre":"Unidad Integral De Salud Unisa C.A","direccion":"Av. El Carvario. Edif. Unisa, Piso PB"},{"codigo":"002881","nombre":"Sunshine Club C.A | Club Dynamo","direccion":"Av Principal de los Robles"},{"codigo":"9959","nombre":"Centro Medico Quirurgico La Fe, C.A.","direccion":"Av. Jovito Villalba"},{"codigo":"5229","nombre":"Makay Beach Club, C.A","direccion":"Boulevard Playa Guacuco"},{"codigo":"012578","nombre":"La Casona Colonial C.A","direccion":"Av. Aldonza Manrique"},{"codigo":"968","nombre":"Downtown Margarita Tibisay Beach, C.A.","direccion":"Av. Aldonza Manrique"},{"codigo":"014184","nombre":"Makay Beach Club, C.A","direccion":"Venetur"},{"codigo":"5281","nombre":"La Tribu 0295, C.A.","direccion":"Hotel Tibisay Beach Resort"},{"codigo":"002920","nombre":"GOA 007, C.A.","direccion":"Marina del Concorde"},{"codigo":"10757","nombre":"Grupo Menta 212, C.A","direccion":"CC Margarita City Place"},{"codigo":"674","nombre":"Guuao, C.A. | Sambil Margarita","direccion":"CC Sambil Margarita"},{"codigo":"8378","nombre":"Guuao C.A | CC La Vela, Local 2","direccion":"CC La Vela, Etapa II"},{"codigo":"4978","nombre":"Guuao C.A | CC La Vela","direccion":"CC La Vela, Etapa II"},{"codigo":"4868","nombre":"Guuao C.A | NOVA El Espinal","direccion":"Carretera principal vía San Juan Bautista"},{"codigo":"2851","nombre":"Emprendimientos Greccia Parra | La Pepitería","direccion":"CC Margarita City Place"},{"codigo":"15513","nombre":"Cocina 2026 C.A","direccion":"Av. Francisco Esteban Gómez"},{"codigo":"15549","nombre":"PASEO DEL MAR","direccion":"PASEO DEL MAR"},{"codigo":"4274","nombre":"Centro Venezolano Americano de Margarita (CEVAMAR) AC","direccion":"Jorge Coll"},{"codigo":"15812","nombre":"DGB Group C.A | Foodkart","direccion":"Foodkart Pampatar"},{"codigo":"2011","nombre":"Granja Kids, C.A. | Restaurante Maroush","direccion":"Playa El Angel"},{"codigo":"12317","nombre":"Alimentos Premium, C.A | AR GRILL","direccion":"Los Robles"},{"codigo":"1860","nombre":"Oscar Eduardo Mirabal Muñoz | Euphoria Bistro Bar","direccion":"Costa Azul"},{"codigo":"6594","nombre":"Emprendimiento Jhonattan Hernández | AM PM","direccion":"Porlamar"}];
 const DIAS = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
 const COMP_OPTS = { baja:{max:960,q:0.55}, media:{max:1280,q:0.72}, alta:{max:1600,q:0.82} };
-
 let DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
 let syncInProgress = false, syncTimer = null;
 let evidCurrentFolder = null, lightboxItems = [], lightboxIndex = 0, bannerDismissed = false;
@@ -358,40 +333,19 @@ let driveStateReady = false;
 let lastKnownRemoteTs = null;
 let activeUsersCache = [];
 let compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null };
-
-// ✅ FIX FORMULARIO: mantener abiertos los forms tras render
 let formsAbiertos = new Set();
-
 function isOnline(){ return navigator.onLine !== false; }
-
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
-
 function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 3600000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
 function isVisitDeleted(visitId){ if (!visitId) return false; try { const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); return !!deleted[visitId]; } catch(e){ return false; } }
 function clearDeletedVisit(visitId){ if (!visitId) return; try { const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); delete deleted[visitId]; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
 function getDeletionsList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}')); } catch(e){ return []; } }
 function clearDeletionsList(){ try { localStorage.removeItem('nocDeletedVisits'); } catch(e){} }
-
-function markPhotoDeleted(codigo, filename){
-  if (!codigo || !filename) return;
-  try {
-    const key = String(codigo).trim() + '|' + filename;
-    const deleted = JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}');
-    deleted[key] = Date.now();
-    localStorage.setItem('nocDeletedPhotos', JSON.stringify(deleted));
-  } catch(e){}
-}
-function getDeletedPhotosList(){
-  try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}')); }
-  catch(e){ return []; }
-}
-function clearDeletedPhotosList(){
-  try { localStorage.removeItem('nocDeletedPhotos'); } catch(e){}
-}
-
+function markPhotoDeleted(codigo, filename){ if (!codigo || !filename) return; try { const key = String(codigo).trim() + '|' + filename; const deleted = JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}'); deleted[key] = Date.now(); localStorage.setItem('nocDeletedPhotos', JSON.stringify(deleted)); } catch(e){} }
+function getDeletedPhotosList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}')); } catch(e){ return []; } }
+function clearDeletedPhotosList(){ try { localStorage.removeItem('nocDeletedPhotos'); } catch(e){} }
 function getDeviceId(){ let id = localStorage.getItem('nocDeviceId'); if (!id){ id = 'dev_' + Math.random().toString(36).slice(2, 8); localStorage.setItem('nocDeviceId', id); } return id; }
 function getDeviceName(){ let n = localStorage.getItem('nocDeviceName'); if (!n){ const ua = navigator.userAgent; let tipo = 'PC'; if (/Android/i.test(ua)) tipo = 'Android'; else if (/iPhone|iPad/i.test(ua)) tipo = 'iPhone'; else if (/Windows/i.test(ua)) tipo = 'Win'; else if (/Mac/i.test(ua)) tipo = 'Mac'; n = tipo + '-' + Math.random().toString(36).slice(2,5).toUpperCase(); localStorage.setItem('nocDeviceName', n); } return n; }
-
 function sanitizeDB(){
   if (!DB || typeof DB !== 'object') DB = {};
   if (!DB.visits || typeof DB.visits !== 'object') DB.visits = {};
@@ -403,7 +357,6 @@ function sanitizeDB(){
   if (!DB.autoSync) DB.autoSync = 'on';
   if (typeof DB.month !== 'string') DB.month = '';
   if (typeof DB.resp !== 'string') DB.resp = '';
-
   for (const cod in DB.photos){
     if (!Array.isArray(DB.photos[cod])) { DB.photos[cod] = []; continue; }
     DB.photos[cod] = DB.photos[cod].filter(p => p && typeof p === 'object' && p.filename);
@@ -416,11 +369,7 @@ function sanitizeDB(){
     });
   }
   for (const cod in DB.visits){
-    if (!Array.isArray(DB.visits[cod])){
-      const v = DB.visits[cod];
-      if (v && typeof v === 'object'){ DB.visits[cod] = [v]; }
-      else { DB.visits[cod] = []; continue; }
-    }
+    if (!Array.isArray(DB.visits[cod])){ const v = DB.visits[cod]; if (v && typeof v === 'object'){ DB.visits[cod] = [v]; } else { DB.visits[cod] = []; continue; } }
     DB.visits[cod] = DB.visits[cod].filter(v => v && typeof v === 'object');
     DB.visits[cod].forEach(v => {
       if (!v.id) v.id = 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
@@ -440,16 +389,13 @@ function sanitizeDB(){
     else if (typeof e === 'object' && !e.filename){ DB.evid[key].filename = 'firma_supervisor.png'; }
   }
 }
-
 function markDirty(){ try{ localStorage.setItem('nocDirty','1'); }catch(e){} }
 function clearDirty(){ try{ localStorage.removeItem('nocDirty'); }catch(e){} }
 function isDirty(){ try{ return localStorage.getItem('nocDirty') === '1'; }catch(e){ return false; } }
-
 async function saveLocal(){ try{ if (typeof localForage !== 'undefined'){ await localForage.ready(); await localForage.setItem('nocVisitasDB', DB); } } catch(e){} }
 async function loadLocal(){ try{ if (typeof localForage !== 'undefined'){ await localForage.ready(); return await localForage.getItem('nocVisitasDB'); } }catch(e){} return null; }
 async function save(){ sanitizeDB(); await saveLocal(); markDirty(); scheduleSync(); updateSyncStatusBox(); }
 function scheduleSync(){ if (DB.autoSync === 'off') return; if (syncTimer) clearTimeout(syncTimer); setSyncBadge('⏳ Pendiente…','warn'); syncTimer = setTimeout(()=>{ syncToCloud(true); }, 5000); }
-
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2500); }
 function showTab(id, el){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); ['agenda','evid','res'].forEach(x=>document.getElementById('tab-'+x).style.display='none'); document.getElementById('tab-'+id).style.display='block'; }
 function setTabEvid(){ evidCurrentFolder = null; renderEvid(); }
@@ -471,8 +417,6 @@ function updateSyncStatusBox(){
   if (readyEl) readyEl.innerHTML = 'Estado de Drive: ' + (driveStateReady ? '<b style="color:#4ade80">listo ✓</b>' : '<b style="color:#fbbf24">cargando…</b>');
 }
 function driveThumbUrl(fileId, size){ if (!fileId) return ''; return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w' + (size || 1280); }
-
-// ✅ FIX RENDIMIENTO: solo re-renderizar la pestaña visible
 function renderActiveTab(){
   const agenda = document.getElementById('tab-agenda');
   const evid   = document.getElementById('tab-evid');
@@ -482,7 +426,6 @@ function renderActiveTab(){
   if (res    && res.style.display    !== 'none') { renderResumen(); return; }
   renderAgenda();
 }
-
 function migrateVisits(){
   for (const cod in DB.visits){
     const v = DB.visits[cod];
@@ -494,12 +437,10 @@ function migrateVisits(){
     } else if (!v){ DB.visits[cod] = []; }
   }
 }
-
 function getVisits(cod){ const v = DB.visits[cod]; if (!v) return []; if (!Array.isArray(v)) return [v]; return v.filter(x => x && typeof x === 'object'); }
 function ensureVisitsArr(cod){ if (!DB.visits[cod]) DB.visits[cod] = []; if (!Array.isArray(DB.visits[cod])) DB.visits[cod] = [DB.visits[cod]]; DB.visits[cod] = DB.visits[cod].filter(v => v && typeof v === 'object'); return DB.visits[cod]; }
 function getCurrentVisit(cod){ const arr = getVisits(cod); if (!arr.length) return null; const id = editingVisitId[cod]; if (id){ const v = arr.find(x => x.id === id); if (v) return v; } editingVisitId[cod] = arr[arr.length - 1].id; return arr[arr.length - 1]; }
 function getLatestVisit(cod){ const arr = getVisits(cod); return arr.length ? arr[arr.length - 1] : null; }
-
 function newVisit(cod){
   const arr = ensureVisitsArr(cod);
   const last = arr.length ? arr[arr.length - 1] : null;
@@ -516,9 +457,8 @@ function newVisit(cod){
   requestAnimationFrame(() => { setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); });
   toast('✓ Visita nueva — completa los datos');
 }
-
 function deleteVisit(cod, visitId){
-  if (!confirm('¿Eliminar esta VISITA del índice?\n\n⚠ IMPORTANTE:\n• Solo se elimina la visita del listado.\n• Las FOTOS y FIRMAS NO se borran de Google Drive.\n• La carpeta del cliente en Drive queda intacta.\n• Si el cliente no tiene más visitas, aparecerá como "Pendiente".\n\n¿Continuar?')) return;
+  if (!confirm('¿Eliminar esta VISITA del índice?\n\n⚠ IMPORTANTE:\n• Solo se elimina la visita del listado.\n• Las FOTOS y FIRMAS NO se borran de Google Drive.\n• La carpeta del cliente en Drive queda intacta.\n\n¿Continuar?')) return;
   if (!DB.visits[cod] || !Array.isArray(DB.visits[cod])){ toast('⚠ No se pudo encontrar la lista de visitas'); return; }
   const arr = DB.visits[cod];
   const i = arr.findIndex(v => v && v.id === visitId);
@@ -532,11 +472,8 @@ function deleteVisit(cod, visitId){
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
   closeHistorial();
   toast('🗑️ Visita eliminada (fotos en Drive intactas)');
-  if (driveStateReady){
-    syncToCloud(false).then(() => { clearDeletedVisit(visitId); toast('✓ Cambio sincronizado'); }).catch(() => { toast('⚠ Sincronización pendiente'); });
-  }
+  if (driveStateReady){ syncToCloud(false).then(() => { clearDeletedVisit(visitId); toast('✓ Cambio sincronizado'); }).catch(() => { toast('⚠ Sincronización pendiente'); }); }
 }
-
 function switchVisit(cod, visitId){
   editingVisitId[cod] = visitId;
   formsAbiertos.add(cod);
@@ -547,7 +484,6 @@ function switchVisit(cod, visitId){
   if (form) form.classList.add('open');
   requestAnimationFrame(() => { setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); });
 }
-
 function showVisitsHistory(cod){
   const visits = getVisits(cod);
   const cliente = getClientByCode(cod);
@@ -568,12 +504,10 @@ function showVisitsHistory(cod){
   document.getElementById('historialModal').classList.add('open');
 }
 function closeHistorial(){ document.getElementById('historialModal').classList.remove('open'); }
-
 function showDownloadBanner(force){ if (bannerDismissed && !force) return; const b = document.getElementById('downloadBanner'); if (b) b.classList.add('visible'); document.body.classList.add('banner-visible'); updateDownloadBanner(); }
 function hideDownloadBanner(){ const b = document.getElementById('downloadBanner'); if (b) b.classList.remove('visible'); document.body.classList.remove('banner-visible'); }
 function dismissBanner(){ bannerDismissed = true; hideDownloadBanner(); }
-function updateDownloadBanner(){ const textEl = document.getElementById('downloadBannerText'); const progEl = document.getElementById('downloadBannerProgress'); const t = downloadState.total, d = downloadState.done, f = downloadState.failed, p = d + f; if (textEl){ if (f > 0 && downloadState.errors.length){ textEl.textContent = '📥 ' + p + '/' + t; } else { textEl.textContent = '📥 ' + p + '/' + t; } } if (progEl) progEl.style.width = (t > 0 ? Math.round(p / t * 100) : 0) + '%'; }
-
+function updateDownloadBanner(){ const textEl = document.getElementById('downloadBannerText'); const progEl = document.getElementById('downloadBannerProgress'); const t = downloadState.total, d = downloadState.done, f = downloadState.failed, p = d + f; if (textEl){ textEl.textContent = '📥 ' + p + '/' + t; } if (progEl) progEl.style.width = (t > 0 ? Math.round(p / t * 100) : 0) + '%'; }
 function jsonpRequest(url, timeoutMs){ return new Promise((resolve, reject) => { const cbName = 'nocJsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); const script = document.createElement('script'); let done = false; const cleanup = () => { try { delete window[cbName]; } catch(e){ window[cbName] = undefined; } if (script.parentNode) script.parentNode.removeChild(script); }; const timer = setTimeout(() => { if (done) return; done = true; cleanup(); reject(new Error('Timeout JSONP')); }, timeoutMs || 25000); window[cbName] = (data) => { if (done) return; done = true; clearTimeout(timer); cleanup(); resolve(data); }; script.onerror = () => { if (done) return; done = true; clearTimeout(timer); cleanup(); reject(new Error('Error de red (JSONP)')); }; const sep = url.indexOf('?') >= 0 ? '&' : '?'; script.src = url + sep + 'callback=' + cbName; document.head.appendChild(script); }); }
 async function callBackendRead(payload, timeoutMs){
   timeoutMs = timeoutMs || 25000;
@@ -597,11 +531,9 @@ async function testBackend(){ toast('🔬 Probando…'); try { const r = await c
 function buildPhotoFilename(fecha){ const d = fecha ? new Date(fecha) : new Date(); const pad = n => String(n).padStart(2, '0'); const stamp = d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()); const rand = Math.random().toString(36).slice(2, 6); return 'foto_' + stamp + '_' + rand + '.jpg'; }
 function arrayBufferToBase64(buffer){ let binary = ''; const bytes = new Uint8Array(buffer); const chunk = 0x8000; for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk)); return btoa(binary); }
 function hoyYMD(){ const d = new Date(); const pad = n => String(n).padStart(2,'0'); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
-
 async function sendHeartbeat(){ if (!isOnline()) return; try { const res = await callBackendRead({ action: 'heartbeat', deviceId: getDeviceId(), deviceName: getDeviceName(), userName: DB.resp || '' }, 8000); if (res && res.ok){ activeUsersCache = res.devices || []; updateActiveUsersBadge(res.active); } } catch(e){} }
 function updateActiveUsersBadge(count){ const el = document.getElementById('activeUsersBadge'); if (!el) return; if (!count || count <= 0){ el.style.display = 'none'; return; } if (count === 1){ el.textContent = '👤 Solo tú'; } else { el.textContent = '👥 ' + count + ' técnicos'; } el.style.display = 'inline-block'; }
 function showActiveUsersModal(){ const modal = document.getElementById('historialModal'); const title = document.getElementById('historialTitle'); const list = document.getElementById('historialList'); title.textContent = '👥 Técnicos conectados (' + activeUsersCache.length + ')'; list.innerHTML = ''; if (!activeUsersCache.length){ list.innerHTML = '<div class="empty">Nadie más</div>'; } else { activeUsersCache.forEach(u => { const row = document.createElement('div'); row.className = 'card'; row.style.padding = '10px'; row.style.marginBottom = '8px'; row.innerHTML = '<b>📱 ' + (u.name || 'Dispositivo') + '</b>' + (u.user ? '<br><small style="color:var(--muted)">👤 ' + u.user + '</small>' : ''); list.appendChild(row); }); } modal.classList.add('open'); }
-
 async function syncMasterNow(){
   if (!driveStateReady){ toast('⏳ Esperando Drive…'); return; }
   if (syncInProgress){ toast('⏳ Sincronización en curso'); return; }
@@ -609,7 +541,6 @@ async function syncMasterNow(){
   toast('📤 Enviando al Master… (puede tardar 2-3 min)');
   setSyncBadge('📤 Master…','info');
   const updates = collectMasterUpdates();
-  console.log('📊 Enviando', updates.length, 'updates al Master');
   if (updates.length === 0){ toast('⚠ No hay visitas para sincronizar'); setSyncBadge('','info'); syncInProgress = false; return; }
   const startTs = Date.now();
   try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, action: 'updateMasterSheet', updates, mesAnio: DB.month }) }); } catch(e){}
@@ -625,7 +556,6 @@ async function syncMasterNow(){
   }
   syncInProgress = false;
   if (!resultado){ toast('⚠ Timeout'); setSyncBadge('⚠ Timeout','warn'); return; }
-  console.log('📊 Resultado:', resultado);
   if (resultado && resultado.ok){
     const n = resultado.updated || 0;
     if (n === 0){ toast('⚠ 0 filas — ver diagnóstico'); setSyncBadge('⚠ 0 filas','warn'); }
@@ -637,9 +567,7 @@ async function syncMasterNow(){
     if (resultado && resultado.debug){ localStorage.setItem('nocLastMasterDebug', JSON.stringify(resultado.debug)); }
   }
 }
-
 function showLastMasterDebug(){ const raw = localStorage.getItem('nocLastMasterDebug'); const cont = document.getElementById('debugMasterContent'); if (!raw){ cont.textContent = 'Sin diagnóstico previo.'; } else { try { cont.textContent = JSON.stringify(JSON.parse(raw), null, 2); } catch(e){ cont.textContent = raw; } } document.getElementById('debugMasterModal').classList.add('open'); }
-
 function collectMasterUpdates(){
   const updates = [];
   allClients().forEach(c => {
@@ -656,13 +584,15 @@ function collectMasterUpdates(){
   });
   return updates;
 }
-
 function renderMasterInfo(){ const el = document.getElementById('masterInfo'); if (!el) return; const lastSync = localStorage.getItem('nocLastMasterSync'); if (!lastSync){ el.innerHTML = '<span style="color:var(--warn)">⚠ Sin sincronizar</span>'; } else { el.innerHTML = '✓ Sincronizado · ' + new Date(lastSync).toLocaleString('es-VE'); } }
-
 async function syncToCloud(silent){
   if (syncInProgress) return;
   if (!isOnline()){ setSyncBadge('📴 Sin conexión','warn'); return; }
-  if (!driveStateReady){ if (!silent) toast('⏳ Esperando Drive…'); return; }
+  if (!driveStateReady){
+    if (!silent) toast('⏳ Esperando Drive…');
+    setTimeout(() => { if (driveStateReady && !syncInProgress) syncToCloud(silent); }, 8000);
+    return;
+  }
   syncInProgress = true;
   if (!silent) setSyncBadge('☁️ Sincronizando…','info');
   let done = 0, failed = 0;
@@ -685,7 +615,6 @@ async function syncToCloud(silent){
     const indexData = buildIndex();
     const deletions = getDeletionsList();
     const deletedPhotos = getDeletedPhotosList();
-    console.log('📊 Tombstones: ' + deletions.length + ' visitas · ' + deletedPhotos.length + ' fotos');
     const wb = buildStyledWorkbook();
     const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
     const excelBase64 = arrayBufferToBase64(excelBuffer);
@@ -711,7 +640,6 @@ async function syncToCloud(silent){
   } catch(err){ setSyncBadge('⚠ Error','err'); }
   finally { syncInProgress = false; }
 }
-
 function applyRemoteIndex(remote){
   if (!remote || typeof remote !== 'object') return;
   const remoteVisits = remote.visits || {};
@@ -735,11 +663,7 @@ function applyRemoteIndex(remote){
       if (deletedPhotosSet.has(cod + '|' + p.filename)) continue;
       const ex = map[p.filename];
       if (!ex) map[p.filename] = p;
-      else {
-        const merged = Object.assign({}, ex, p);
-        if (!p.visitId && ex.visitId) merged.visitId = ex.visitId;
-        map[p.filename] = merged;
-      }
+      else { const merged = Object.assign({}, ex, p); if (!p.visitId && ex.visitId) merged.visitId = ex.visitId; map[p.filename] = merged; }
     }
     DB.photos[cod] = Object.values(map);
   }
@@ -751,10 +675,8 @@ function applyRemoteIndex(remote){
   if (remote.comp) DB.comp = remote.comp;
   sanitizeDB(); renderActiveTab();
 }
-
 async function pollForUpdates(){ if (!isOnline() || syncInProgress || !driveStateReady) return; if (document.hidden) return; try { const meta = await callBackendRead({ action:'getIndexMeta' }, 8000); if (!meta || !meta.ok || !meta.exists) return; if (lastKnownRemoteTs === null){ lastKnownRemoteTs = meta.updatedAt; return; } if (meta.updatedAt !== lastKnownRemoteTs){ lastKnownRemoteTs = meta.updatedAt; if (meta.lastWriter === getDeviceId()) return; toast('🔄 Actualización de ' + (meta.lastWriter || 'otro')); await loadFromCloud(); } } catch(e){} }
 setInterval(pollForUpdates, 30000);
-
 function collectPendingUploads(){
   const items = [];
   for (const codigo in DB.photos){ const cliente = getClientByCode(codigo); const nombreCliente = cliente ? cliente.nombre : ('Cliente ' + codigo); const arr = safeArray(DB.photos[codigo]); for (const p of arr) if (p.data && !p.synced && p.filename) items.push({ codigo: String(codigo).trim(), nombre: nombreCliente, fechaVisita: p.fechaVisita || hoyYMD(), filename: p.filename, mime:'image/jpeg', base64: p.data.split(',')[1], ref: p }); }
@@ -762,7 +684,6 @@ function collectPendingUploads(){
   const sup = DB.evid['super_sig']; if (sup && typeof sup === 'object' && sup.data && !sup.synced && sup.filename) items.push({ codigo:'_supervisor', nombre:'Supervisor NOC', fechaVisita: hoyYMD(), filename: sup.filename, mime:'image/png', base64: sup.data.split(',')[1], ref: sup });
   return items;
 }
-
 function buildIndex(){
   const photosMeta = {};
   for (const codigo in DB.photos) photosMeta[codigo] = safeArray(DB.photos[codigo]).map(p => ({ filename: p.filename, fecha: p.fecha || '', fechaVisita: p.fechaVisita || '', visitId: p.visitId || null, fileId: p.fileId || null }));
@@ -774,53 +695,71 @@ function buildIndex(){
   return { version: 10, month: DB.month, resp: DB.resp, comp: DB.comp, autoSync: DB.autoSync, visits: visitsSerializable, customClients: DB.customClients, hiddenClients: DB.hiddenClients, photosMeta, evidMeta, updatedAt: new Date().toISOString() };
 }
 function setSyncProgress(pct){ const el = document.getElementById('syncProgress'); if (el) el.style.width = pct + '%'; }
-
 async function loadFromCloud(){
-  if (!isOnline()){ driveStateReady = true; setSyncBadge('📴 Sin conexión','warn'); return false; }
+  if (!isOnline()){ driveStateReady = true; setSyncBadge('📴 Sin conexión','warn'); updateSyncStatusBox(); return false; }
   setSyncBadge('📥 Cargando Drive…','info');
-  let res;
-  try { res = await callBackendRead({ action:'getIndex' }, 30000); } catch(err){ setSyncBadge('⚠ Error red','err'); driveStateReady = true; return false; }
+  updateSyncStatusBox();
+  const timeoutGlobal = setTimeout(() => {
+    if (!driveStateReady){
+      console.warn('⏱ loadFromCloud: timeout global 90s');
+      driveStateReady = true;
+      setSyncBadge('⚠ Drive lento','warn');
+      updateSyncStatusBox();
+      toast('⚠ Drive tardó demasiado — usando datos locales');
+    }
+  }, 90000);
+  let res = null;
+  try { res = await callBackendRead({ action:'getIndex' }, 80000); }
+  catch(err){ clearTimeout(timeoutGlobal); console.error('loadFromCloud error:', err); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
+  clearTimeout(timeoutGlobal);
   if (!res || !res.ok){
-    if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); return false; }
-    setSyncBadge('⚠ Error','err'); driveStateReady = true; return false;
+    if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); updateSyncStatusBox(); return false; }
+    setSyncBadge('⚠ ' + (res && res.error ? String(res.error).slice(0,25) : 'sin respuesta'),'err');
+    driveStateReady = true;
+    updateSyncStatusBox();
+    return false;
   }
   let remote;
-  try { remote = JSON.parse(res.content); } catch(e){ driveStateReady = true; return false; }
-  if (!remote || typeof remote !== 'object'){ driveStateReady = true; return false; }
+  try { remote = JSON.parse(res.content); }
+  catch(e){ driveStateReady = true; setSyncBadge('⚠ Error JSON','err'); updateSyncStatusBox(); return false; }
+  if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('⚠ Formato inválido','warn'); updateSyncStatusBox(); return false; }
   const remoteHasData = (remote.visits && Object.keys(remote.visits).length > 0) || (remote.photosMeta && Object.keys(remote.photosMeta).length > 0);
   const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
-  if (!remoteHasData && localHasData){ driveStateReady = true; toast('⚠ Drive vacío — tus datos locales se conservan'); return false; }
+  if (!remoteHasData && localHasData){ driveStateReady = true; toast('⚠ Drive vacío — tus datos locales se conservan'); setSyncBadge('⚠ Drive vacío','warn'); updateSyncStatusBox(); return false; }
   try {
     applyRemoteIndex(remote);
     lastKnownRemoteTs = remote.updatedAt || new Date().toISOString();
     migrateVisits();
     sanitizeDB();
     await saveLocal();
-    clearDirty();
     localStorage.setItem('nocLastSync', new Date().toISOString());
     renderActiveTab();
     driveStateReady = true;
     setSyncBadge('✓ Drive cargado','ok');
     toast('✓ Datos cargados de Drive');
     updateSyncStatusBox();
-    if (isDirty()) setTimeout(() => syncToCloud(true), 2000);
+    setTimeout(() => {
+      if (!driveStateReady) return;
+      const hayPendientes = isDirty() || collectPendingUploads().length > 0;
+      if (hayPendientes){ console.log('📤 Flush post-Drive'); syncToCloud(true); }
+    }, 5000);
     return true;
   } catch (criticalError){
     driveStateReady = true;
     console.error('❌ Error procesando Drive:', criticalError);
     const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
     toast('⚠ Drive: ' + detalle.slice(0,80));
+    setSyncBadge('⚠ Error','err');
+    updateSyncStatusBox();
     try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, stack: (criticalError && criticalError.stack) || '', ts: new Date().toISOString() })); } catch(e){}
     return false;
   }
 }
-
 async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
 async function forceSyncNow(){ if (!driveStateReady){ if (!confirm('⚠ Drive NO se ha cargado. ¿Continuar?')) return; driveStateReady = true; } markDirty(); await syncToCloud(false); }
 async function reorganizeDrive(){ if (!confirm('¿Reorganizar carpetas y fechas en Drive?')) return; const clientesMap = {}; allClients().forEach(c => { clientesMap[String(c.codigo).trim()] = c.nombre; }); clientesMap['_supervisor'] = 'Supervisor NOC'; toast('🗂️ Reorganizando…'); try { await callBackendWrite({ action:'reorganizeAll', clientesMap }); await new Promise(r => setTimeout(r, 3000)); await callBackendWrite({ action:'fixDates', index: JSON.stringify(buildIndex()) }); await new Promise(r => setTimeout(r, 3000)); await loadFromCloud(); toast('✓ Reorganización completa'); } catch(err){ toast('⚠ ' + err.message); } }
 async function rescanDriveNow(){ if (!confirm('¿Escanear Drive y agregar fotos nuevas al índice?')) return; toast('🔍 Escaneando…'); try { await callBackendWrite({ action: 'rescanDrivePhotos' }); await new Promise(r => setTimeout(r, 5000)); if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; await loadFromCloud(); toast('✓ Índice reconstruido'); } catch(err){ toast('⚠ ' + err.message); } }
 async function cleanOrphanPhotos(){ if (!confirm('¿Limpiar fotos huérfanas?')) return; try { await callBackendWrite({ action:'cleanOrphans' }); await new Promise(r => setTimeout(r, 3000)); await loadFromCloud(); toast('✓ Limpiado'); } catch(err){ toast('⚠ ' + err.message); } }
-
 async function fetchFileId(codigo, filename, itemRef){ if (!itemRef) throw new Error('Ref inválida'); const fecha = itemRef.fechaVisita || ''; const res = await callBackendRead({ action:'getFileId', codigo, filename, fecha }, 15000); if (!res) throw new Error('Sin respuesta'); if (!res.ok) throw new Error(res.error || 'Error'); if (!res.fileId) throw new Error('Sin fileId'); itemRef.fileId = res.fileId; if (itemRef.synced) delete itemRef.data; return res.fileId; }
 async function downloadAllPending(silent){
   if (downloadState.active){ if (!silent) toast('Ya procesando'); return; }
@@ -840,27 +779,16 @@ async function downloadAllPending(silent){
 }
 async function downloadAllPhotos(){ await downloadAllPending(false); }
 async function downloadOne(codigo, filename, ev){ if (ev) ev.stopPropagation(); let itemRef = null; if (codigo === '_supervisor') itemRef = DB.evid['super_sig']; else { const lista = safeArray(DB.photos[codigo], true); itemRef = lista.find(p => p && p.filename === filename); if (!itemRef){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; for (const v of arr){ if (v && v.firma && typeof v.firma === 'object' && v.firma.filename === filename){ itemRef = v.firma; break; } } } } if (!itemRef){ toast('⚠ No encontrado'); return; } try { await fetchFileId(codigo, filename, itemRef); await saveLocal(); toast('✓ Lista'); if (evidCurrentFolder) renderEvidFolderContent(evidCurrentFolder); renderEvid(); } catch(err){ toast('⚠ ' + err.message); } }
-
 function allClients(){ const hidden = new Set(DB.hiddenClients || []); return CLIENTES.filter(c => !hidden.has(c.codigo)).concat(DB.customClients || []); }
 function statusClass(e){ return e === 'Realizada' ? 'r' : e === 'Pendiente' ? 'p' : e === 'No Realizada' ? 'n' : 's'; }
 function getClientByCode(cod){ const c = (DB.customClients || []).find(x => String(x.codigo).trim() === String(cod).trim()); if (c) return c; return CLIENTES.find(x => String(x.codigo).trim() === String(cod).trim()) || null; }
-
 function detectarFechaBusqueda(q){
   if (!q) return null;
   const s = String(q).trim();
   let m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-  if (m){
-    const y = m[1], mo = String(m[2]).padStart(2,'0'), d = String(m[3]).padStart(2,'0');
-    if (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) return y + '-' + mo + '-' + d;
-  }
+  if (m){ const y = m[1], mo = String(m[2]).padStart(2,'0'), d = String(m[3]).padStart(2,'0'); if (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) return y + '-' + mo + '-' + d; }
   m = s.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?$/);
-  if (m){
-    const d = String(m[1]).padStart(2,'0');
-    const mo = String(m[2]).padStart(2,'0');
-    let y = m[3] || String(new Date().getFullYear());
-    if (y.length === 2) y = '20' + y;
-    if (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) return y + '-' + mo + '-' + d;
-  }
+  if (m){ const d = String(m[1]).padStart(2,'0'); const mo = String(m[2]).padStart(2,'0'); let y = m[3] || String(new Date().getFullYear()); if (y.length === 2) y = '20' + y; if (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) return y + '-' + mo + '-' + d; }
   return null;
 }
 function clientesConVisitaEnFecha(fechaISO){
@@ -868,54 +796,27 @@ function clientesConVisitaEnFecha(fechaISO){
   if (!fechaISO) return set;
   const parts = fechaISO.split('-');
   const sufijo = '-' + parts[1] + '-' + parts[2];
-  for (const cod in DB.visits){
-    const arr = getVisits(cod);
-    for (const v of arr){
-      if (!v || !v.fecha) continue;
-      if (v.fecha === fechaISO || v.fecha.endsWith(sufijo)){
-        set.add(String(cod).trim());
-        break;
-      }
-    }
-  }
+  for (const cod in DB.visits){ const arr = getVisits(cod); for (const v of arr){ if (!v || !v.fecha) continue; if (v.fecha === fechaISO || v.fecha.endsWith(sufijo)){ set.add(String(cod).trim()); break; } } }
   return set;
 }
-
 function renderAgenda(){
   const q = (document.getElementById('search').value || '').toLowerCase();
   const list = document.getElementById('clientList');
   const scrollY = window.scrollY;
   const focusedId = document.activeElement ? document.activeElement.id : '';
   let focusedVal = null, focusedSelStart = null, focusedSelEnd = null;
-  if (focusedId){
-    const elF = document.getElementById(focusedId);
-    if (elF && ('value' in elF)){
-      focusedVal = elF.value;
-      if ('selectionStart' in elF){ focusedSelStart = elF.selectionStart; focusedSelEnd = elF.selectionEnd; }
-    }
-  }
+  if (focusedId){ const elF = document.getElementById(focusedId); if (elF && ('value' in elF)){ focusedVal = elF.value; if ('selectionStart' in elF){ focusedSelStart = elF.selectionStart; focusedSelEnd = elF.selectionEnd; } } }
   list.innerHTML = '';
-
   const fechaFiltro = q ? detectarFechaBusqueda(q) : null;
   const setConVisitaFecha = fechaFiltro ? clientesConVisitaEnFecha(fechaFiltro) : null;
-
   const chipId = 'filtroFechaChip';
   let chip = document.getElementById(chipId);
   if (fechaFiltro){
-    if (!chip){
-      chip = document.createElement('div');
-      chip.id = chipId;
-      chip.style.cssText = 'background:rgba(56,189,248,.15);border:1px solid var(--accent);color:var(--accent);padding:8px 12px;border-radius:10px;font-size:.78rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between';
-      list.parentNode.insertBefore(chip, list);
-    }
+    if (!chip){ chip = document.createElement('div'); chip.id = chipId; chip.style.cssText = 'background:rgba(56,189,248,.15);border:1px solid var(--accent);color:var(--accent);padding:8px 12px;border-radius:10px;font-size:.78rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between'; list.parentNode.insertBefore(chip, list); }
     const n = setConVisitaFecha.size;
-    chip.innerHTML = '<span>🗓️ Filtrando por fecha: <b>' + fechaFiltro.split('-').reverse().join('/') + '</b> · ' + n + ' cliente(s)</span>' +
-      '<button onclick="document.getElementById(\'search\').value=\'\';onSearchInput();" style="background:transparent;border:none;color:var(--accent);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
+    chip.innerHTML = '<span>🗓️ Filtrando por fecha: <b>' + fechaFiltro.split('-').reverse().join('/') + '</b> · ' + n + ' cliente(s)</span><button onclick="document.getElementById(\'search\').value=\'\';onSearchInput();" style="background:transparent;border:none;color:var(--accent);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
     chip.style.display = 'flex';
-  } else if (chip){
-    chip.style.display = 'none';
-  }
-
+  } else if (chip){ chip.style.display = 'none'; }
   allClients().filter(c => {
     if (!q) return true;
     if (setConVisitaFecha !== null) return setConVisitaFecha.has(String(c.codigo).trim());
@@ -974,19 +875,9 @@ function renderAgenda(){
   document.querySelectorAll('.form.open').forEach(f => { const cid = f.id.replace('form-', ''); requestAnimationFrame(() => setTimeout(() => initSig('sig-' + cid), 80)); });
   requestAnimationFrame(() => {
     window.scrollTo(0, scrollY);
-    if (focusedId){
-      const el2 = document.getElementById(focusedId);
-      if (el2 && ('value' in el2)){
-        if (focusedVal !== null) el2.value = focusedVal;
-        if (focusedSelStart !== null && 'setSelectionRange' in el2){
-          try { el2.setSelectionRange(focusedSelStart, focusedSelEnd); } catch(e){}
-        }
-        el2.focus({ preventScroll: true });
-      }
-    }
+    if (focusedId){ const el2 = document.getElementById(focusedId); if (el2 && ('value' in el2)){ if (focusedVal !== null) el2.value = focusedVal; if (focusedSelStart !== null && 'setSelectionRange' in el2){ try { el2.setSelectionRange(focusedSelStart, focusedSelEnd); } catch(e){} } el2.focus({ preventScroll: true }); } }
   });
 }
-
 let obsTimer = {};
 function onObsInput(cod, value){
   const v = getCurrentVisit(cod);
@@ -994,26 +885,14 @@ function onObsInput(cod, value){
   v.obs = value;
   v.updatedAt = new Date().toISOString();
   if (obsTimer[cod]) clearTimeout(obsTimer[cod]);
-  obsTimer[cod] = setTimeout(() => {
-    saveLocal();
-    markDirty();
-  }, 800);
+  obsTimer[cod] = setTimeout(() => { saveLocal(); markDirty(); }, 800);
   formsAbiertos.add(cod);
 }
-
 function toggleDay(cod, di){ const v = getCurrentVisit(cod) || getLatestVisit(cod); if (!v){ toast('⚠ Crea una visita primero'); return; } v.days = v.days || []; const i = v.days.indexOf(di); if (i >= 0) v.days.splice(i, 1); else v.days.push(di); v.updatedAt = new Date().toISOString(); const scrollY = window.scrollY; save(); renderAgenda(); requestAnimationFrame(() => window.scrollTo(0, scrollY)); }
-function toggleForm(cod){
-  const f = document.getElementById('form-' + cod);
-  const vaAbrir = !f.classList.contains('open');
-  const scrollY = window.scrollY;
-  f.classList.toggle('open');
-  if (vaAbrir) formsAbiertos.add(cod); else formsAbiertos.delete(cod);
-  if (vaAbrir){ requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); }); }
-}
+function toggleForm(cod){ const f = document.getElementById('form-' + cod); const vaAbrir = !f.classList.contains('open'); const scrollY = window.scrollY; f.classList.toggle('open'); if (vaAbrir) formsAbiertos.add(cod); else formsAbiertos.delete(cod); if (vaAbrir){ requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); }); } }
 function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; v.fecha = document.getElementById('f-' + cod).value; v.hora = document.getElementById('h-' + cod).value; v.estado = document.getElementById('e-' + cod).value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
 function addClient(){ const cod = document.getElementById('ncCodigo').value.trim(); const nom = document.getElementById('ncNombre').value.trim(); const dir = document.getElementById('ncDir').value.trim(); if (!cod || !nom){ toast('⚠ Código y nombre obligatorios'); return; } if (allClients().some(c => c.codigo === cod)){ toast('⚠ Ya existe'); return; } DB.customClients.push({ codigo: cod, nombre: nom, direccion: dir || '—', custom: true }); DB.visits[cod] = []; save(); document.getElementById('ncCodigo').value = ''; document.getElementById('ncNombre').value = ''; document.getElementById('ncDir').value = ''; document.getElementById('addClientForm').style.display = 'none'; document.getElementById('addClientBtn').style.display = 'block'; renderAgenda(); toast('✓ Cliente agregado'); }
 function delClient(cod){ if (!confirm('¿Quitar este cliente?')) return; DB.customClients = DB.customClients.filter(c => c.codigo !== cod); delete DB.visits[cod]; delete DB.photos[cod]; callBackendWrite({ action:'deleteClientPhotos', codigo: cod }).catch(()=>{}); save(); renderAgenda(); toast('Cliente eliminado'); }
-
 function editClient(cod){
   const c = getClientByCode(cod);
   if (!c){ toast('⚠ Cliente no encontrado'); return; }
@@ -1023,7 +902,6 @@ function editClient(cod){
   document.getElementById('ecDir').value = c.direccion || '';
   document.getElementById('editClientModal').classList.add('open');
 }
-
 async function saveClientEdit(){
   const oldCod = document.getElementById('ecCodigoOld').value.trim();
   const newCod = document.getElementById('ecCodigo').value.trim();
@@ -1031,18 +909,10 @@ async function saveClientEdit(){
   const newDir = document.getElementById('ecDir').value.trim();
   if (!newCod || !newNom){ toast('⚠ Código y nombre son obligatorios'); return; }
   const cambioCodigo = (newCod !== oldCod);
-
   if (cambioCodigo){
-    const clienteExistente = allClients().find(x =>
-      String(x.codigo).trim() === newCod &&
-      String(x.codigo).trim() !== oldCod
-    );
-    if (clienteExistente){
-      alert('⛔ CAMBIO BLOQUEADO\n\nEl código "' + newCod + '" ya está asignado a:\n  → "' + clienteExistente.nombre + '"\n\nSi cambias el código, se MEZCLARÍAN los datos de ambos clientes.\n\nSoluciones:\n1. Usa un código NUEVO (que no exista).\n2. Edita el otro cliente primero y asígnale otro código.\n3. Elimina el otro cliente antes de continuar.');
-      return;
-    }
+    const clienteExistente = allClients().find(x => String(x.codigo).trim() === newCod && String(x.codigo).trim() !== oldCod);
+    if (clienteExistente){ alert('⛔ CAMBIO BLOQUEADO\n\nEl código "' + newCod + '" ya está asignado a:\n  → "' + clienteExistente.nombre + '"\n\nUsa un código NUEVO.'); return; }
   }
-
   if (cambioCodigo){
     const oldVisits = DB.visits[oldCod] || [];
     if (!DB.visits[newCod]) DB.visits[newCod] = [];
@@ -1054,11 +924,8 @@ async function saveClientEdit(){
     delete DB.photos[oldCod];
   }
   const isCustom = (DB.customClients || []).find(c => String(c.codigo).trim() === oldCod);
-  if (isCustom){
-    isCustom.codigo = newCod;
-    isCustom.nombre = newNom;
-    isCustom.direccion = newDir || '—';
-  } else {
+  if (isCustom){ isCustom.codigo = newCod; isCustom.nombre = newNom; isCustom.direccion = newDir || '—'; }
+  else {
     if (!DB.hiddenClients.includes(oldCod)) DB.hiddenClients.push(oldCod);
     const dup = (DB.customClients || []).find(c => String(c.codigo).trim() === newCod);
     if (dup){ dup.nombre = newNom; dup.direccion = newDir || '—'; }
@@ -1070,52 +937,20 @@ async function saveClientEdit(){
   toast('✓ Cliente actualizado');
   if (DB.autoSync === 'on') scheduleSync();
 }
-
 function diagnosticarIds(){
   const lineas = [];
   lineas.push('=== DIAGNÓSTICO DE IDs ===');
-  lineas.push('');
-  lineas.push('--- Clientes estáticos ---');
-  CLIENTES.forEach(c => {
-    if (c.codigo === '2881' || c.codigo === '002881' || c.codigo === '16102'){
-      const vis = getVisits(c.codigo).length;
-      const fot = safeArray(DB.photos[c.codigo]).length;
-      lineas.push(`#${c.codigo} "${c.nombre}" | ${vis} visitas | ${fot} fotos`);
-    }
-  });
-  lineas.push('');
-  lineas.push('--- Clientes custom ---');
-  (DB.customClients || []).forEach(c => {
-    if (c.codigo === '2881' || c.codigo === '002881' || c.codigo === '16102'){
-      const vis = getVisits(c.codigo).length;
-      const fot = safeArray(DB.photos[c.codigo]).length;
-      lineas.push(`#${c.codigo} "${c.nombre}" | ${vis} visitas | ${fot} fotos`);
-    }
-  });
-  lineas.push('');
-  lineas.push('--- Ocultos ---');
-  lineas.push(JSON.stringify(DB.hiddenClients || []));
-  lineas.push('');
-  lineas.push('--- Tombstones de fotos pendientes ---');
-  const tp = getDeletedPhotosList();
-  lineas.push(tp.length ? tp.join('\n') : '(ninguno)');
-  lineas.push('');
-  lineas.push('--- TODOS los códigos con datos ---');
   const codigos = new Set([...Object.keys(DB.visits||{}), ...Object.keys(DB.photos||{})]);
   codigos.forEach(c => {
     const vis = (DB.visits[c] || []).length;
     const fot = (DB.photos[c] || []).length;
-    if (vis > 0 || fot > 0){
-      const cli = getClientByCode(c);
-      lineas.push(`#${c} "${cli ? cli.nombre : '(no encontrado)'}" | ${vis} visitas | ${fot} fotos`);
-    }
+    if (vis > 0 || fot > 0){ const cli = getClientByCode(c); lineas.push(`#${c} "${cli ? cli.nombre : '(no encontrado)'}" | ${vis} visitas | ${fot} fotos`); }
   });
   const texto = lineas.join('\n');
   console.log(texto);
   document.getElementById('debugMasterContent').textContent = texto;
   document.getElementById('debugMasterModal').classList.add('open');
 }
-
 function openRepairModal(){
   const opts = allClients().map(c => `<option value="${c.codigo}">#${c.codigo} — ${c.nombre}</option>`).join('');
   document.getElementById('rpOrigen').innerHTML = opts;
@@ -1124,44 +959,32 @@ function openRepairModal(){
   document.getElementById('repairModal').classList.add('open');
 }
 function closeRepairModal(){ document.getElementById('repairModal').classList.remove('open'); }
-function onRepairDestChange(){
-  const v = document.getElementById('rpDestino').value;
-  document.getElementById('rpNewCodeWrap').style.display = (v === '__new') ? 'block' : 'none';
-}
+function onRepairDestChange(){ const v = document.getElementById('rpDestino').value; document.getElementById('rpNewCodeWrap').style.display = (v === '__new') ? 'block' : 'none'; }
 async function ejecutarRepararID(){
   const origen = document.getElementById('rpOrigen').value;
   let destino = document.getElementById('rpDestino').value;
-  if (destino === '__new'){
-    destino = document.getElementById('rpNewCode').value.trim();
-    if (!destino){ toast('⚠ Escribe el código nuevo'); return; }
-  }
+  if (destino === '__new'){ destino = document.getElementById('rpNewCode').value.trim(); if (!destino){ toast('⚠ Escribe el código nuevo'); return; } }
   if (!origen){ toast('⚠ Elige el cliente origen'); return; }
   if (String(origen).trim() === String(destino).trim()){ toast('⚠ Origen y destino deben ser distintos'); return; }
   const clienteOrigen = getClientByCode(origen);
   const clienteDestino = getClientByCode(destino);
-  if (!confirm('🛠️ REPARAR ID\n\nSe moverán TODAS las visitas y fotos de:\n  #' + origen + ' "' + (clienteOrigen ? clienteOrigen.nombre : '?') + '"\n\nBajo el código:\n  #' + destino + (clienteDestino ? ' "' + clienteDestino.nombre + '"' : ' (cliente nuevo)') + '\n\n• Las fotos del código origen se marcarán como eliminadas (papelera en Drive).\n• El cliente origen se ocultará de la agenda.\n\n¿Continuar?')) return;
-
+  if (!confirm('🛠️ REPARAR ID\n\nSe moverán TODAS las visitas y fotos de:\n  #' + origen + ' "' + (clienteOrigen ? clienteOrigen.nombre : '?') + '"\n\nBajo el código:\n  #' + destino + (clienteDestino ? ' "' + clienteDestino.nombre + '"' : ' (cliente nuevo)') + '\n\n¿Continuar?')) return;
   const visitas = (DB.visits[origen] || []).slice();
   const fotos = (DB.photos[origen] || []).slice();
-
   if (!DB.visits[destino]) DB.visits[destino] = [];
   if (!Array.isArray(DB.visits[destino])) DB.visits[destino] = [DB.visits[destino]];
   const byId = {};
   DB.visits[destino].forEach(v => { if (v && v.id) byId[v.id] = v; });
   visitas.forEach(v => { if (v && v.id) byId[v.id] = v; });
   DB.visits[destino] = Object.values(byId);
-
   if (!DB.photos[destino]) DB.photos[destino] = [];
   const byFN = {};
   DB.photos[destino].forEach(p => { if (p && p.filename) byFN[p.filename] = p; });
   fotos.forEach(p => { if (p && p.filename) byFN[p.filename] = p; });
   DB.photos[destino] = Object.values(byFN);
-
   fotos.forEach(p => { if (p && p.filename) markPhotoDeleted(origen, p.filename); });
-
   delete DB.visits[origen];
   delete DB.photos[origen];
-
   if (!clienteDestino){
     const base = CLIENTES.find(x => String(x.codigo).trim() === String(destino).trim());
     const nombre = base ? base.nombre : (clienteOrigen ? clienteOrigen.nombre : ('Cliente ' + destino));
@@ -1172,14 +995,11 @@ async function ejecutarRepararID(){
   const esCustomOrigen = (DB.customClients || []).find(c => String(c.codigo).trim() === String(origen).trim());
   if (esCustomOrigen){ DB.customClients = DB.customClients.filter(c => String(c.codigo).trim() !== String(origen).trim()); }
   else if (!DB.hiddenClients.includes(origen)) DB.hiddenClients.push(origen);
-
   await save();
   renderAgenda(); renderEvid(); renderResumen();
   closeRepairModal();
   toast('✓ Reparado: #' + origen + ' → #' + destino);
-  setTimeout(diagnosticarIds, 400);
 }
-
 const sigData = {};
 function initSig(id){
   const c = document.getElementById(id);
@@ -1218,7 +1038,6 @@ function initSig(id){
   if (firmaData){ const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, c.width, c.height); img.src = firmaData; }
 }
 function clearSig(id){ const c = document.getElementById(id); if (c){ c.getContext('2d').clearRect(0, 0, c.width, c.height); delete sigData[id]; } if (id === 'sigSuper'){ delete DB.evid['super_sig']; save(); } else if (id.startsWith('sig-')){ const cod = id.replace('sig-',''); const v = getCurrentVisit(cod); if (v) delete v.firma; save(); renderAgenda(); } }
-
 function addPhotos(cod, input){
   const v = getCurrentVisit(cod);
   const fechaVisita = v && v.fecha ? v.fecha : hoyYMD();
@@ -1280,7 +1099,6 @@ function delPhoto(cod, i){
   save(); renderPhotos(cod); renderAgenda();
   toast('🗑️ Foto enviada a papelera');
 }
-
 function guardarVisita(cod, nombre){
   const v = getCurrentVisit(cod);
   if (!v){ toast('⚠ No hay visita activa'); return; }
@@ -1303,7 +1121,6 @@ function guardarVisita(cod, nombre){
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
 }
 function updatePhotoReq(cod){ const el = document.getElementById('photoReq-' + cod); if (el){ const v = getCurrentVisit(cod); el.style.display = (v && v.estado === 'Realizada') ? 'inline' : 'none'; } }
-
 function renderEvid(){
   const foldersView = document.getElementById('evidFoldersView');
   const folderView = document.getElementById('evidFolderView');
@@ -1343,7 +1160,6 @@ function renderEvid(){
 }
 function openEvidFolder(codigo){ evidCurrentFolder = codigo; renderEvid(); window.scrollTo({ top:0, behavior:'smooth' }); }
 function closeEvidFolder(){ evidCurrentFolder = null; renderEvid(); }
-
 function renderEvidFolderContent(codigo){
   const client = getClientByCode(codigo);
   const nombre = client ? client.nombre : (codigo === '_supervisor' ? 'Supervisor NOC' : codigo);
@@ -1386,7 +1202,6 @@ function renderEvidFolderContent(codigo){
   });
   document.getElementById('evidFolderEmpty').style.display = totalArchivos ? 'none' : 'block';
 }
-
 function openLightbox(index){
   if (!lightboxItems.length) return;
   lightboxIndex = Math.max(0, Math.min(index, lightboxItems.length - 1));
@@ -1414,7 +1229,6 @@ function lightboxNav(dir){
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') lightboxNav(-1); if (e.key === 'ArrowRight') lightboxNav(1); });
 document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
-
 function renderResumen(){
   let r=0,p=0,n=0,s=0,ev=0; const dayCount=[0,0,0,0,0,0,0];
   allClients().forEach(c => {
@@ -1444,7 +1258,6 @@ function renderResumen(){
   renderMasterStats();
 }
 function updateStorageInfo(){ let bytes = 0; try{ bytes = (JSON.stringify(DB) || '').length; }catch(e){} const el = document.getElementById('storageInfo'); if (el) el.innerHTML = '📦 Local: <b style="color:var(--accent)">' + (bytes/1048576).toFixed(1) + ' MB</b>'; }
-
 function buildEvidenciasRows(){
   const rows = []; let n = 0;
   allClients().forEach(c => {
@@ -1461,21 +1274,17 @@ function buildStyledWorkbook(){
   const clients = allClients(); const allRows = [];
   clients.forEach(c => { const arr = getVisits(c.codigo); if (arr.length === 0){ allRows.push({ cliente: c, visit: null }); } else { arr.forEach(v => allRows.push({ cliente: c, visit: v })); } });
   const N = allRows.length; const lastRow = 4 + N;
-
   const col = {titleBg:'1F4E79',titleFg:'FFFFFF',zonaBg:'00B050',zonaFg:'FFFFFF',instrBg:'FFF2CC',instrFg:'1F4E79',secClienteBg:'2E75B6',secDiaBg:'BF8F00',secRegistroBg:'548235',headBg:'2E75B6',headFg:'FFFFFF',dayBg:'FFE699',dayFg:'7F6000',border:'808080',realBg:'C6EFCE',realFg:'006100',pendBg:'FFEB9C',pendFg:'9C6500',nreBg:'FFC7CE',nreFg:'9C0006',posBg:'D9D9D9',posFg:'333333',altBg:'F2F7FB',codeBg:'DDEBF7',zonaRowBg:'E2EFDA'};
   const bd = () => ({top:{style:'thin',color:{rgb:col.border}},bottom:{style:'thin',color:{rgb:col.border}},left:{style:'thin',color:{rgb:col.border}},right:{style:'thin',color:{rgb:col.border}}});
   const fill  = rgb => ({ patternType:'solid', fgColor:{rgb} });
   const center= { horizontal:'center', vertical:'center', wrapText:true };
   const left  = { horizontal:'left',   vertical:'center', wrapText:true };
-
   const wb = XLSX.utils.book_new();
-
   const A = [];
   const r1 = new Array(18).fill(''); r1[0]='AGENDA DE VISITAS — NOC NIVEL 2'; r1[4]='ZONA WIFI'; A.push(r1);
-  const r2 = new Array(18).fill(''); r2[0]='INSTRUCCIONES: ① Marca con "X" el día programado. ② Al realizar la visita registra FECHA y HORA, elige el ESTADO, escribe OBSERVACIONES y toma la FIRMA del cliente (opcional). ③ Fotos en Drive → "fotos/[código]_[nombre]/[fecha-visita]/".'; A.push(r2);
+  const r2 = new Array(18).fill(''); r2[0]='INSTRUCCIONES: Marca con "X" el día programado. Registra FECHA, HORA, ESTADO, OBSERVACIONES y FIRMA. Fotos en Drive → "fotos/[código]_[nombre]/[fecha-visita]/".'; A.push(r2);
   const r3 = new Array(18).fill(''); r3[0]='DATOS DEL CLIENTE'; r3[5]='DÍA PROGRAMADO DE VISITA'; r3[12]='REGISTRO DE VISITA REALIZADA'; A.push(r3);
   A.push(['Nº','CÓDIGO','CLIENTE / RAZÓN SOCIAL','DIRECCIÓN','ZONA','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO','DOMINGO','FECHA DE VISITA','HORA','ESTADO','OBSERVACIONES DE LA VISITA','FIRMA DEL CLIENTE','Nº EVIDENCIAS']);
-
   allRows.forEach((r, i) => {
     const c = r.cliente; const v = r.visit;
     const days = v ? (v.days || []) : [];
@@ -1485,12 +1294,10 @@ function buildStyledWorkbook(){
     row.push(v ? (v.fecha || '') : '', v ? (v.hora || '') : '', v ? (v.estado || 'Pendiente') : 'Pendiente', v ? (v.obs || '') : '', (v && v.firma && (v.firma.fileId || v.firma.data)) ? 'Sí' : '', nEv);
     A.push(row);
   });
-
   const wsA = XLSX.utils.aoa_to_sheet(A);
   wsA['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:0,c:4},e:{r:0,c:17}},{s:{r:1,c:0},e:{r:1,c:17}},{s:{r:2,c:0},e:{r:2,c:4}},{s:{r:2,c:5},e:{r:2,c:11}},{s:{r:2,c:12},e:{r:2,c:17}}];
   wsA['!cols'] = [{wch:4},{wch:10},{wch:36},{wch:45},{wch:11},{wch:7},{wch:7},{wch:10},{wch:7},{wch:7},{wch:7},{wch:8},{wch:13},{wch:8},{wch:13},{wch:38},{wch:14},{wch:11}];
   wsA['!rows'] = [{hpt:30},{hpt:42},{hpt:22},{hpt:32}];
-
   for (let R = 0; R < lastRow; R++){
     for (let Cc = 0; Cc < 18; Cc++){
       const addr = XLSX.utils.encode_cell({r:R,c:Cc});
@@ -1500,27 +1307,16 @@ function buildStyledWorkbook(){
         if (Cc < 4){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:col.titleFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
         else { cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'right', vertical:'center'}; }
         cell.s.border = bd();
-      } else if (R === 1){
-        cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center', wrapText:true}; cell.s.border = bd();
-      } else if (R === 2){
-        if (Cc <= 4){ cell.s.fill = fill(col.secClienteBg); } else if (Cc <= 11){ cell.s.fill = fill(col.secDiaBg); } else { cell.s.fill = fill(col.secRegistroBg); }
-        cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = center; cell.s.border = bd();
-      } else if (R === 3){
-        if (Cc >= 5 && Cc <= 11){ cell.s.fill = fill(col.dayBg); cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:col.dayFg}}; }
-        else { cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.headFg}}; }
-        cell.s.alignment = center; cell.s.border = bd();
-      } else {
+      } else if (R === 1){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center', wrapText:true}; cell.s.border = bd(); }
+      else if (R === 2){ if (Cc <= 4){ cell.s.fill = fill(col.secClienteBg); } else if (Cc <= 11){ cell.s.fill = fill(col.secDiaBg); } else { cell.s.fill = fill(col.secRegistroBg); } cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = center; cell.s.border = bd(); }
+      else if (R === 3){ if (Cc >= 5 && Cc <= 11){ cell.s.fill = fill(col.dayBg); cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:col.dayFg}}; } else { cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.headFg}}; } cell.s.alignment = center; cell.s.border = bd(); }
+      else {
         cell.s.font = {name:'Calibri', sz:10}; cell.s.border = bd();
-        if (Cc === 0){ cell.s.fill = fill(col.codeBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; cell.s.alignment = center; }
-        else if (Cc === 1){ cell.s.fill = fill(col.codeBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; cell.s.alignment = center; }
+        if (Cc === 0 || Cc === 1){ cell.s.fill = fill(col.codeBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; cell.s.alignment = center; }
         else if (Cc === 2 || Cc === 3){ cell.s.alignment = left; }
         else if (Cc === 4){ cell.s.fill = fill(col.zonaRowBg); cell.s.alignment = center; cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:'375623'}}; }
-        else if (Cc >= 5 && Cc <= 11){
-          cell.s.alignment = center;
-          if (cell.v === 'X'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:col.realFg}}; } else { cell.s.fill = fill(col.dayBg); }
-        }
-        else if (Cc === 12){ cell.s.alignment = center; cell.s.font = {name:'Calibri', sz:10}; }
-        else if (Cc === 13){ cell.s.alignment = center; }
+        else if (Cc >= 5 && Cc <= 11){ cell.s.alignment = center; if (cell.v === 'X'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:col.realFg}}; } else { cell.s.fill = fill(col.dayBg); } }
+        else if (Cc === 12 || Cc === 13){ cell.s.alignment = center; }
         else if (Cc === 14){
           cell.s.alignment = center;
           const estado = String(cell.v || '');
@@ -1537,7 +1333,6 @@ function buildStyledWorkbook(){
     }
   }
   XLSX.utils.book_append_sheet(wb, wsA, 'Agenda de Visitas');
-
   const E = [['EVIDENCIAS DE VISITAS — FOTOS Y FIRMAS','','','','','',''],['Ruta: "Agenda_NOC/fotos/[código]_[nombre]/[fecha-visita]/archivo".','','','','','',''],['Nº','FECHA','CÓDIGO CLIENTE','CLIENTE','TIPO DE EVIDENCIA','DESCRIPCIÓN / OBSERVACIÓN','RUTA EN DRIVE']];
   const evidRows = buildEvidenciasRows();
   const totalFilas = Math.max(60, evidRows.length);
@@ -1558,7 +1353,6 @@ function buildStyledWorkbook(){
     }
   }
   XLSX.utils.book_append_sheet(wb, wsE, 'Evidencias');
-
   const R3 = [
     ['RESUMEN Y CIERRE DE MES — CONTROL DE VISITAS','','','','','',''],
     ['MES / AÑO:', DB.month || '','','','','',''],
@@ -1592,10 +1386,7 @@ function buildStyledWorkbook(){
   wsR['B10'] = {t:'n', f:`COUNTIF('Agenda de Visitas'!O5:O${lastRow},"Pospuesta")`};
   wsR['B11'] = {t:'n', f:`COUNTA(Evidencias!C4:C500)`};
   wsR['B12'] = {t:'n', f:`IF(COUNTA('Agenda de Visitas'!C5:C${lastRow})=0,0,COUNTIF('Agenda de Visitas'!O5:O${lastRow},"Realizada")/COUNTA('Agenda de Visitas'!C5:C${lastRow}))`, z:'0%'};
-  ['F','G','H','I','J','K','L'].forEach((colL, idx) => {
-    const addr = XLSX.utils.encode_cell({r:16, c:idx});
-    wsR[addr] = {t:'n', f:`COUNTIF('Agenda de Visitas'!${colL}5:${colL}${lastRow},"X")+COUNTIF('Agenda de Visitas'!${colL}5:${colL}${lastRow},"x")`};
-  });
+  ['F','G','H','I','J','K','L'].forEach((colL, idx) => { const addr = XLSX.utils.encode_cell({r:16, c:idx}); wsR[addr] = {t:'n', f:`COUNTIF('Agenda de Visitas'!${colL}5:${colL}${lastRow},"X")+COUNTIF('Agenda de Visitas'!${colL}5:${colL}${lastRow},"x")`}; });
   wsR['!cols']  = [{wch:38},{wch:18},{wch:6},{wch:6},{wch:22},{wch:14},{wch:14}];
   wsR['!merges']= [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:2,c:0},e:{r:2,c:6}},{s:{r:4,c:0},e:{r:4,c:3}},{s:{r:4,c:4},e:{r:4,c:6}},{s:{r:14,c:0},e:{r:14,c:6}},{s:{r:19,c:5},e:{r:19,c:6}}];
   wsR['!rows'] = [{hpt:30},{hpt:24},{hpt:20}];
@@ -1633,7 +1424,6 @@ function buildStyledWorkbook(){
 }
 function exportExcel(){ const wb = buildStyledWorkbook(); const mes = (DB.month || 'Mes').replace(/\s+/g, '_'); XLSX.writeFile(wb, `Agenda_Visitas_NOC_${mes}.xlsx`, { cellStyles: true }); toast('✓ Excel descargado'); }
 async function exportPhotos(){ const zip = new JSZip(); let any = false; allClients().forEach(c => { safeArray(DB.photos[c.codigo]).forEach(p => { if (p.data){ const fecha = p.fechaVisita || 'sin-fecha'; zip.file(`${c.codigo}_${c.nombre.replace(/[^\w\sáéíóúñ]/gi,'').slice(0,25)}/${fecha}/${p.filename}`, p.data.split(',')[1], { base64: true }); any = true; } }); const arr = getVisits(c.codigo); arr.forEach(v => { if (v && v.firma && typeof v.firma === 'object' && v.firma.data){ const fecha = v.fecha || 'sin-fecha'; zip.file(`${c.codigo}_${c.nombre.replace(/[^\w\sáéíóúñ]/gi,'').slice(0,25)}/${fecha}/${v.firma.filename}`, v.firma.data.split(',')[1], { base64: true }); any = true; } }); }); const sup = DB.evid['super_sig']; if (sup && sup.data){ zip.file('firma_supervisor.png', sup.data.split(',')[1], { base64: true }); any = true; } if (!any){ toast('Sin fotos locales'); return; } const blob = await zip.generateAsync({ type:'blob' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Evidencias_Visitas.zip'; a.click(); toast('✓ ZIP descargado'); }
-
 async function importarDatos(input){
   const file = input.files[0]; if (!file) return;
   const ext = file.name.split('.').pop().toLowerCase();
@@ -1644,74 +1434,46 @@ async function importarDatos(input){
   else toast('Formato no soportado');
   input.value = '';
 }
-
-/* ============================================================
-   📤 COMPARTIR VISITA — con TODAS las fotos por WhatsApp
-   ============================================================ */
 async function abrirCompartir(cod){
   const v = getCurrentVisit(cod);
   if (!v){ toast('⚠ No hay visita activa'); return; }
   if (!v.fecha){ toast('⚠ La visita no tiene fecha'); return; }
   const cliente = getClientByCode(cod);
-  const todasFotos = safeArray(DB.photos[cod]).filter(p =>
-    (p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)
-  ).filter(p => p.fileId || p.data);
-
+  const todasFotos = safeArray(DB.photos[cod]).filter(p => (p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)).filter(p => p.fileId || p.data);
   compartirCtx.cod = cod;
   compartirCtx.visitId = v.id;
   compartirCtx.fotos = todasFotos;
   compartirCtx.texto = generarTextoVisita(cliente, v, todasFotos.length, cod);
   compartirCtx.blobs = [];
-
   document.getElementById('compartirModal').classList.add('open');
   const prev = document.getElementById('compartirPreview');
   const btn = document.getElementById('btnCompartirWhats');
   btn.disabled = true; btn.style.opacity = .6; btn.textContent = '⏳ Preparando…';
-
-  // ✅ VISTA PREVIA: usar la fuente original (data URL o thumbnail de Drive)
-  //    Nunca usar blob URLs aquí → se rompen en Android con imágenes grandes.
   let html = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">';
   todasFotos.forEach(p => {
     let src = null;
     if (p.data) src = p.data;
     else if (p.fileId) src = driveThumbUrl(p.fileId, 400);
-    html += '<div class="comp-foto-thumb">' +
-      (src
-        ? '<img src="' + src + '" loading="lazy" onerror="this.onerror=null;this.style.background=\'#334155\';this.removeAttribute(\'src\')">'
-        : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.6rem">⚠</div>') +
-      '</div>';
+    html += '<div class="comp-foto-thumb">' + (src ? '<img src="' + src + '" loading="lazy" onerror="this.onerror=null;this.style.background=\'#334155\';this.removeAttribute(\'src\')">' : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.6rem">⚠</div>') + '</div>';
   });
   html += '</div>';
   html += '<div style="background:#0f172a;border-radius:10px;padding:12px;text-align:left;font-size:.82rem;color:var(--text);white-space:pre-wrap;line-height:1.5">' + escapeHtml(compartirCtx.texto) + '</div>';
   prev.innerHTML = html;
-
   document.getElementById('compartirInfo').textContent = todasFotos.length + ' foto(s). Preparando envío…';
-
-  // ✅ CARGAR BLOBS EN SEGUNDO PLANO con progreso visible
-   let fallos = 0;
+  let fallos = 0;
   for (let i = 0; i < todasFotos.length; i++){
     const blob = await cargarFotoComoBlob(todasFotos[i]);
-    if (blob) compartirCtx.blobs.push(blob);
-    else fallos++;
+    if (blob) compartirCtx.blobs.push(blob); else fallos++;
     btn.textContent = '⏳ Preparando ' + (i + 1) + '/' + todasFotos.length + '…';
-    document.getElementById('compartirInfo').textContent =
-      (i + 1) + ' / ' + todasFotos.length + ' preparada(s)' + (fallos ? ' · ' + fallos + ' con error' : '') + '…';
+    document.getElementById('compartirInfo').textContent = (i + 1) + ' / ' + todasFotos.length + ' preparada(s)' + (fallos ? ' · ' + fallos + ' con error' : '') + '…';
   }
-
   const nOk = compartirCtx.blobs.length;
-  document.getElementById('compartirInfo').textContent =
-    nOk + ' de ' + todasFotos.length + ' foto(s) listas para enviar.';
+  document.getElementById('compartirInfo').textContent = nOk + ' de ' + todasFotos.length + ' foto(s) listas para enviar.';
   btn.disabled = false; btn.style.opacity = 1;
   btn.textContent = '💬 Compartir por WhatsApp (' + nOk + ' fotos)';
 }
-
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-function cerrarCompartir(){
-  document.getElementById('compartirModal').classList.remove('open');
-  compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null };
-}
-
+function cerrarCompartir(){ document.getElementById('compartirModal').classList.remove('open'); compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null }; }
 function generarTextoVisita(cliente, v, nFotos, cod){
   const fecha = v.fecha ? v.fecha.split('-').reverse().join('/') : '';
   const hora = v.hora || '--:--';
@@ -1732,14 +1494,11 @@ function generarTextoVisita(cliente, v, nFotos, cod){
   txt += '\n📝 Observaciones:\n' + obs + '\n';
   return txt;
 }
-
 async function cargarFotoComoBlob(foto){
   try {
     const nombre = (foto.filename || '').toLowerCase();
     const esPng = nombre.endsWith('.png') || (foto.data || '').indexOf('data:image/png') === 0;
     const tipo = esPng ? 'image/png' : 'image/jpeg';
-
-    // 1) Foto local: data URL → Blob SIN fetch (100% confiable)
     if (foto.data){
       const partes = foto.data.split(',');
       const mimeMatch = partes[0].match(/:(.*?);/);
@@ -1750,53 +1509,25 @@ async function cargarFotoComoBlob(foto){
       for (let i = 0; i < len; i++) u8[i] = bstr.charCodeAt(i);
       return new Blob([u8], { type: mime });
     }
-
-    // 2) Foto en Drive: usar PROXY CORS (images.weserv.nl)
-    //    Google Drive NO devuelve CORS → fetch directo falla siempre.
     if (foto.fileId){
-      // El proxy necesita la URL de Drive URL-encoded
       const driveUrl = 'https://drive.google.com/thumbnail?id=' + foto.fileId + '&sz=w2000';
       const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(driveUrl.replace(/^https?:\/\//, '')) + '&w=1600&output=jpg&q=82';
-
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout
-
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
       const res = await fetch(proxyUrl, { signal: controller.signal });
       clearTimeout(timeoutId);
-
-      if (!res.ok){
-        console.warn('Proxy falló para', foto.filename, res.status);
-        return null;
-      }
-
+      if (!res.ok){ console.warn('Proxy falló para', foto.filename, res.status); return null; }
       const blobOrig = await res.blob();
-      if (!blobOrig || blobOrig.size < 100){
-        console.warn('Blob vacío para', foto.filename);
-        return null;
-      }
+      if (!blobOrig || blobOrig.size < 100){ console.warn('Blob vacío', foto.filename); return null; }
       return new Blob([blobOrig], { type: tipo });
     }
     return null;
-  } catch(e){
-    console.warn('No se pudo cargar foto', foto.filename, e.message || e);
-    return null;
-  }
+  } catch(e){ console.warn('No se pudo cargar foto', foto.filename, e.message || e); return null; }
 }
-
 async function copiarTextoVisita(){
-  try {
-    await navigator.clipboard.writeText(compartirCtx.texto);
-    toast('✓ Texto copiado');
-  } catch(e){
-    const ta = document.createElement('textarea');
-    ta.value = compartirCtx.texto;
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand('copy'); toast('✓ Texto copiado'); } catch(err){ toast('⚠ No se pudo copiar'); }
-    document.body.removeChild(ta);
-  }
+  try { await navigator.clipboard.writeText(compartirCtx.texto); toast('✓ Texto copiado'); }
+  catch(e){ const ta = document.createElement('textarea'); ta.value = compartirCtx.texto; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('✓ Texto copiado'); } catch(err){ toast('⚠ No se pudo copiar'); } document.body.removeChild(ta); }
 }
-
 async function descargarZipVisita(){
   const cod = compartirCtx.cod;
   const v = getCurrentVisit(cod);
@@ -1804,9 +1535,7 @@ async function descargarZipVisita(){
   const zip = new JSZip();
   zip.file('visita.txt', compartirCtx.texto);
   const fecha = v && v.fecha ? v.fecha : 'sin-fecha';
-  for (let i = 0; i < compartirCtx.blobs.length; i++){
-    zip.file('foto_' + String(i+1).padStart(2,'0') + '.jpg', compartirCtx.blobs[i]);
-  }
+  for (let i = 0; i < compartirCtx.blobs.length; i++){ zip.file('foto_' + String(i+1).padStart(2,'0') + '.jpg', compartirCtx.blobs[i]); }
   const blob = await zip.generateAsync({ type:'blob' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1815,69 +1544,40 @@ async function descargarZipVisita(){
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   toast('✓ ZIP descargado');
 }
-
 async function abrirWhatsAppVisita(){
-  // 1) Web Share API — preferido: manda TODAS las fotos + texto
   if (navigator.share){
     try {
       if (compartirCtx.blobs && compartirCtx.blobs.length){
         const files = [];
-        for (let i = 0; i < compartirCtx.blobs.length; i++){
-          const b = compartirCtx.blobs[i];
-          files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
-        }
-        if (!navigator.canShare || navigator.canShare({ files })){
-          await navigator.share({ text: compartirCtx.texto, files });
-          return;
-        }
+        for (let i = 0; i < compartirCtx.blobs.length; i++){ const b = compartirCtx.blobs[i]; files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' })); }
+        if (!navigator.canShare || navigator.canShare({ files })){ await navigator.share({ text: compartirCtx.texto, files }); return; }
       }
       await navigator.share({ text: compartirCtx.texto });
       return;
-    } catch(e){
-      if (e && e.name === 'AbortError') return;
-    }
+    } catch(e){ if (e && e.name === 'AbortError') return; }
   }
-
-  // 2) Fallback: <a target="_blank"> con wa.me
   const texto = encodeURIComponent(compartirCtx.texto);
   const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
   const a = document.createElement('a');
   a.style.display = 'none';
   a.rel = 'noopener noreferrer';
-  if (esMovil){
-    a.href = 'https://wa.me/?text=' + texto;
-    a.target = '_blank';
-  } else {
-    a.href = 'https://web.whatsapp.com/send?text=' + texto;
-    a.target = '_blank';
-  }
+  if (esMovil){ a.href = 'https://wa.me/?text=' + texto; a.target = '_blank'; }
+  else { a.href = 'https://web.whatsapp.com/send?text=' + texto; a.target = '_blank'; }
   document.body.appendChild(a);
   a.click();
   setTimeout(() => document.body.removeChild(a), 1000);
 }
-
 function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
-
 let searchDebounce = null;
-function toggleSearch(force){
-  const bar = document.getElementById('searchBar');
-  const open = (force !== undefined) ? force : !bar.classList.contains('open');
-  bar.classList.toggle('open', open);
-  if (open){ const inp = document.getElementById('search'); setTimeout(() => { inp.focus(); inp.select(); }, 60); }
-}
+function toggleSearch(force){ const bar = document.getElementById('searchBar'); const open = (force !== undefined) ? force : !bar.classList.contains('open'); bar.classList.toggle('open', open); if (open){ const inp = document.getElementById('search'); setTimeout(() => { inp.focus(); inp.select(); }, 60); } }
 function onSearchInput(){ if (searchDebounce) clearTimeout(searchDebounce); searchDebounce = setTimeout(renderAgenda, 200); }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('searchBar').classList.contains('open')) toggleSearch(false); });
-
 let lastStats = { r: 0, p: 0, n: 0, s: 0 };
 function drawChart(){
-  const cv = document.getElementById('chartCanvas');
-  if (!cv) return;
-  const dpr = window.devicePixelRatio || 1;
-  const W = 640, H = 340;
+  const cv = document.getElementById('chartCanvas'); if (!cv) return;
+  const dpr = window.devicePixelRatio || 1; const W = 640, H = 340;
   cv.width = W * dpr; cv.height = H * dpr;
-  const ctx = cv.getContext('2d');
-  ctx.scale(dpr, dpr);
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
   const data = [['Realizadas', lastStats.r, '#22c55e'],['Pendientes', lastStats.p, '#f59e0b'],['No realizadas', lastStats.n, '#ef4444'],['Pospuestas', lastStats.s, '#94a3b8']];
   const max = Math.max(1, ...data.map(d => d[1]));
@@ -1902,16 +1602,7 @@ function drawChart(){
     ctx.fillText(d[0], cx, padT + plotH + 20);
   });
 }
-function downloadChart(){
-  const cv = document.getElementById('chartCanvas');
-  if (!cv) return;
-  const a = document.createElement('a');
-  a.href = cv.toDataURL('image/png');
-  a.download = 'Grafica_Visitas_' + (DB.month || 'Mes').replace(/\s+/g, '_') + '.png';
-  a.click();
-  toast('✓ Gráfica descargada');
-}
-
+function downloadChart(){ const cv = document.getElementById('chartCanvas'); if (!cv) return; const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'Grafica_Visitas_' + (DB.month || 'Mes').replace(/\s+/g, '_') + '.png'; a.click(); toast('✓ Gráfica descargada'); }
 function liberarEspacio(){
   let freed = 0;
   const limpiar = p => { if (p && p.data && p.fileId && p.synced){ freed += p.data.length; delete p.data; } };
@@ -1920,30 +1611,18 @@ function liberarEspacio(){
   limpiar(DB.evid['super_sig']);
   return freed;
 }
-function liberarEspacioManual(){
-  const bytes = liberarEspacio();
-  save();
-  updateStorageInfo();
-  renderAgenda(); renderEvid();
-  toast(bytes > 0 ? ('🧹 Liberados ' + (bytes / 1048576).toFixed(1) + ' MB') : '✓ Nada que liberar');
-}
-function retryPendingUploads(){
-  document.getElementById('partialSyncModal').classList.remove('open');
-  syncToCloud(false);
-}
-
+function liberarEspacioManual(){ const bytes = liberarEspacio(); save(); updateStorageInfo(); renderAgenda(); renderEvid(); toast(bytes > 0 ? ('🧹 Liberados ' + (bytes / 1048576).toFixed(1) + ' MB') : '✓ Nada que liberar'); }
+function retryPendingUploads(){ document.getElementById('partialSyncModal').classList.remove('open'); syncToCloud(false); }
 let pendingGPS = null;
 function openGpsHelp(cod){ pendingGPS = cod; document.getElementById('gpsModal').classList.add('open'); }
 function closeGpsHelp(){ document.getElementById('gpsModal').classList.remove('open'); }
 function tryOpenLocationSettings(){ window.location.href = 'intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end'; }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && pendingGPS){ const cod = pendingGPS; pendingGPS = null; closeGpsHelp(); captureGPS(cod); } });
 function captureGPS(cod){ const info = document.getElementById('gpsInfo-' + cod); const btn = document.getElementById('gpsBtn-' + cod); if (!navigator.geolocation) return; btn.textContent = '⏳...'; btn.disabled = true; const onExito = pos => { const v = getCurrentVisit(cod); if (!v) return; v.gps = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy || 0, time: new Date().toLocaleString('es-VE') }; v.updatedAt = new Date().toISOString(); save(); info.innerHTML = '✓ ' + v.gps.lat.toFixed(6) + ', ' + v.gps.lng.toFixed(6); btn.textContent = '📍 Actualizar'; btn.disabled = false; }; navigator.geolocation.getCurrentPosition(onExito, () => openGpsHelp(cod), { enableHighAccuracy:true, timeout:30000, maximumAge:60000 }); }
-
 function saveMonth(){ DB.month = document.getElementById('mesAnio').value; document.getElementById('mesAnio2').value = DB.month; save(); }
 function saveResp(){ DB.resp = document.getElementById('responsable').value; save(); sendHeartbeat(); }
 function saveComp(){ DB.comp = document.getElementById('compSelect').value; save(); toast('🗜️ ' + DB.comp); }
 function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
-
 async function initApp(){
   setSyncBadge('⏳ Cargando…','info');
   try {
@@ -1968,60 +1647,38 @@ async function initApp(){
   sanitizeDB();
   try { migrateVisits(); } catch(e){}
   sanitizeDB();
-
-  // ✅ 1. Render INMEDIATO con datos locales (la UI ya es usable)
   try { renderAgenda(); } catch(e){}
   try { if (liberarEspacio() > 0) await saveLocal(); } catch(e){}
-
-  // ✅ 2. Drive en BACKGROUND — no bloquea la UI
   setSyncBadge('📥 Drive…','info');
   loadFromCloud().catch(() => { driveStateReady = true; });
 }
-
 initApp();
 setInterval(sendHeartbeat, 30000);
 setTimeout(sendHeartbeat, 3000);
-
 window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); driveStateReady = false; loadFromCloud().then(() => { if (isDirty()){ toast('📤 Subiendo imágenes pendientes…'); syncToCloud(true); } }); sendHeartbeat(); });
 window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','warn'); updateActiveUsersBadge(0); });
 setInterval(async () => { if (!document.hidden && isOnline() && !syncInProgress){ try { await callBackendRead({ action:'ping' }, 8000); } catch(e){} } }, 240000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on') syncToCloud(true); } });
 setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 60000);
-
 const CATS = [['ZONA WIFI','#3b82f6'],['DEDICADO - ZONA WIFI','#ef4444'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['PYME','#f97316'],['ANTENA','#14b8a6'],['NODO','#60a5fa']];
 async function renderMasterStats(){
-  const box = document.getElementById('masterStatsBox');
-  if (!box) return;
+  const box = document.getElementById('masterStatsBox'); if (!box) return;
   let data = null;
-  try {
-    const r = await callBackendRead({ action:'getMasterStats', mesAnio: DB.month }, 12000);
-    if (r && r.ok && r.stats){ data = r; try{ localStorage.setItem('nocMasterStats', JSON.stringify(r)); }catch(e){} }
-  } catch(e){}
+  try { const r = await callBackendRead({ action:'getMasterStats', mesAnio: DB.month }, 12000); if (r && r.ok && r.stats){ data = r; try{ localStorage.setItem('nocMasterStats', JSON.stringify(r)); }catch(e){} } } catch(e){}
   if (!data){ try { data = JSON.parse(localStorage.getItem('nocMasterStats') || 'null'); } catch(e){} }
   const cv = document.getElementById('chartCategorias');
-  if (!data){
-    box.innerHTML = '<span style="color:var(--muted)">⚠ Master no disponible aún. Sincroniza el Master primero.</span>';
-    if (cv) cv.style.display = 'none';
-    return;
-  }
+  if (!data){ box.innerHTML = '<span style="color:var(--muted)">⚠ Master no disponible aún.</span>'; if (cv) cv.style.display = 'none'; return; }
   if (cv) cv.style.display = 'block';
   const map = {};
   (data.stats || []).forEach(s => { map[s.tipo] = s.count; });
-  box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.85rem">' +
-    CATS.map(c => '<tr><td style="padding:6px 8px;color:' + c[1] + ';font-weight:700">' + c[0] + '</td>' +
-      '<td style="text-align:right;padding:6px 8px;font-weight:800">' + (map[c[0]] || 0) + '</td></tr>').join('') +
-    '<tr style="border-top:1px solid #334155"><td style="padding:6px 8px;font-weight:800">TOTAL VISITAS</td>' +
-    '<td style="text-align:right;padding:6px 8px;font-weight:800;color:var(--accent)">' + (data.total || 0) + '</td></tr></table>';
+  box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.85rem">' + CATS.map(c => '<tr><td style="padding:6px 8px;color:' + c[1] + ';font-weight:700">' + c[0] + '</td><td style="text-align:right;padding:6px 8px;font-weight:800">' + (map[c[0]] || 0) + '</td></tr>').join('') + '<tr style="border-top:1px solid #334155"><td style="padding:6px 8px;font-weight:800">TOTAL VISITAS</td><td style="text-align:right;padding:6px 8px;font-weight:800;color:var(--accent)">' + (data.total || 0) + '</td></tr></table>';
   drawChartCategorias(CATS.map(c => [c[0], map[c[0]] || 0, c[1]]));
 }
 function drawChartCategorias(data){
-  const cv = document.getElementById('chartCategorias');
-  if (!cv) return;
-  const dpr = window.devicePixelRatio || 1;
-  const W = 640, H = 340;
+  const cv = document.getElementById('chartCategorias'); if (!cv) return;
+  const dpr = window.devicePixelRatio || 1; const W = 640, H = 340;
   cv.width = W * dpr; cv.height = H * dpr;
-  const ctx = cv.getContext('2d');
-  ctx.scale(dpr, dpr);
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'left';
   ctx.fillText('Visitas realizadas por categoría (Master)', 16, 22);
@@ -2029,28 +1686,17 @@ function drawChartCategorias(data){
   const padL = 36, padR = 16, padT = 44, padB = 80;
   const plotW = W - padL - padR, plotH = H - padT - padB;
   ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(padL, padT);
-  ctx.lineTo(padL, padT + plotH);
-  ctx.lineTo(padL + plotW, padT + plotH);
-  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
   ctx.strokeStyle = '#1e293b'; ctx.fillStyle = '#64748b'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
-  for (let i = 0; i <= 4; i++){
-    const v = Math.round(max * i / 4);
-    const y = padT + plotH - (plotH * i / 4);
-    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
-    ctx.fillText(String(v), padL - 6, y + 3);
-  }
+  for (let i = 0; i <= 4; i++){ const v = Math.round(max * i / 4); const y = padT + plotH - (plotH * i / 4); ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke(); ctx.fillText(String(v), padL - 6, y + 3); }
   const slotW = plotW / data.length;
   const barW = Math.min(56, slotW * 0.6);
   data.forEach((d, i) => {
     const cx = padL + slotW * (i + 0.5);
     const bh = Math.max(plotH * d[1] / max, d[1] > 0 ? 4 : 1);
-    const x = cx - barW / 2;
-    const y = padT + plotH - bh;
+    const x = cx - barW / 2, y = padT + plotH - bh;
     const grad = ctx.createLinearGradient(0, y, 0, y + bh);
-    grad.addColorStop(0, d[2]);
-    grad.addColorStop(1, shadeColorCats(d[2], -35));
+    grad.addColorStop(0, d[2]); grad.addColorStop(1, shadeColorCats(d[2], -35));
     ctx.fillStyle = grad;
     ctx.beginPath();
     if (ctx.roundRect){ ctx.roundRect(x, y, barW, bh, [6, 6, 0, 0]); } else { ctx.rect(x, y, barW, bh); }
@@ -2071,15 +1717,11 @@ function shadeColorCats(hex, percent){
   let R = (num >> 16) + amt;
   let G = (num >> 8 & 0x00FF) + amt;
   let B = (num & 0x0000FF) + amt;
-  R = Math.max(0, Math.min(255, R));
-  G = Math.max(0, Math.min(255, G));
-  B = Math.max(0, Math.min(255, B));
+  R = Math.max(0, Math.min(255, R)); G = Math.max(0, Math.min(255, G)); B = Math.max(0, Math.min(255, B));
   return '#' + (0x1000000 + R*0x10000 + G*0x100 + B).toString(16).slice(1);
 }
 </script>
-
 <script>
-/* ===== PWA: Service Worker ===== */
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
 }

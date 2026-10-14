@@ -134,7 +134,6 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .visit-bar .nav:disabled{opacity:.35;cursor:not-allowed}
 .visit-actions{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
 .visit-actions .btn{flex:1;min-width:90px;padding:10px 6px;font-size:.78rem}
-/* ===== BARRA SUPERIOR FIJA: agregar cliente + búsqueda ===== */
 .hrow{display:flex;align-items:center;gap:10px}
 .icon-btn{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:1.15rem;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .icon-btn:active{background:rgba(255,255,255,.35)}
@@ -142,7 +141,6 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .search-bar{position:fixed;top:64px;left:0;right:0;z-index:80;display:none;gap:8px;padding:10px 12px;background:var(--bg);border-bottom:1px solid #334155;align-items:center}
 .search-bar.open{display:flex}
 .search-bar .search{margin-bottom:0;flex:1}
-/* ===== NAVEGACIÓN INFERIOR (pestañas siempre visibles) ===== */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid #334155;z-index:61}
 .bottom-nav .tab{flex:1;padding:13px 4px;font-size:.8rem;border-bottom:none;border-top:3px solid transparent}
 .bottom-nav .tab.active{border-bottom-color:transparent;border-top-color:var(--accent)}
@@ -165,7 +163,7 @@ body{padding-bottom:170px}
 </div>
 
 <div class="search-bar" id="searchBar">
-  <input class="search" id="search" placeholder="🔍 Buscar cliente o código..." oninput="onSearchInput()">
+  <input class="search" id="search" placeholder="🔍 Cliente, código o fecha (12/10/2026)" oninput="onSearchInput()">
   <button class="btn btn-gray" style="padding:10px 14px;flex-shrink:0" onclick="toggleSearch(false)">✕</button>
 </div>
 
@@ -220,7 +218,7 @@ body{padding-bottom:170px}
       <div class="stat"><span style="color:#cbd5e1">Visitas POSPUESTAS</span><b id="stS">0</b></div>
       <div class="stat"><span>Evidencias (fotos/firmas)</span><b id="stE">0</b></div>
     </div>
-        <div class="card">
+    <div class="card">
       <label>📊 DETALLE POR CATEGORÍA — VISITAS REALIZADAS (Master)</label>
       <div id="masterStatsBox" style="margin-top:6px">Cargando datos del Master…</div>
       <canvas id="chartCategorias" style="width:100%;border-radius:12px;background:#0f172a;border:1px solid #334155;margin-top:10px"></canvas>
@@ -388,8 +386,7 @@ function sanitizeDB(){
       if (typeof p.fechaVisita !== 'string') p.fechaVisita = '';
       if (p.fileId === undefined) p.fileId = null;
       if (p.synced === undefined) p.synced = !!(p.fileId || p.data);
-      // ✅ FIX: asegurar que visitId exista como campo (puede ser null)
-      if (p.visitId === undefined) p.visitId = null;
+      if (p.visitId === undefined) p.visitId = null;   // ✅ FIX
     });
   }
   for (const cod in DB.visits){
@@ -521,7 +518,7 @@ function showVisitsHistory(cod){
   if (!visits.length){ cont.innerHTML = '<div class="empty">Sin visitas registradas</div>'; document.getElementById('historialModal').classList.add('open'); return; }
   const ordenadas = visits.slice().sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
   ordenadas.forEach(v => {
-    const nFotos = safeArray(DB.photos[cod]).filter(p => p.fechaVisita === v.fecha).length;
+    const nFotos = safeArray(DB.photos[cod]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha)).length;
     const tieneFirma = v.firma && (v.firma.data || v.firma.fileId);
     const estadoColor = v.estado === 'Realizada' ? 'r' : v.estado === 'Pendiente' ? 'p' : v.estado === 'No Realizada' ? 'n' : 's';
     const row = document.createElement('div');
@@ -706,9 +703,8 @@ function applyRemoteIndex(remote){
       const ex = map[p.filename];
       if (!ex) map[p.filename] = p;
       else {
-        // ✅ FIX: al mergear, preservar visitId del local si el remoto no lo trae
         const merged = Object.assign({}, ex, p);
-        if (!p.visitId && ex.visitId) merged.visitId = ex.visitId;
+        if (!p.visitId && ex.visitId) merged.visitId = ex.visitId;   // ✅ FIX: preservar visitId
         map[p.filename] = merged;
       }
     }
@@ -736,7 +732,7 @@ function collectPendingUploads(){
 
 function buildIndex(){
   const photosMeta = {};
-  // ✅ FIX: incluir visitId para que las fotos viajen asociadas a su visita
+  // ✅ FIX: incluir visitId
   for (const codigo in DB.photos) photosMeta[codigo] = safeArray(DB.photos[codigo]).map(p => ({ filename: p.filename, fecha: p.fecha || '', fechaVisita: p.fechaVisita || '', visitId: p.visitId || null, fileId: p.fileId || null }));
   const visitsSerializable = {};
   for (const codigo in DB.visits){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; visitsSerializable[codigo] = arr.filter(v => v && typeof v === 'object').map(v => { const vOut = { id: v.id, fecha: v.fecha||'', hora: v.hora||'', estado: v.estado||'Pendiente', obs: v.obs||'', gps: v.gps||null, days: v.days||[], updatedAt: v.updatedAt || '' }; if (v.firma && v.firma.filename) vOut.firma = { filename: v.firma.filename, fileId: v.firma.fileId || null, fechaVisita: v.firma.fechaVisita || v.fecha || '', synced: true }; return vOut; }); }
@@ -820,13 +816,79 @@ function allClients(){ const hidden = new Set(DB.hiddenClients || []); return CL
 function statusClass(e){ return e === 'Realizada' ? 'r' : e === 'Pendiente' ? 'p' : e === 'No Realizada' ? 'n' : 's'; }
 function getClientByCode(cod){ const c = (DB.customClients || []).find(x => String(x.codigo).trim() === String(cod).trim()); if (c) return c; return CLIENTES.find(x => String(x.codigo).trim() === String(cod).trim()) || null; }
 
+/* ============================================================
+   🗓️ FILTRO FECHA — utilidades
+   ============================================================ */
+function detectarFechaBusqueda(q){
+  if (!q) return null;
+  const s = String(q).trim();
+  let m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (m){
+    const y = m[1], mo = String(m[2]).padStart(2,'0'), d = String(m[3]).padStart(2,'0');
+    if (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) return y + '-' + mo + '-' + d;
+  }
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?$/);
+  if (m){
+    const d = String(m[1]).padStart(2,'0');
+    const mo = String(m[2]).padStart(2,'0');
+    let y = m[3] || String(new Date().getFullYear());
+    if (y.length === 2) y = '20' + y;
+    if (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) return y + '-' + mo + '-' + d;
+  }
+  return null;
+}
+function clientesConVisitaEnFecha(fechaISO){
+  const set = new Set();
+  if (!fechaISO) return set;
+  const parts = fechaISO.split('-');
+  const sufijo = '-' + parts[1] + '-' + parts[2];
+  for (const cod in DB.visits){
+    const arr = getVisits(cod);
+    for (const v of arr){
+      if (!v || !v.fecha) continue;
+      if (v.fecha === fechaISO || v.fecha.endsWith(sufijo)){
+        set.add(String(cod).trim());
+        break;
+      }
+    }
+  }
+  return set;
+}
+
 function renderAgenda(){
   const q = (document.getElementById('search').value || '').toLowerCase();
   const list = document.getElementById('clientList');
   const scrollY = window.scrollY;
   const focusedId = document.activeElement ? document.activeElement.id : '';
   list.innerHTML = '';
-  allClients().filter(c => !q || c.nombre.toLowerCase().includes(q) || c.codigo.includes(q)).forEach((c) => {
+
+  // 🗓️ FILTRO FECHA
+  const fechaFiltro = q ? detectarFechaBusqueda(q) : null;
+  const setConVisitaFecha = fechaFiltro ? clientesConVisitaEnFecha(fechaFiltro) : null;
+
+  // Chip visual indicando filtro fecha
+  const chipId = 'filtroFechaChip';
+  let chip = document.getElementById(chipId);
+  if (fechaFiltro){
+    if (!chip){
+      chip = document.createElement('div');
+      chip.id = chipId;
+      chip.style.cssText = 'background:rgba(56,189,248,.15);border:1px solid var(--accent);color:var(--accent);padding:8px 12px;border-radius:10px;font-size:.78rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between';
+      list.parentNode.insertBefore(chip, list);
+    }
+    const n = setConVisitaFecha.size;
+    chip.innerHTML = '<span>🗓️ Filtrando por fecha: <b>' + fechaFiltro.split('-').reverse().join('/') + '</b> · ' + n + ' cliente(s)</span>' +
+      '<button onclick="document.getElementById(\'search\').value=\'\';onSearchInput();" style="background:transparent;border:none;color:var(--accent);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
+    chip.style.display = 'flex';
+  } else if (chip){
+    chip.style.display = 'none';
+  }
+
+  allClients().filter(c => {
+    if (!q) return true;
+    if (setConVisitaFecha !== null) return setConVisitaFecha.has(String(c.codigo).trim());
+    return c.nombre.toLowerCase().includes(q) || c.codigo.includes(q);
+  }).forEach((c) => {
     const visits = getVisits(c.codigo);
     const latest = getLatestVisit(c.codigo);
     const current = getCurrentVisit(c.codigo) || latest;
@@ -885,9 +947,6 @@ function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; v.fecha
 function addClient(){ const cod = document.getElementById('ncCodigo').value.trim(); const nom = document.getElementById('ncNombre').value.trim(); const dir = document.getElementById('ncDir').value.trim(); if (!cod || !nom){ toast('⚠ Código y nombre obligatorios'); return; } if (allClients().some(c => c.codigo === cod)){ toast('⚠ Ya existe'); return; } DB.customClients.push({ codigo: cod, nombre: nom, direccion: dir || '—', custom: true }); DB.visits[cod] = []; save(); document.getElementById('ncCodigo').value = ''; document.getElementById('ncNombre').value = ''; document.getElementById('ncDir').value = ''; document.getElementById('addClientForm').style.display = 'none'; document.getElementById('addClientBtn').style.display = 'block'; renderAgenda(); toast('✓ Cliente agregado'); }
 function delClient(cod){ if (!confirm('¿Quitar este cliente?')) return; DB.customClients = DB.customClients.filter(c => c.codigo !== cod); delete DB.visits[cod]; delete DB.photos[cod]; callBackendWrite({ action:'deleteClientPhotos', codigo: cod }).catch(()=>{}); save(); renderAgenda(); toast('Cliente eliminado'); }
 
-/* ============================================================
-   EDITAR CLIENTE — con bloqueo de código ocupado
-   ============================================================ */
 function editClient(cod){
   const c = getClientByCode(cod);
   if (!c){ toast('⚠ Cliente no encontrado'); return; }
@@ -912,16 +971,7 @@ async function saveClientEdit(){
       String(x.codigo).trim() !== oldCod
     );
     if (clienteExistente){
-      alert(
-        '⛔ CAMBIO BLOQUEADO\n\n' +
-        'El código "' + newCod + '" ya está asignado a:\n' +
-        '  → "' + clienteExistente.nombre + '"\n\n' +
-        'Si cambias el código, se MEZCLARÍAN los datos de ambos clientes.\n\n' +
-        'Soluciones:\n' +
-        '1. Usa un código NUEVO (que no exista).\n' +
-        '2. Edita el otro cliente primero y asígnale otro código.\n' +
-        '3. Elimina el otro cliente antes de continuar.'
-      );
+      alert('⛔ CAMBIO BLOQUEADO\n\nEl código "' + newCod + '" ya está asignado a:\n  → "' + clienteExistente.nombre + '"\n\nSi cambias el código, se MEZCLARÍAN los datos de ambos clientes.\n\nSoluciones:\n1. Usa un código NUEVO (que no exista).\n2. Edita el otro cliente primero y asígnale otro código.\n3. Elimina el otro cliente antes de continuar.');
       return;
     }
   }
@@ -954,9 +1004,6 @@ async function saveClientEdit(){
   if (DB.autoSync === 'on') scheduleSync();
 }
 
-/* ============================================================
-   DIAGNÓSTICO Y REPARACIÓN
-   ============================================================ */
 function diagnosticarIds(){
   const lineas = [];
   lineas.push('=== DIAGNÓSTICO DE IDs ===');
@@ -1002,9 +1049,6 @@ function diagnosticarIds(){
   document.getElementById('debugMasterModal').classList.add('open');
 }
 
-/* ============================================================
-   REPARAR ID — genérico para cualquier cliente
-   ============================================================ */
 function openRepairModal(){
   const opts = allClients().map(c => `<option value="${c.codigo}">#${c.codigo} — ${c.nombre}</option>`).join('');
   document.getElementById('rpOrigen').innerHTML = opts;
@@ -1069,9 +1113,6 @@ async function ejecutarRepararID(){
   setTimeout(diagnosticarIds, 400);
 }
 
-/* ============================================================
-   FIRMAS
-   ============================================================ */
 const sigData = {};
 function initSig(id){
   const c = document.getElementById(id);
@@ -1114,7 +1155,7 @@ function clearSig(id){ const c = document.getElementById(id); if (c){ c.getConte
 function addPhotos(cod, input){
   const v = getCurrentVisit(cod);
   const fechaVisita = v && v.fecha ? v.fecha : hoyYMD();
-  const visitId = v ? v.id : null;   // ✅ FIX: capturar id de la visita actual
+  const visitId = v ? v.id : null;
   [...input.files].forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
@@ -1128,16 +1169,7 @@ function addPhotos(cod, input){
         const dataUrl = cv.toDataURL('image/jpeg', opt.q);
         const ahora = new Date();
         DB.photos[cod] = DB.photos[cod] || [];
-        // ✅ FIX: guardar visitId en la foto
-        DB.photos[cod].push({
-          data: dataUrl,
-          fecha: ahora.toLocaleString('es-VE'),
-          fechaVisita: fechaVisita,
-          visitId: visitId,
-          filename: buildPhotoFilename(ahora),
-          synced: false,
-          fileId: null
-        });
+        DB.photos[cod].push({ data: dataUrl, fecha: ahora.toLocaleString('es-VE'), fechaVisita: fechaVisita, visitId: visitId, filename: buildPhotoFilename(ahora), synced: false, fileId: null });
         save(); renderPhotos(cod);
       };
       img.src = e.target.result;
@@ -1146,31 +1178,21 @@ function addPhotos(cod, input){
   });
   input.value = '';
 }
-
-// ✅ FIX: renderPhotos ahora filtra por visita actual
 function renderPhotos(cod){
   const box = document.getElementById('ph-' + cod); if (!box) return;
   const v = getCurrentVisit(cod);
   const visitId = v ? v.id : null;
   const fechaVisita = v && v.fecha ? v.fecha : null;
-
   const todas = DB.photos[cod] || [];
   const indicesReales = [];
   const filtradas = [];
   todas.forEach((p, i) => {
     if (!p || !p.filename) return;
-    // Es de esta visita si: (a) tiene visitId y coincide, o (b) no tiene visitId pero la fecha coincide
-    const esDeEstaVisita =
-      (p.visitId && visitId && p.visitId === visitId) ||
-      (!p.visitId && fechaVisita && p.fechaVisita === fechaVisita);
-    if (esDeEstaVisita){
-      filtradas.push(p);
-      indicesReales.push(i);
-    }
+    const esDeEstaVisita = (p.visitId && visitId && p.visitId === visitId) || (!p.visitId && fechaVisita && p.fechaVisita === fechaVisita);
+    if (esDeEstaVisita){ filtradas.push(p); indicesReales.push(i); }
   });
-
   box.innerHTML = filtradas.map((p, j) => {
-    const i = indicesReales[j];  // índice real en DB.photos[cod]
+    const i = indicesReales[j];
     if (!p || !p.filename) return `<div class="photo-box"><div class="placeholder">⚠</div><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
     let src = null;
     if (p.fileId) src = driveThumbUrl(p.fileId, 200);
@@ -1179,7 +1201,6 @@ function renderPhotos(cod){
     return `<div class="photo-box"><div class="placeholder">⏳</div><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
   }).join('');
 }
-
 function delPhoto(cod, i){
   const arr = DB.photos[cod];
   if (!Array.isArray(arr) || !arr[i]){ toast('⚠ No encontrado'); return; }
@@ -1215,9 +1236,6 @@ function guardarVisita(cod, nombre){
 }
 function updatePhotoReq(cod){ const el = document.getElementById('photoReq-' + cod); if (el){ const v = getCurrentVisit(cod); el.style.display = (v && v.estado === 'Realizada') ? 'inline' : 'none'; } }
 
-/* ============================================================
-   EVIDENCIAS
-   ============================================================ */
 function renderEvid(){
   const foldersView = document.getElementById('evidFoldersView');
   const folderView = document.getElementById('evidFolderView');
@@ -1359,7 +1377,6 @@ function renderResumen(){
 }
 function updateStorageInfo(){ let bytes = 0; try{ bytes = (JSON.stringify(DB) || '').length; }catch(e){} const el = document.getElementById('storageInfo'); if (el) el.innerHTML = '📦 Local: <b style="color:var(--accent)">' + (bytes/1048576).toFixed(1) + ' MB</b>'; }
 
-/* EXCEL */
 function buildEvidenciasRows(){
   const rows = []; let n = 0;
   allClients().forEach(c => {
@@ -1392,12 +1409,7 @@ function buildStyledWorkbook(){
     altBg:'F2F7FB',  codeBg:'DDEBF7', zonaRowBg:'E2EFDA'
   };
 
-  const bd = () => ({
-    top:{style:'thin',color:{rgb:col.border}},
-    bottom:{style:'thin',color:{rgb:col.border}},
-    left:{style:'thin',color:{rgb:col.border}},
-    right:{style:'thin',color:{rgb:col.border}}
-  });
+  const bd = () => ({top:{style:'thin',color:{rgb:col.border}},bottom:{style:'thin',color:{rgb:col.border}},left:{style:'thin',color:{rgb:col.border}},right:{style:'thin',color:{rgb:col.border}}});
   const fill  = rgb => ({ patternType:'solid', fgColor:{rgb} });
   const center= { horizontal:'center', vertical:'center', wrapText:true };
   const left  = { horizontal:'left',   vertical:'center', wrapText:true };
@@ -1421,22 +1433,9 @@ function buildStyledWorkbook(){
   });
 
   const wsA = XLSX.utils.aoa_to_sheet(A);
-  wsA['!merges'] = [
-    {s:{r:0,c:0},e:{r:0,c:3}},
-    {s:{r:0,c:4},e:{r:0,c:17}},
-    {s:{r:1,c:0},e:{r:1,c:17}},
-    {s:{r:2,c:0},e:{r:2,c:4}},
-    {s:{r:2,c:5},e:{r:2,c:11}},
-    {s:{r:2,c:12},e:{r:2,c:17}}
-  ];
-  wsA['!cols'] = [
-    {wch:4},{wch:10},{wch:36},{wch:45},{wch:11},
-    {wch:7},{wch:7},{wch:10},{wch:7},{wch:7},{wch:7},{wch:8},
-    {wch:13},{wch:8},{wch:13},{wch:38},{wch:14},{wch:11}
-  ];
-  wsA['!rows'] = [
-    {hpt:30},{hpt:42},{hpt:22},{hpt:32}
-  ];
+  wsA['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:0,c:4},e:{r:0,c:17}},{s:{r:1,c:0},e:{r:1,c:17}},{s:{r:2,c:0},e:{r:2,c:4}},{s:{r:2,c:5},e:{r:2,c:11}},{s:{r:2,c:12},e:{r:2,c:17}}];
+  wsA['!cols'] = [{wch:4},{wch:10},{wch:36},{wch:45},{wch:11},{wch:7},{wch:7},{wch:10},{wch:7},{wch:7},{wch:7},{wch:8},{wch:13},{wch:8},{wch:13},{wch:38},{wch:14},{wch:11}];
+  wsA['!rows'] = [{hpt:30},{hpt:42},{hpt:22},{hpt:32}];
 
   for (let R = 0; R < lastRow; R++){
     for (let Cc = 0; Cc < 18; Cc++){
@@ -1444,169 +1443,65 @@ function buildStyledWorkbook(){
       if (!wsA[addr]) wsA[addr] = {t:'s', v:''};
       const cell = wsA[addr];
       cell.s = cell.s || {};
-
       if (R === 0){
-        if (Cc < 4){
-          cell.s.fill = fill(col.titleBg);
-          cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:col.titleFg}};
-          cell.s.alignment = {horizontal:'left', vertical:'center'};
-        } else {
-          cell.s.fill = fill(col.zonaBg);
-          cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}};
-          cell.s.alignment = {horizontal:'right', vertical:'center'};
-        }
+        if (Cc < 4){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:col.titleFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+        else { cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'right', vertical:'center'}; }
         cell.s.border = bd();
-      }
-      else if (R === 1){
-        cell.s.fill = fill(col.instrBg);
-        cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}};
-        cell.s.alignment = {horizontal:'left', vertical:'center', wrapText:true};
-        cell.s.border = bd();
-      }
-      else if (R === 2){
-        if (Cc <= 4){ cell.s.fill = fill(col.secClienteBg); }
-        else if (Cc <= 11){ cell.s.fill = fill(col.secDiaBg); }
-        else { cell.s.fill = fill(col.secRegistroBg); }
-        cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}};
-        cell.s.alignment = center;
-        cell.s.border = bd();
-      }
-      else if (R === 3){
-        if (Cc >= 5 && Cc <= 11){
-          cell.s.fill = fill(col.dayBg);
-          cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:col.dayFg}};
-        } else {
-          cell.s.fill = fill(col.headBg);
-          cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.headFg}};
-        }
-        cell.s.alignment = center;
-        cell.s.border = bd();
-      }
-      else {
-        cell.s.font = {name:'Calibri', sz:10};
-        cell.s.border = bd();
-
-        if (Cc === 0){
-          cell.s.fill = fill(col.codeBg);
-          cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}};
-          cell.s.alignment = center;
-        }
-        else if (Cc === 1){
-          cell.s.fill = fill(col.codeBg);
-          cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}};
-          cell.s.alignment = center;
-        }
-        else if (Cc === 2 || Cc === 3){
-          cell.s.alignment = left;
-        }
-        else if (Cc === 4){
-          cell.s.fill = fill(col.zonaRowBg);
-          cell.s.alignment = center;
-          cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:'375623'}};
-        }
+      } else if (R === 1){
+        cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center', wrapText:true}; cell.s.border = bd();
+      } else if (R === 2){
+        if (Cc <= 4){ cell.s.fill = fill(col.secClienteBg); } else if (Cc <= 11){ cell.s.fill = fill(col.secDiaBg); } else { cell.s.fill = fill(col.secRegistroBg); }
+        cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = center; cell.s.border = bd();
+      } else if (R === 3){
+        if (Cc >= 5 && Cc <= 11){ cell.s.fill = fill(col.dayBg); cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:col.dayFg}}; }
+        else { cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.headFg}}; }
+        cell.s.alignment = center; cell.s.border = bd();
+      } else {
+        cell.s.font = {name:'Calibri', sz:10}; cell.s.border = bd();
+        if (Cc === 0){ cell.s.fill = fill(col.codeBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; cell.s.alignment = center; }
+        else if (Cc === 1){ cell.s.fill = fill(col.codeBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; cell.s.alignment = center; }
+        else if (Cc === 2 || Cc === 3){ cell.s.alignment = left; }
+        else if (Cc === 4){ cell.s.fill = fill(col.zonaRowBg); cell.s.alignment = center; cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:'375623'}}; }
         else if (Cc >= 5 && Cc <= 11){
           cell.s.alignment = center;
-          if (cell.v === 'X'){
-            cell.s.fill = fill(col.realBg);
-            cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:col.realFg}};
-          } else {
-            cell.s.fill = fill(col.dayBg);
-          }
+          if (cell.v === 'X'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:col.realFg}}; } else { cell.s.fill = fill(col.dayBg); }
         }
-        else if (Cc === 12){
-          cell.s.alignment = center;
-          cell.s.font = {name:'Calibri', sz:10};
-        }
-        else if (Cc === 13){
-          cell.s.alignment = center;
-        }
+        else if (Cc === 12){ cell.s.alignment = center; cell.s.font = {name:'Calibri', sz:10}; }
+        else if (Cc === 13){ cell.s.alignment = center; }
         else if (Cc === 14){
           cell.s.alignment = center;
           const estado = String(cell.v || '');
-          if (estado === 'Realizada'){
-            cell.s.fill = fill(col.realBg);
-            cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.realFg}};
-          } else if (estado === 'Pendiente'){
-            cell.s.fill = fill(col.pendBg);
-            cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.pendFg}};
-          } else if (estado === 'No Realizada'){
-            cell.s.fill = fill(col.nreBg);
-            cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.nreFg}};
-          } else if (estado === 'Pospuesta'){
-            cell.s.fill = fill(col.posBg);
-            cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.posFg}};
-          }
+          if (estado === 'Realizada'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.realFg}}; }
+          else if (estado === 'Pendiente'){ cell.s.fill = fill(col.pendBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.pendFg}}; }
+          else if (estado === 'No Realizada'){ cell.s.fill = fill(col.nreBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.nreFg}}; }
+          else if (estado === 'Pospuesta'){ cell.s.fill = fill(col.posBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.posFg}}; }
         }
-        else if (Cc === 15){
-          cell.s.alignment = left;
-        }
-        else if (Cc === 16){
-          cell.s.alignment = center;
-          if (cell.v === 'Sí'){
-            cell.s.fill = fill(col.realBg);
-            cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:col.realFg}};
-          }
-        }
-        else if (Cc === 17){
-          cell.s.alignment = center;
-          cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}};
-        }
-
-        if (Cc === 15 && !cell.v && R % 2 === 0){
-          cell.s.fill = fill(col.altBg);
-        }
+        else if (Cc === 15){ cell.s.alignment = left; }
+        else if (Cc === 16){ cell.s.alignment = center; if (cell.v === 'Sí'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:col.realFg}}; } }
+        else if (Cc === 17){ cell.s.alignment = center; cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; }
+        if (Cc === 15 && !cell.v && R % 2 === 0){ cell.s.fill = fill(col.altBg); }
       }
     }
   }
   XLSX.utils.book_append_sheet(wb, wsA, 'Agenda de Visitas');
 
-  const E = [
-    ['EVIDENCIAS DE VISITAS — FOTOS Y FIRMAS','','','','','',''],
-    ['Ruta: "Agenda_NOC/fotos/[código]_[nombre]/[fecha-visita]/archivo".','','','','','',''],
-    ['Nº','FECHA','CÓDIGO CLIENTE','CLIENTE','TIPO DE EVIDENCIA','DESCRIPCIÓN / OBSERVACIÓN','RUTA EN DRIVE']
-  ];
+  const E = [['EVIDENCIAS DE VISITAS — FOTOS Y FIRMAS','','','','','',''],['Ruta: "Agenda_NOC/fotos/[código]_[nombre]/[fecha-visita]/archivo".','','','','','',''],['Nº','FECHA','CÓDIGO CLIENTE','CLIENTE','TIPO DE EVIDENCIA','DESCRIPCIÓN / OBSERVACIÓN','RUTA EN DRIVE']];
   const evidRows = buildEvidenciasRows();
   const totalFilas = Math.max(60, evidRows.length);
-  for (let i=0; i<totalFilas; i++){
-    if (i < evidRows.length) E.push(evidRows[i]);
-    else E.push([i+1,'','','','','','']);
-  }
+  for (let i=0; i<totalFilas; i++){ if (i < evidRows.length) E.push(evidRows[i]); else E.push([i+1,'','','','','','']); }
   const wsE = XLSX.utils.aoa_to_sheet(E);
-  wsE['!merges'] = [
-    {s:{r:0,c:0},e:{r:0,c:6}},
-    {s:{r:1,c:0},e:{r:1,c:6}}
-  ];
+  wsE['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
   wsE['!cols'] = [{wch:5},{wch:22},{wch:16},{wch:38},{wch:20},{wch:48},{wch:55}];
   wsE['!rows'] = [{hpt:28},{hpt:22},{hpt:26}];
-
   for (let R = 0; R < E.length; R++){
     for (let Cc = 0; Cc < 7; Cc++){
       const addr = XLSX.utils.encode_cell({r:R,c:Cc});
       if (!wsE[addr]) wsE[addr] = {t:'s', v:''};
-      const cell = wsE[addr];
-      cell.s = cell.s || {};
-
-      if (R === 0){
-        cell.s.fill = fill(col.titleBg);
-        cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:'FFFFFF'}};
-        cell.s.alignment = {horizontal:'center', vertical:'center'};
-        cell.s.border = bd();
-      } else if (R === 1){
-        cell.s.fill = fill(col.instrBg);
-        cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}};
-        cell.s.alignment = {horizontal:'left', vertical:'center'};
-        cell.s.border = bd();
-      } else if (R === 2){
-        cell.s.fill = fill(col.headBg);
-        cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:'FFFFFF'}};
-        cell.s.alignment = center;
-        cell.s.border = bd();
-      } else {
-        cell.s.font = {name:'Calibri', sz:9};
-        cell.s.border = bd();
-        cell.s.alignment = (Cc === 5) ? left : center;
-        if (R % 2 === 0) cell.s.fill = fill(col.altBg);
-      }
+      const cell = wsE[addr]; cell.s = cell.s || {};
+      if (R === 0){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'center', vertical:'center'}; cell.s.border = bd(); }
+      else if (R === 1){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.border = bd(); }
+      else if (R === 2){ cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = center; cell.s.border = bd(); }
+      else { cell.s.font = {name:'Calibri', sz:9}; cell.s.border = bd(); cell.s.alignment = (Cc === 5) ? left : center; if (R % 2 === 0) cell.s.fill = fill(col.altBg); }
     }
   }
   XLSX.utils.book_append_sheet(wb, wsE, 'Evidencias');
@@ -1649,50 +1544,22 @@ function buildStyledWorkbook(){
     wsR[addr] = {t:'n', f:`COUNTIF('Agenda de Visitas'!${colL}5:${colL}${lastRow},"X")+COUNTIF('Agenda de Visitas'!${colL}5:${colL}${lastRow},"x")`};
   });
   wsR['!cols']  = [{wch:38},{wch:18},{wch:6},{wch:6},{wch:22},{wch:14},{wch:14}];
-  wsR['!merges']= [
-    {s:{r:0,c:0},e:{r:0,c:6}},
-    {s:{r:2,c:0},e:{r:2,c:6}},
-    {s:{r:4,c:0},e:{r:4,c:3}},
-    {s:{r:4,c:4},e:{r:4,c:6}},
-    {s:{r:14,c:0},e:{r:14,c:6}},
-    {s:{r:19,c:5},e:{r:19,c:6}}
-  ];
+  wsR['!merges']= [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:2,c:0},e:{r:2,c:6}},{s:{r:4,c:0},e:{r:4,c:3}},{s:{r:4,c:4},e:{r:4,c:6}},{s:{r:14,c:0},e:{r:14,c:6}},{s:{r:19,c:5},e:{r:19,c:6}}];
   wsR['!rows'] = [{hpt:30},{hpt:24},{hpt:20}];
-
   for (let R = 0; R < R3.length; R++){
     for (let Cc = 0; Cc < 7; Cc++){
       const addr = XLSX.utils.encode_cell({r:R,c:Cc});
       if (!wsR[addr]) wsR[addr] = {t:'s', v:''};
-      const cell = wsR[addr];
-      cell.s = cell.s || {};
-      cell.s.border = bd();
-      cell.s.font = {name:'Calibri', sz:10};
-      cell.s.alignment = center;
-
-      if (R === 0){
-        cell.s.fill = fill(col.titleBg);
-        cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}};
-      } else if (R === 1){
-        cell.s.fill = fill(col.zonaBg);
-        cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:'FFFFFF'}};
-        cell.s.alignment = {horizontal:'left', vertical:'center'};
-      } else if (R === 2){
-        cell.s.fill = fill(col.instrBg);
-        cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}};
-        cell.s.alignment = {horizontal:'left', vertical:'center'};
-      } else if (R === 4){
-        cell.s.fill = fill(col.headBg);
-        cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}};
-      } else if (R >= 5 && R <= 11){
-        if (Cc === 0){
-          cell.s.fill = fill(col.codeBg);
-          cell.s.alignment = {horizontal:'left', vertical:'center'};
-          cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}};
-        } else if (Cc === 1){
-          cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:col.zonaBg}};
-        } else if (Cc === 4){
-          const leyendas = ['Realizada','Pendiente','No Realizada','Pospuesta'];
-          const leyenda = leyendas[R-5];
+      const cell = wsR[addr]; cell.s = cell.s || {}; cell.s.border = bd(); cell.s.font = {name:'Calibri', sz:10}; cell.s.alignment = center;
+      if (R === 0){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; }
+      else if (R === 1){ cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+      else if (R === 2){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+      else if (R === 4){ cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; }
+      else if (R >= 5 && R <= 11){
+        if (Cc === 0){ cell.s.fill = fill(col.codeBg); cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; }
+        else if (Cc === 1){ cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:col.zonaBg}}; }
+        else if (Cc === 4){
+          const leyendas = ['Realizada','Pendiente','No Realizada','Pospuesta']; const leyenda = leyendas[R-5];
           if (leyenda){
             cell.s.font = {name:'Calibri', sz:10, bold:true};
             if (leyenda === 'Realizada'){ cell.s.fill = fill(col.realBg); cell.s.font.color = {rgb:col.realFg}; }
@@ -1701,27 +1568,14 @@ function buildStyledWorkbook(){
             else if (leyenda === 'Pospuesta'){ cell.s.fill = fill(col.posBg); cell.s.font.color = {rgb:col.posFg}; }
           }
         }
-      } else if (R === 14){
-        cell.s.fill = fill(col.secDiaBg);
-        cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}};
-      } else if (R === 15){
-        cell.s.fill = fill(col.dayBg);
-        cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.dayFg}};
-      } else if (R === 16){
-        cell.s.font = {name:'Calibri', sz:16, bold:true, color:{rgb:col.zonaBg}};
-        cell.s.fill = fill('E2EFDA');
-      } else if (R === 19){
-        cell.s.fill = fill('FFF2CC');
-        cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.instrFg}};
-        cell.s.alignment = {horizontal:'left', vertical:'center'};
-      } else if (R === 21 || R === 22){
-        cell.s.alignment = {horizontal:'left', vertical:'center'};
-        cell.s.font = {name:'Calibri', sz:10, italic:true};
-      }
+      } else if (R === 14){ cell.s.fill = fill(col.secDiaBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; }
+      else if (R === 15){ cell.s.fill = fill(col.dayBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.dayFg}}; }
+      else if (R === 16){ cell.s.font = {name:'Calibri', sz:16, bold:true, color:{rgb:col.zonaBg}}; cell.s.fill = fill('E2EFDA'); }
+      else if (R === 19){ cell.s.fill = fill('FFF2CC'); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+      else if (R === 21 || R === 22){ cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.font = {name:'Calibri', sz:10, italic:true}; }
     }
   }
   XLSX.utils.book_append_sheet(wb, wsR, 'Resumen Mensual');
-
   return wb;
 }
 function exportExcel(){ const wb = buildStyledWorkbook(); const mes = (DB.month || 'Mes').replace(/\s+/g, '_'); XLSX.writeFile(wb, `Agenda_Visitas_NOC_${mes}.xlsx`, { cellStyles: true }); toast('✓ Excel descargado'); }
@@ -1740,9 +1594,6 @@ async function importarDatos(input){
 
 function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
 
-/* ============================================================
-   BÚSQUEDA — lupa expansible
-   ============================================================ */
 let searchDebounce = null;
 function toggleSearch(force){
   const bar = document.getElementById('searchBar');
@@ -1753,9 +1604,6 @@ function toggleSearch(force){
 function onSearchInput(){ if (searchDebounce) clearTimeout(searchDebounce); searchDebounce = setTimeout(renderAgenda, 200); }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('searchBar').classList.contains('open')) toggleSearch(false); });
 
-/* ============================================================
-   GRÁFICA MENSUAL
-   ============================================================ */
 let lastStats = { r: 0, p: 0, n: 0, s: 0 };
 function drawChart(){
   const cv = document.getElementById('chartCanvas');
@@ -1766,12 +1614,7 @@ function drawChart(){
   const ctx = cv.getContext('2d');
   ctx.scale(dpr, dpr);
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
-  const data = [
-    ['Realizadas', lastStats.r, '#22c55e'],
-    ['Pendientes', lastStats.p, '#f59e0b'],
-    ['No realizadas', lastStats.n, '#ef4444'],
-    ['Pospuestas', lastStats.s, '#94a3b8']
-  ];
+  const data = [['Realizadas', lastStats.r, '#22c55e'],['Pendientes', lastStats.p, '#f59e0b'],['No realizadas', lastStats.n, '#ef4444'],['Pospuestas', lastStats.s, '#94a3b8']];
   const max = Math.max(1, ...data.map(d => d[1]));
   const padL = 36, padR = 16, padT = 34, padB = 44;
   const plotW = W - padL - padR, plotH = H - padT - padB;
@@ -1806,17 +1649,9 @@ function downloadChart(){
 
 function liberarEspacio(){
   let freed = 0;
-  const limpiar = p => {
-    if (p && p.data && p.fileId && p.synced){
-      freed += p.data.length;
-      delete p.data;
-    }
-  };
+  const limpiar = p => { if (p && p.data && p.fileId && p.synced){ freed += p.data.length; delete p.data; } };
   for (const cod in DB.photos) safeArray(DB.photos[cod]).forEach(limpiar);
-  for (const cod in DB.visits){
-    const arr = Array.isArray(DB.visits[cod]) ? DB.visits[cod] : [];
-    arr.forEach(v => { if (v && v.firma) limpiar(v.firma); });
-  }
+  for (const cod in DB.visits){ const arr = Array.isArray(DB.visits[cod]) ? DB.visits[cod] : []; arr.forEach(v => { if (v && v.firma) limpiar(v.firma); }); }
   limpiar(DB.evid['super_sig']);
   return freed;
 }
@@ -1873,9 +1708,6 @@ setInterval(async () => { if (!document.hidden && isOnline() && !syncInProgress)
 document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on') syncToCloud(true); } });
 setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 60000);
 
-/* ============================================================
-   📊 SEGUNDA GRÁFICA — DETALLE POR CATEGORÍA (Master)
-   ============================================================ */
 const CATS = [['ZONA WIFI','#3b82f6'],['DEDICADO - ZONA WIFI','#ef4444'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['PYME','#f97316'],['ANTENA','#14b8a6'],['NODO','#60a5fa']];
 async function renderMasterStats(){
   const box = document.getElementById('masterStatsBox');
@@ -1922,15 +1754,11 @@ function drawChartCategorias(data){
   ctx.lineTo(padL, padT + plotH);
   ctx.lineTo(padL + plotW, padT + plotH);
   ctx.stroke();
-  ctx.strokeStyle = '#1e293b';
-  ctx.fillStyle = '#64748b';
-  ctx.font = '10px Segoe UI';
-  ctx.textAlign = 'right';
+  ctx.strokeStyle = '#1e293b'; ctx.fillStyle = '#64748b'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++){
     const v = Math.round(max * i / 4);
     const y = padT + plotH - (plotH * i / 4);
-    ctx.beginPath();
-    ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
     ctx.fillText(String(v), padL - 6, y + 3);
   }
   const slotW = plotW / data.length;
@@ -1947,16 +1775,12 @@ function drawChartCategorias(data){
     ctx.beginPath();
     if (ctx.roundRect){ ctx.roundRect(x, y, barW, bh, [6, 6, 0, 0]); } else { ctx.rect(x, y, barW, bh); }
     ctx.fill();
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = 'bold 14px Segoe UI';
-    ctx.textAlign = 'center';
+    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center';
     ctx.fillText(String(d[1]), cx, y - 6);
     ctx.save();
     ctx.translate(cx, padT + plotH + 10);
     ctx.rotate(-Math.PI / 4);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '10px Segoe UI';
-    ctx.textAlign = 'right';
+    ctx.fillStyle = '#94a3b8'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
     ctx.fillText(d[0], 0, 0);
     ctx.restore();
   });

@@ -1716,16 +1716,30 @@ function generarTextoVisita(cliente, v, nFotos, cod){
 
 async function cargarFotoComoBlob(foto){
   try {
-    // Foto local (data URL) → blob directo
+    // Detectar tipo real por filename o data URL
+    const nombre = (foto.filename || '').toLowerCase();
+    const dataStr = (foto.data || '').toLowerCase();
+    const esPng = nombre.endsWith('.png') || dataStr.indexOf('data:image/png') === 0;
+    const tipo = esPng ? 'image/png' : 'image/jpeg';
+
+    // 1) Foto local (data URL)
     if (foto.data){
       const res = await fetch(foto.data);
-      return await res.blob();
+      const blobOrig = await res.blob();
+      // Forzar el tipo correcto → el <img> ya la podrá mostrar
+      return new Blob([blobOrig], { type: tipo });
     }
-    // Foto en Drive → descargar como blob
+
+    // 2) Foto en Drive
     if (foto.fileId){
       const url = 'https://drive.google.com/thumbnail?id=' + foto.fileId + '&sz=w2000';
-      const res = await fetch(url);
-      if (res.ok) return await res.blob();
+      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!res.ok) return null;
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      // Si Google devolvió HTML (error/login), descartar
+      if (ct.indexOf('image/') !== 0 && ct.indexOf('octet-stream') < 0) return null;
+      const blobOrig = await res.blob();
+      return new Blob([blobOrig], { type: tipo });
     }
     return null;
   } catch(e){

@@ -334,6 +334,7 @@ let lastKnownRemoteTs = null;
 let activeUsersCache = [];
 let compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null };
 let formsAbiertos = new Set();
+let loadingFromCloud = false;
 function isOnline(){ return navigator.onLine !== false; }
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
 function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 3600000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
@@ -389,13 +390,13 @@ function sanitizeDB(){
     else if (typeof e === 'object' && !e.filename){ DB.evid[key].filename = 'firma_supervisor.png'; }
   }
 }
-function markDirty(){ try{ localStorage.setItem('nocDirty','1'); }catch(e){} }
+function markDirty(){ try{ localStorage.setItem('nocDirty','1'); localStorage.setItem('nocLastLocalActivity', String(Date.now())); }catch(e){} }
 function clearDirty(){ try{ localStorage.removeItem('nocDirty'); }catch(e){} }
 function isDirty(){ try{ return localStorage.getItem('nocDirty') === '1'; }catch(e){ return false; } }
 async function saveLocal(){ try{ if (typeof localForage !== 'undefined'){ await localForage.ready(); await localForage.setItem('nocVisitasDB', DB); } } catch(e){} }
 async function loadLocal(){ try{ if (typeof localForage !== 'undefined'){ await localForage.ready(); return await localForage.getItem('nocVisitasDB'); } }catch(e){} return null; }
 async function save(){ sanitizeDB(); await saveLocal(); markDirty(); scheduleSync(); updateSyncStatusBox(); }
-function scheduleSync(){ if (DB.autoSync === 'off') return; if (syncTimer) clearTimeout(syncTimer); setSyncBadge('⏳ Pendiente…','warn'); syncTimer = setTimeout(()=>{ syncToCloud(true); }, 5000); }
+function scheduleSync(){ if (DB.autoSync === 'off') return; if (syncTimer) clearTimeout(syncTimer); setSyncBadge('⏳ Pendiente…','warn'); syncTimer = setTimeout(()=>{ syncToCloud(true); }, 8000); }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',2500); }
 function showTab(id, el){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); ['agenda','evid','res'].forEach(x=>document.getElementById('tab-'+x).style.display='none'); document.getElementById('tab-'+id).style.display='block'; }
 function setTabEvid(){ evidCurrentFolder = null; renderEvid(); }
@@ -458,7 +459,7 @@ function newVisit(cod){
   toast('✓ Visita nueva — completa los datos');
 }
 function deleteVisit(cod, visitId){
-  if (!confirm('¿Eliminar esta VISITA del índice?\n\n⚠ IMPORTANTE:\n• Solo se elimina la visita del listado.\n• Las FOTOS y FIRMAS NO se borran de Google Drive.\n• La carpeta del cliente en Drive queda intacta.\n\n¿Continuar?')) return;
+  if (!confirm('¿Eliminar esta VISITA del índice?\n\n⚠ IMPORTANTE:\n• Solo se elimina la visita del listado.\n• Las FOTOS y FIRMAS NO se borran de Google Drive.\n\n¿Continuar?')) return;
   if (!DB.visits[cod] || !Array.isArray(DB.visits[cod])){ toast('⚠ No se pudo encontrar la lista de visitas'); return; }
   const arr = DB.visits[cod];
   const i = arr.findIndex(v => v && v.id === visitId);
@@ -472,7 +473,6 @@ function deleteVisit(cod, visitId){
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
   closeHistorial();
   toast('🗑️ Visita eliminada (fotos en Drive intactas)');
-  if (driveStateReady){ syncToCloud(false).then(() => { clearDeletedVisit(visitId); toast('✓ Cambio sincronizado'); }).catch(() => { toast('⚠ Sincronización pendiente'); }); }
 }
 function switchVisit(cod, visitId){
   editingVisitId[cod] = visitId;
@@ -517,8 +517,8 @@ async function callBackendRead(payload, timeoutMs){
   const baseUrl = APPS_SCRIPT_URL + '?' + params.toString();
   let result = null;
   for (let intento = 0; intento < 2; intento++){
-    try { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 12000); const res = await fetch(baseUrl, { method: 'GET', signal: controller.signal }); clearTimeout(timer); if (res.ok){ const text = await res.text(); try { result = JSON.parse(text); break; } catch(e){} } } catch(e){}
-    if (intento === 0){ setSyncBadge('⏳ Conectando…', 'warn'); await new Promise(r => setTimeout(r, 3000)); }
+    try { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 25000); const res = await fetch(baseUrl, { method: 'GET', signal: controller.signal }); clearTimeout(timer); if (res.ok){ const text = await res.text(); try { result = JSON.parse(text); break; } catch(e){} } } catch(e){}
+    if (intento === 0){ setSyncBadge('⏳ Conectando…', 'warn'); await new Promise(r => setTimeout(r, 2000)); }
   }
   if (!result){ result = await jsonpRequest(baseUrl, timeoutMs); }
   const badge = document.getElementById('syncBadge');
@@ -526,12 +526,12 @@ async function callBackendRead(payload, timeoutMs){
   return result;
 }
 async function callBackendWrite(payload){ try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, ...payload }) }); } catch(e){ throw new Error('No se pudo enviar: ' + e.message); } return { ok: true }; }
-async function callBackendWriteAndRead(payload){ await callBackendWrite(payload); await new Promise(r => setTimeout(r, 1500)); const res = await callBackendRead({ action:'getIndex' }, 20000); if (res && res.ok && res.content){ return { ok: true, merged: res.content }; } return { ok: false }; }
+async function callBackendWriteAndRead(payload){ await callBackendWrite(payload); await new Promise(r => setTimeout(r, 3000)); const res = await callBackendRead({ action:'getIndex' }, 40000); if (res && res.ok && res.content){ return { ok: true, merged: res.content }; } return { ok: false }; }
 async function testBackend(){ toast('🔬 Probando…'); try { const r = await callBackendRead({ action: 'ping' }, 15000); if (r.ok){ setDriveStatus('✓ Backend OK', '#4ade80'); toast('✓ OK'); } else { toast('⚠ ' + r.error); } } catch(e){ toast('⚠ ' + e.message); } }
 function buildPhotoFilename(fecha){ const d = fecha ? new Date(fecha) : new Date(); const pad = n => String(n).padStart(2, '0'); const stamp = d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()); const rand = Math.random().toString(36).slice(2, 6); return 'foto_' + stamp + '_' + rand + '.jpg'; }
 function arrayBufferToBase64(buffer){ let binary = ''; const bytes = new Uint8Array(buffer); const chunk = 0x8000; for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk)); return btoa(binary); }
 function hoyYMD(){ const d = new Date(); const pad = n => String(n).padStart(2,'0'); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
-async function sendHeartbeat(){ if (!isOnline()) return; try { const res = await callBackendRead({ action: 'heartbeat', deviceId: getDeviceId(), deviceName: getDeviceName(), userName: DB.resp || '' }, 8000); if (res && res.ok){ activeUsersCache = res.devices || []; updateActiveUsersBadge(res.active); } } catch(e){} }
+async function sendHeartbeat(){ if (!isOnline()) return; try { const res = await callBackendRead({ action: 'heartbeat', deviceId: getDeviceId(), deviceName: getDeviceName(), userName: DB.resp || '' }, 10000); if (res && res.ok){ activeUsersCache = res.devices || []; updateActiveUsersBadge(res.active); } } catch(e){} }
 function updateActiveUsersBadge(count){ const el = document.getElementById('activeUsersBadge'); if (!el) return; if (!count || count <= 0){ el.style.display = 'none'; return; } if (count === 1){ el.textContent = '👤 Solo tú'; } else { el.textContent = '👥 ' + count + ' técnicos'; } el.style.display = 'inline-block'; }
 function showActiveUsersModal(){ const modal = document.getElementById('historialModal'); const title = document.getElementById('historialTitle'); const list = document.getElementById('historialList'); title.textContent = '👥 Técnicos conectados (' + activeUsersCache.length + ')'; list.innerHTML = ''; if (!activeUsersCache.length){ list.innerHTML = '<div class="empty">Nadie más</div>'; } else { activeUsersCache.forEach(u => { const row = document.createElement('div'); row.className = 'card'; row.style.padding = '10px'; row.style.marginBottom = '8px'; row.innerHTML = '<b>📱 ' + (u.name || 'Dispositivo') + '</b>' + (u.user ? '<br><small style="color:var(--muted)">👤 ' + u.user + '</small>' : ''); list.appendChild(row); }); } modal.classList.add('open'); }
 async function syncMasterNow(){
@@ -604,7 +604,7 @@ async function syncToCloud(silent){
       try {
         await callBackendWrite({ action:'uploadPhoto', codigo:item.codigo, nombre:item.nombre, fecha:item.fechaVisita, filename:item.filename, mime:item.mime, base64:item.base64 });
         if (item.ref) item.ref.synced = true;
-        try { const fid = await callBackendRead({ action:'getFileId', codigo:item.codigo, filename:item.filename, fecha:item.fechaVisita }, 12000); if (fid && fid.ok && fid.fileId && item.ref) item.ref.fileId = fid.fileId; if (item.ref && item.ref.synced && item.ref.fileId) delete item.ref.data; } catch(e){}
+        try { const fid = await callBackendRead({ action:'getFileId', codigo:item.codigo, filename:item.filename, fecha:item.fechaVisita }, 15000); if (fid && fid.ok && fid.fileId && item.ref) item.ref.fileId = fid.fileId; if (item.ref && item.ref.synced && item.ref.fileId) delete item.ref.data; } catch(e){}
         done++;
         setSyncProgress(Math.round(done/Math.max(pending.length,1)*100));
         setSyncBadge('⬆ ' + done + '/' + pending.length,'info');
@@ -619,7 +619,15 @@ async function syncToCloud(silent){
     const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
     const excelBase64 = arrayBufferToBase64(excelBuffer);
     const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId(), excelBase64 });
-    if (resp && resp.ok && resp.merged){ try { const merged = JSON.parse(resp.merged); applyRemoteIndex(merged); lastKnownRemoteTs = merged.updatedAt || null; liberarEspacio(); await saveLocal(); } catch(e){} }
+    if (resp && resp.ok && resp.merged){
+      try {
+        const merged = JSON.parse(resp.merged);
+        lastKnownRemoteTs = merged.updatedAt || null;
+        localStorage.setItem('nocLastLoadOk', String(Date.now()));
+        liberarEspacio();
+        await saveLocal();
+      } catch(e){}
+    }
     setSyncProgress(100); setTimeout(()=>setSyncProgress(0), 800);
     clearDeletionsList(); clearDeletedPhotosList();
     if (failed === 0){
@@ -632,7 +640,7 @@ async function syncToCloud(silent){
       setSyncBadge('⚠ ' + restantes + ' pendiente(s)','warn');
       const msg = document.getElementById('partialSyncMsg');
       if (msg){
-        msg.innerHTML = 'Se cargaron <b style="color:#4ade80">' + done + ' de ' + pending.length + '</b> imágenes.<br><br>📴 El internet se interrumpió o falló la subida. Las <b style="color:#fbbf24">' + restantes + '</b> restantes quedan <b>guardadas en este dispositivo (offline)</b> y se subirán automáticamente al reconectar, o cuando pulses <b>☁️ Sync</b>.';
+        msg.innerHTML = 'Se cargaron <b style="color:#4ade80">' + done + ' de ' + pending.length + '</b> imágenes.<br><br>📴 El internet se interrumpió o falló la subida. Las <b style="color:#fbbf24">' + restantes + '</b> restantes quedan guardadas en este dispositivo y se subirán al reconectar.';
         document.getElementById('partialSyncModal').classList.add('open');
       }
     }
@@ -675,8 +683,28 @@ function applyRemoteIndex(remote){
   if (remote.comp) DB.comp = remote.comp;
   sanitizeDB(); renderActiveTab();
 }
-async function pollForUpdates(){ if (!isOnline() || syncInProgress || !driveStateReady) return; if (document.hidden) return; try { const meta = await callBackendRead({ action:'getIndexMeta' }, 8000); if (!meta || !meta.ok || !meta.exists) return; if (lastKnownRemoteTs === null){ lastKnownRemoteTs = meta.updatedAt; return; } if (meta.updatedAt !== lastKnownRemoteTs){ lastKnownRemoteTs = meta.updatedAt; if (meta.lastWriter === getDeviceId()) return; toast('🔄 Actualización de ' + (meta.lastWriter || 'otro')); await loadFromCloud(); } } catch(e){} }
-setInterval(pollForUpdates, 30000);
+async function pollForUpdates(){
+  if (!isOnline()) return;
+  if (syncInProgress) return;
+  if (loadingFromCloud) return;
+  if (!driveStateReady) return;
+  if (document.hidden) return;
+  if (formsAbiertos.size > 0) return;
+  const lastLocal = parseInt(localStorage.getItem('nocLastLocalActivity') || '0', 10);
+  if (Date.now() - lastLocal < 30000) return;
+  try {
+    const meta = await callBackendRead({ action:'getIndexMeta' }, 15000);
+    if (!meta || !meta.ok || !meta.exists) return;
+    if (lastKnownRemoteTs === null){ lastKnownRemoteTs = meta.updatedAt; return; }
+    if (meta.updatedAt !== lastKnownRemoteTs){
+      lastKnownRemoteTs = meta.updatedAt;
+      if (meta.lastWriter === getDeviceId()) return;
+      console.log('🔄 Actualización remota:', meta.lastWriter);
+      await loadFromCloud();
+    }
+  } catch(e){}
+}
+setInterval(pollForUpdates, 90000);
 function collectPendingUploads(){
   const items = [];
   for (const codigo in DB.photos){ const cliente = getClientByCode(codigo); const nombreCliente = cliente ? cliente.nombre : ('Cliente ' + codigo); const arr = safeArray(DB.photos[codigo]); for (const p of arr) if (p.data && !p.synced && p.filename) items.push({ codigo: String(codigo).trim(), nombre: nombreCliente, fechaVisita: p.fechaVisita || hoyYMD(), filename: p.filename, mime:'image/jpeg', base64: p.data.split(',')[1], ref: p }); }
@@ -696,71 +724,85 @@ function buildIndex(){
 }
 function setSyncProgress(pct){ const el = document.getElementById('syncProgress'); if (el) el.style.width = pct + '%'; }
 async function loadFromCloud(){
-  if (!isOnline()){ driveStateReady = true; setSyncBadge('📴 Sin conexión','warn'); updateSyncStatusBox(); return false; }
-  setSyncBadge('📥 Cargando Drive…','info');
-  updateSyncStatusBox();
-  const timeoutGlobal = setTimeout(() => {
-    if (!driveStateReady){
-      console.warn('⏱ loadFromCloud: timeout global 90s');
-      driveStateReady = true;
-      setSyncBadge('⚠ Drive lento','warn');
-      updateSyncStatusBox();
-      toast('⚠ Drive tardó demasiado — usando datos locales');
-    }
-  }, 90000);
-  let res = null;
-  try { res = await callBackendRead({ action:'getIndex' }, 80000); }
-  catch(err){ clearTimeout(timeoutGlobal); console.error('loadFromCloud error:', err); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
-  clearTimeout(timeoutGlobal);
-  if (!res || !res.ok){
-    if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); updateSyncStatusBox(); return false; }
-    setSyncBadge('⚠ ' + (res && res.error ? String(res.error).slice(0,25) : 'sin respuesta'),'err');
-    driveStateReady = true;
+  if (loadingFromCloud){ console.log('⏭ loadFromCloud ya en curso'); return false; }
+  const lastLoad = parseInt(localStorage.getItem('nocLastLoadOk') || '0', 10);
+  const MIN = 3 * 60 * 1000;
+  if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN)){
+    console.log('⏭ loadFromCloud cache válido');
+    setSyncBadge('✓ Drive reciente','ok');
     updateSyncStatusBox();
-    return false;
-  }
-  let remote;
-  try { remote = JSON.parse(res.content); }
-  catch(e){ driveStateReady = true; setSyncBadge('⚠ Error JSON','err'); updateSyncStatusBox(); return false; }
-  if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('⚠ Formato inválido','warn'); updateSyncStatusBox(); return false; }
-  const remoteHasData = (remote.visits && Object.keys(remote.visits).length > 0) || (remote.photosMeta && Object.keys(remote.photosMeta).length > 0);
-  const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
-  if (!remoteHasData && localHasData){ driveStateReady = true; toast('⚠ Drive vacío — tus datos locales se conservan'); setSyncBadge('⚠ Drive vacío','warn'); updateSyncStatusBox(); return false; }
-  try {
-    applyRemoteIndex(remote);
-    lastKnownRemoteTs = remote.updatedAt || new Date().toISOString();
-    migrateVisits();
-    sanitizeDB();
-    await saveLocal();
-    localStorage.setItem('nocLastSync', new Date().toISOString());
-    renderActiveTab();
-    driveStateReady = true;
-    setSyncBadge('✓ Drive cargado','ok');
-    toast('✓ Datos cargados de Drive');
-    updateSyncStatusBox();
-    setTimeout(() => {
-      if (!driveStateReady) return;
-      const hayPendientes = isDirty() || collectPendingUploads().length > 0;
-      if (hayPendientes){ console.log('📤 Flush post-Drive'); syncToCloud(true); }
-    }, 5000);
     return true;
-  } catch (criticalError){
-    driveStateReady = true;
-    console.error('❌ Error procesando Drive:', criticalError);
-    const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
-    toast('⚠ Drive: ' + detalle.slice(0,80));
-    setSyncBadge('⚠ Error','err');
+  }
+  loadingFromCloud = true;
+  try {
+    if (!isOnline()){ driveStateReady = true; setSyncBadge('📴 Sin conexión','warn'); updateSyncStatusBox(); return false; }
+    setSyncBadge('📥 Cargando Drive…','info');
     updateSyncStatusBox();
-    try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, stack: (criticalError && criticalError.stack) || '', ts: new Date().toISOString() })); } catch(e){}
-    return false;
+    const timeoutGlobal = setTimeout(() => {
+      if (!driveStateReady){
+        console.warn('⏱ timeout global 90s');
+        driveStateReady = true;
+        setSyncBadge('⚠ Drive lento','warn');
+        updateSyncStatusBox();
+        toast('⚠ Drive tardó demasiado — usando datos locales');
+      }
+    }, 90000);
+    let res = null;
+    try { res = await callBackendRead({ action:'getIndex' }, 80000); }
+    catch(err){ clearTimeout(timeoutGlobal); console.error('loadFromCloud error:', err); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
+    clearTimeout(timeoutGlobal);
+    if (!res || !res.ok){
+      if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); updateSyncStatusBox(); return false; }
+      setSyncBadge('⚠ ' + (res && res.error ? String(res.error).slice(0,25) : 'sin respuesta'),'err');
+      driveStateReady = true;
+      updateSyncStatusBox();
+      return false;
+    }
+    let remote;
+    try { remote = JSON.parse(res.content); }
+    catch(e){ driveStateReady = true; setSyncBadge('⚠ Error JSON','err'); updateSyncStatusBox(); return false; }
+    if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('⚠ Formato inválido','warn'); updateSyncStatusBox(); return false; }
+    const remoteHasData = (remote.visits && Object.keys(remote.visits).length > 0) || (remote.photosMeta && Object.keys(remote.photosMeta).length > 0);
+    const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
+    if (!remoteHasData && localHasData){ driveStateReady = true; toast('⚠ Drive vacío — datos locales conservados'); setSyncBadge('⚠ Drive vacío','warn'); updateSyncStatusBox(); return false; }
+    try {
+      applyRemoteIndex(remote);
+      lastKnownRemoteTs = remote.updatedAt || new Date().toISOString();
+      migrateVisits();
+      sanitizeDB();
+      await saveLocal();
+      localStorage.setItem('nocLastSync', new Date().toISOString());
+      localStorage.setItem('nocLastLoadOk', String(Date.now()));
+      if (formsAbiertos.size === 0){
+        renderActiveTab();
+      } else {
+        console.log('⏭ Re-render pausado: forms abiertos');
+      }
+      driveStateReady = true;
+      setSyncBadge('✓ Drive cargado','ok');
+      toast('✓ Datos cargados de Drive');
+      updateSyncStatusBox();
+      return true;
+    } catch (criticalError){
+      driveStateReady = true;
+      console.error('❌ Error procesando Drive:', criticalError);
+      const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
+      toast('⚠ Drive: ' + detalle.slice(0,80));
+      setSyncBadge('⚠ Error','err');
+      updateSyncStatusBox();
+      try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, stack: (criticalError && criticalError.stack) || '', ts: new Date().toISOString() })); } catch(e){}
+      return false;
+    }
+  } finally {
+    loadingFromCloud = false;
   }
 }
-async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
+async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
 async function forceSyncNow(){ if (!driveStateReady){ if (!confirm('⚠ Drive NO se ha cargado. ¿Continuar?')) return; driveStateReady = true; } markDirty(); await syncToCloud(false); }
-async function reorganizeDrive(){ if (!confirm('¿Reorganizar carpetas y fechas en Drive?')) return; const clientesMap = {}; allClients().forEach(c => { clientesMap[String(c.codigo).trim()] = c.nombre; }); clientesMap['_supervisor'] = 'Supervisor NOC'; toast('🗂️ Reorganizando…'); try { await callBackendWrite({ action:'reorganizeAll', clientesMap }); await new Promise(r => setTimeout(r, 3000)); await callBackendWrite({ action:'fixDates', index: JSON.stringify(buildIndex()) }); await new Promise(r => setTimeout(r, 3000)); await loadFromCloud(); toast('✓ Reorganización completa'); } catch(err){ toast('⚠ ' + err.message); } }
-async function rescanDriveNow(){ if (!confirm('¿Escanear Drive y agregar fotos nuevas al índice?')) return; toast('🔍 Escaneando…'); try { await callBackendWrite({ action: 'rescanDrivePhotos' }); await new Promise(r => setTimeout(r, 5000)); if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; await loadFromCloud(); toast('✓ Índice reconstruido'); } catch(err){ toast('⚠ ' + err.message); } }
-async function cleanOrphanPhotos(){ if (!confirm('¿Limpiar fotos huérfanas?')) return; try { await callBackendWrite({ action:'cleanOrphans' }); await new Promise(r => setTimeout(r, 3000)); await loadFromCloud(); toast('✓ Limpiado'); } catch(err){ toast('⚠ ' + err.message); } }
-async function fetchFileId(codigo, filename, itemRef){ if (!itemRef) throw new Error('Ref inválida'); const fecha = itemRef.fechaVisita || ''; const res = await callBackendRead({ action:'getFileId', codigo, filename, fecha }, 15000); if (!res) throw new Error('Sin respuesta'); if (!res.ok) throw new Error(res.error || 'Error'); if (!res.fileId) throw new Error('Sin fileId'); itemRef.fileId = res.fileId; if (itemRef.synced) delete itemRef.data; return res.fileId; }
+async function reorganizeDrive(){ if (!confirm('¿Reorganizar carpetas y fechas en Drive?')) return; const clientesMap = {}; allClients().forEach(c => { clientesMap[String(c.codigo).trim()] = c.nombre; }); clientesMap['_supervisor'] = 'Supervisor NOC'; toast('🗂️ Reorganizando…'); try { await callBackendWrite({ action:'reorganizeAll', clientesMap }); await new Promise(r => setTimeout(r, 3000)); await callBackendWrite({ action:'fixDates', index: JSON.stringify(buildIndex()) }); await new Promise(r => setTimeout(r, 3000)); localStorage.removeItem('nocLastLoadOk'); await loadFromCloud(); toast('✓ Reorganización completa'); } catch(err){ toast('⚠ ' + err.message); } }
+async function rescanDriveNow(){ if (!confirm('¿Escanear Drive y agregar fotos nuevas al índice?')) return; toast('🔍 Escaneando…'); try { await callBackendWrite({ action: 'rescanDrivePhotos' }); await new Promise(r => setTimeout(r, 5000)); if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; await loadFromCloud(); toast('✓ Índice reconstruido'); } catch(err){ toast('⚠ ' + err.message); } }
+async function cleanOrphanPhotos(){ if (!confirm('¿Limpiar fotos huérfanas?')) return; try { await callBackendWrite({ action:'cleanOrphans' }); await new Promise(r => setTimeout(r, 3000)); localStorage.removeItem('nocLastLoadOk'); await loadFromCloud(); toast('✓ Limpiado'); } catch(err){ toast('⚠ ' + err.message); } }
+async function fetchFileId(codigo, filename, itemRef){ if (!itemRef) throw new Error('Ref inválida'); const fecha = itemRef.fechaVisita || ''; const res = await callBackendRead({ action:'getFileId', codigo, filename, fecha }, 20000); if (!res) throw new Error('Sin respuesta'); if (!res.ok) throw new Error(res.error || 'Error'); if (!res.fileId) throw new Error('Sin fileId'); itemRef.fileId = res.fileId; if (itemRef.synced) delete itemRef.data; return res.fileId; }
 async function downloadAllPending(silent){
   if (downloadState.active){ if (!silent) toast('Ya procesando'); return; }
   const pending = [];
@@ -798,6 +840,37 @@ function clientesConVisitaEnFecha(fechaISO){
   const sufijo = '-' + parts[1] + '-' + parts[2];
   for (const cod in DB.visits){ const arr = getVisits(cod); for (const v of arr){ if (!v || !v.fecha) continue; if (v.fecha === fechaISO || v.fecha.endsWith(sufijo)){ set.add(String(cod).trim()); break; } } }
   return set;
+}
+function fechaADiaIndex(fechaYMD){
+  if (!fechaYMD) return -1;
+  const partes = String(fechaYMD).split('-');
+  if (partes.length !== 3) return -1;
+  const d = new Date(parseInt(partes[0],10), parseInt(partes[1],10)-1, parseInt(partes[2],10));
+  if (isNaN(d.getTime())) return -1;
+  return (d.getDay() + 6) % 7;
+}
+function onFechaChange(cod){
+  saveVisit(cod);
+  const v = getCurrentVisit(cod);
+  if (!v || !v.fecha) return;
+  const di = fechaADiaIndex(v.fecha);
+  if (di < 0) return;
+  v.days = v.days || [];
+  if (!v.days.includes(di)){
+    v.days.push(di);
+    v.updatedAt = new Date().toISOString();
+    saveLocal();
+    markDirty();
+  }
+  const form = document.getElementById('form-' + cod);
+  if (form){
+    const cardPadre = form.closest('.card');
+    if (cardPadre){
+      const dayBtns = cardPadre.querySelectorAll('.days .day');
+      if (dayBtns[di]) dayBtns[di].classList.add('sel');
+    }
+  }
+  toast('📅 Día marcado: ' + DIAS[di]);
 }
 function renderAgenda(){
   const q = (document.getElementById('search').value || '').toLowerCase();
@@ -850,7 +923,7 @@ function renderAgenda(){
       ${nFotos?`<span style="font-size:.75rem;color:var(--accent);margin-left:8px">📷 ${nFotos}</span>`:''}
       <div class="form ${formAbierto ? 'open' : ''}" id="form-${c.codigo}">
         ${current ? `
-        <div class="row2"><div><label>FECHA DE VISITA 📅</label><input type="date" id="f-${c.codigo}" value="${current.fecha||''}" onchange="saveVisit('${c.codigo}')"></div><div><label>HORA</label><input type="time" id="h-${c.codigo}" value="${current.hora||''}" onchange="saveVisit('${c.codigo}')"></div></div>
+        <div class="row2"><div><label>FECHA DE VISITA 📅</label><input type="date" id="f-${c.codigo}" value="${current.fecha||''}" onchange="onFechaChange('${c.codigo}')"></div><div><label>HORA</label><input type="time" id="h-${c.codigo}" value="${current.hora||''}" onchange="saveVisit('${c.codigo}')"></div></div>
         <label>ESTADO</label><select id="e-${c.codigo}" onchange="saveVisit('${c.codigo}')">${['Pendiente','Realizada','No Realizada','Pospuesta'].map(o=>`<option ${o===current.estado?'selected':''}>${o}</option>`).join('')}</select>
         <label>OBSERVACIONES</label><textarea id="o-${c.codigo}" placeholder="..." oninput="onObsInput('${c.codigo}', this.value)">${current.obs||''}</textarea>
         <label>FIRMA DEL CLIENTE</label><canvas class="sig" id="sig-${c.codigo}"></canvas>
@@ -925,12 +998,7 @@ async function saveClientEdit(){
   }
   const isCustom = (DB.customClients || []).find(c => String(c.codigo).trim() === oldCod);
   if (isCustom){ isCustom.codigo = newCod; isCustom.nombre = newNom; isCustom.direccion = newDir || '—'; }
-  else {
-    if (!DB.hiddenClients.includes(oldCod)) DB.hiddenClients.push(oldCod);
-    const dup = (DB.customClients || []).find(c => String(c.codigo).trim() === newCod);
-    if (dup){ dup.nombre = newNom; dup.direccion = newDir || '—'; }
-    else DB.customClients.push({ codigo: newCod, nombre: newNom, direccion: newDir || '—', custom: true });
-  }
+  else { if (!DB.hiddenClients.includes(oldCod)) DB.hiddenClients.push(oldCod); const dup = (DB.customClients || []).find(c => String(c.codigo).trim() === newCod); if (dup){ dup.nombre = newNom; dup.direccion = newDir || '—'; } else DB.customClients.push({ codigo: newCod, nombre: newNom, direccion: newDir || '—', custom: true }); }
   await save();
   renderAgenda();
   document.getElementById('editClientModal').classList.remove('open');
@@ -938,8 +1006,7 @@ async function saveClientEdit(){
   if (DB.autoSync === 'on') scheduleSync();
 }
 function diagnosticarIds(){
-  const lineas = [];
-  lineas.push('=== DIAGNÓSTICO DE IDs ===');
+  const lineas = ['=== DIAGNÓSTICO DE IDs ==='];
   const codigos = new Set([...Object.keys(DB.visits||{}), ...Object.keys(DB.photos||{})]);
   codigos.forEach(c => {
     const vis = (DB.visits[c] || []).length;
@@ -968,7 +1035,7 @@ async function ejecutarRepararID(){
   if (String(origen).trim() === String(destino).trim()){ toast('⚠ Origen y destino deben ser distintos'); return; }
   const clienteOrigen = getClientByCode(origen);
   const clienteDestino = getClientByCode(destino);
-  if (!confirm('🛠️ REPARAR ID\n\nSe moverán TODAS las visitas y fotos de:\n  #' + origen + ' "' + (clienteOrigen ? clienteOrigen.nombre : '?') + '"\n\nBajo el código:\n  #' + destino + (clienteDestino ? ' "' + clienteDestino.nombre + '"' : ' (cliente nuevo)') + '\n\n¿Continuar?')) return;
+  if (!confirm('🛠️ REPARAR ID\n\nSe moverán TODAS las visitas y fotos de #' + origen + ' a #' + destino + '\n\n¿Continuar?')) return;
   const visitas = (DB.visits[origen] || []).slice();
   const fotos = (DB.photos[origen] || []).slice();
   if (!DB.visits[destino]) DB.visits[destino] = [];
@@ -1092,12 +1159,12 @@ function delPhoto(cod, i){
   const arr = DB.photos[cod];
   if (!Array.isArray(arr) || !arr[i]){ toast('⚠ No encontrado'); return; }
   const p = arr[i];
-  if (!confirm('¿Eliminar esta FOTO?\n\nSe moverá a la papelera de Google Drive.')) return;
+  if (!confirm('¿Eliminar esta FOTO?')) return;
   if (p.filename) markPhotoDeleted(cod, p.filename);
   if (p.filename && p.synced) callBackendWrite({ action:'deletePhoto', codigo:cod, filename:p.filename, fecha: p.fechaVisita || '' }).catch(()=>{});
   arr.splice(i, 1);
   save(); renderPhotos(cod); renderAgenda();
-  toast('🗑️ Foto enviada a papelera');
+  toast('🗑️ Foto eliminada');
 }
 function guardarVisita(cod, nombre){
   const v = getCurrentVisit(cod);
@@ -1282,7 +1349,7 @@ function buildStyledWorkbook(){
   const wb = XLSX.utils.book_new();
   const A = [];
   const r1 = new Array(18).fill(''); r1[0]='AGENDA DE VISITAS — NOC NIVEL 2'; r1[4]='ZONA WIFI'; A.push(r1);
-  const r2 = new Array(18).fill(''); r2[0]='INSTRUCCIONES: Marca con "X" el día programado. Registra FECHA, HORA, ESTADO, OBSERVACIONES y FIRMA. Fotos en Drive → "fotos/[código]_[nombre]/[fecha-visita]/".'; A.push(r2);
+  const r2 = new Array(18).fill(''); r2[0]='INSTRUCCIONES: Marca con "X" el día programado.'; A.push(r2);
   const r3 = new Array(18).fill(''); r3[0]='DATOS DEL CLIENTE'; r3[5]='DÍA PROGRAMADO DE VISITA'; r3[12]='REGISTRO DE VISITA REALIZADA'; A.push(r3);
   A.push(['Nº','CÓDIGO','CLIENTE / RAZÓN SOCIAL','DIRECCIÓN','ZONA','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO','DOMINGO','FECHA DE VISITA','HORA','ESTADO','OBSERVACIONES DE LA VISITA','FIRMA DEL CLIENTE','Nº EVIDENCIAS']);
   allRows.forEach((r, i) => {
@@ -1303,23 +1370,17 @@ function buildStyledWorkbook(){
       const addr = XLSX.utils.encode_cell({r:R,c:Cc});
       if (!wsA[addr]) wsA[addr] = {t:'s', v:''};
       const cell = wsA[addr]; cell.s = cell.s || {};
-      if (R === 0){
-        if (Cc < 4){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:col.titleFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
-        else { cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'right', vertical:'center'}; }
-        cell.s.border = bd();
-      } else if (R === 1){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center', wrapText:true}; cell.s.border = bd(); }
+      if (R === 0){ if (Cc < 4){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:col.titleFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; } else { cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'right', vertical:'center'}; } cell.s.border = bd(); }
+      else if (R === 1){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center', wrapText:true}; cell.s.border = bd(); }
       else if (R === 2){ if (Cc <= 4){ cell.s.fill = fill(col.secClienteBg); } else if (Cc <= 11){ cell.s.fill = fill(col.secDiaBg); } else { cell.s.fill = fill(col.secRegistroBg); } cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = center; cell.s.border = bd(); }
       else if (R === 3){ if (Cc >= 5 && Cc <= 11){ cell.s.fill = fill(col.dayBg); cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:col.dayFg}}; } else { cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.headFg}}; } cell.s.alignment = center; cell.s.border = bd(); }
-      else {
-        cell.s.font = {name:'Calibri', sz:10}; cell.s.border = bd();
+      else { cell.s.font = {name:'Calibri', sz:10}; cell.s.border = bd();
         if (Cc === 0 || Cc === 1){ cell.s.fill = fill(col.codeBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; cell.s.alignment = center; }
         else if (Cc === 2 || Cc === 3){ cell.s.alignment = left; }
         else if (Cc === 4){ cell.s.fill = fill(col.zonaRowBg); cell.s.alignment = center; cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:'375623'}}; }
         else if (Cc >= 5 && Cc <= 11){ cell.s.alignment = center; if (cell.v === 'X'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:col.realFg}}; } else { cell.s.fill = fill(col.dayBg); } }
         else if (Cc === 12 || Cc === 13){ cell.s.alignment = center; }
-        else if (Cc === 14){
-          cell.s.alignment = center;
-          const estado = String(cell.v || '');
+        else if (Cc === 14){ cell.s.alignment = center; const estado = String(cell.v || '');
           if (estado === 'Realizada'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.realFg}}; }
           else if (estado === 'Pendiente'){ cell.s.fill = fill(col.pendBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.pendFg}}; }
           else if (estado === 'No Realizada'){ cell.s.fill = fill(col.nreBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.nreFg}}; }
@@ -1333,7 +1394,7 @@ function buildStyledWorkbook(){
     }
   }
   XLSX.utils.book_append_sheet(wb, wsA, 'Agenda de Visitas');
-  const E = [['EVIDENCIAS DE VISITAS — FOTOS Y FIRMAS','','','','','',''],['Ruta: "Agenda_NOC/fotos/[código]_[nombre]/[fecha-visita]/archivo".','','','','','',''],['Nº','FECHA','CÓDIGO CLIENTE','CLIENTE','TIPO DE EVIDENCIA','DESCRIPCIÓN / OBSERVACIÓN','RUTA EN DRIVE']];
+  const E = [['EVIDENCIAS DE VISITAS — FOTOS Y FIRMAS','','','','','',''],['','','','','','',''],['Nº','FECHA','CÓDIGO CLIENTE','CLIENTE','TIPO DE EVIDENCIA','DESCRIPCIÓN / OBSERVACIÓN','RUTA EN DRIVE']];
   const evidRows = buildEvidenciasRows();
   const totalFilas = Math.max(60, evidRows.length);
   for (let i=0; i<totalFilas; i++){ if (i < evidRows.length) E.push(evidRows[i]); else E.push([i+1,'','','','','','']); }
@@ -1341,17 +1402,12 @@ function buildStyledWorkbook(){
   wsE['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
   wsE['!cols'] = [{wch:5},{wch:22},{wch:16},{wch:38},{wch:20},{wch:48},{wch:55}];
   wsE['!rows'] = [{hpt:28},{hpt:22},{hpt:26}];
-  for (let R = 0; R < E.length; R++){
-    for (let Cc = 0; Cc < 7; Cc++){
-      const addr = XLSX.utils.encode_cell({r:R,c:Cc});
-      if (!wsE[addr]) wsE[addr] = {t:'s', v:''};
-      const cell = wsE[addr]; cell.s = cell.s || {};
-      if (R === 0){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'center', vertical:'center'}; cell.s.border = bd(); }
-      else if (R === 1){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.border = bd(); }
-      else if (R === 2){ cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = center; cell.s.border = bd(); }
-      else { cell.s.font = {name:'Calibri', sz:9}; cell.s.border = bd(); cell.s.alignment = (Cc === 5) ? left : center; if (R % 2 === 0) cell.s.fill = fill(col.altBg); }
-    }
-  }
+  for (let R = 0; R < E.length; R++){ for (let Cc = 0; Cc < 7; Cc++){ const addr = XLSX.utils.encode_cell({r:R,c:Cc}); if (!wsE[addr]) wsE[addr] = {t:'s', v:''}; const cell = wsE[addr]; cell.s = cell.s || {};
+    if (R === 0){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'center', vertical:'center'}; cell.s.border = bd(); }
+    else if (R === 1){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.border = bd(); }
+    else if (R === 2){ cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = center; cell.s.border = bd(); }
+    else { cell.s.font = {name:'Calibri', sz:9}; cell.s.border = bd(); cell.s.alignment = (Cc === 5) ? left : center; if (R % 2 === 0) cell.s.fill = fill(col.altBg); }
+  } }
   XLSX.utils.book_append_sheet(wb, wsE, 'Evidencias');
   const R3 = [
     ['RESUMEN Y CIERRE DE MES — CONTROL DE VISITAS','','','','','',''],
@@ -1370,9 +1426,7 @@ function buildStyledWorkbook(){
     ['','','','','','',''],
     ['VISITAS PROGRAMADAS POR DÍA DE LA SEMANA','','','','','',''],
     ['LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO','DOMINGO'],
-    ['','','','','','',''],
-    ['','','','','','',''],
-    ['','','','','','',''],
+    ['','','','','','',''],['','','','','','',''],['','','','','','',''],
     ['Responsable NOC N2:','','','','','SELLO / FIRMA DEL SUPERVISOR',''],
     ['','','','','','',''],
     ['Firma: ______________________________','','','','','',''],
@@ -1390,35 +1444,18 @@ function buildStyledWorkbook(){
   wsR['!cols']  = [{wch:38},{wch:18},{wch:6},{wch:6},{wch:22},{wch:14},{wch:14}];
   wsR['!merges']= [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:2,c:0},e:{r:2,c:6}},{s:{r:4,c:0},e:{r:4,c:3}},{s:{r:4,c:4},e:{r:4,c:6}},{s:{r:14,c:0},e:{r:14,c:6}},{s:{r:19,c:5},e:{r:19,c:6}}];
   wsR['!rows'] = [{hpt:30},{hpt:24},{hpt:20}];
-  for (let R = 0; R < R3.length; R++){
-    for (let Cc = 0; Cc < 7; Cc++){
-      const addr = XLSX.utils.encode_cell({r:R,c:Cc});
-      if (!wsR[addr]) wsR[addr] = {t:'s', v:''};
-      const cell = wsR[addr]; cell.s = cell.s || {}; cell.s.border = bd(); cell.s.font = {name:'Calibri', sz:10}; cell.s.alignment = center;
-      if (R === 0){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; }
-      else if (R === 1){ cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
-      else if (R === 2){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
-      else if (R === 4){ cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; }
-      else if (R >= 5 && R <= 11){
-        if (Cc === 0){ cell.s.fill = fill(col.codeBg); cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; }
-        else if (Cc === 1){ cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:col.zonaBg}}; }
-        else if (Cc === 4){
-          const leyendas = ['Realizada','Pendiente','No Realizada','Pospuesta']; const leyenda = leyendas[R-5];
-          if (leyenda){
-            cell.s.font = {name:'Calibri', sz:10, bold:true};
-            if (leyenda === 'Realizada'){ cell.s.fill = fill(col.realBg); cell.s.font.color = {rgb:col.realFg}; }
-            else if (leyenda === 'Pendiente'){ cell.s.fill = fill(col.pendBg); cell.s.font.color = {rgb:col.pendFg}; }
-            else if (leyenda === 'No Realizada'){ cell.s.fill = fill(col.nreBg); cell.s.font.color = {rgb:col.nreFg}; }
-            else if (leyenda === 'Pospuesta'){ cell.s.fill = fill(col.posBg); cell.s.font.color = {rgb:col.posFg}; }
-          }
-        }
-      } else if (R === 14){ cell.s.fill = fill(col.secDiaBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; }
-      else if (R === 15){ cell.s.fill = fill(col.dayBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.dayFg}}; }
-      else if (R === 16){ cell.s.font = {name:'Calibri', sz:16, bold:true, color:{rgb:col.zonaBg}}; cell.s.fill = fill('E2EFDA'); }
-      else if (R === 19){ cell.s.fill = fill('FFF2CC'); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
-      else if (R === 21 || R === 22){ cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.font = {name:'Calibri', sz:10, italic:true}; }
-    }
-  }
+  for (let R = 0; R < R3.length; R++){ for (let Cc = 0; Cc < 7; Cc++){ const addr = XLSX.utils.encode_cell({r:R,c:Cc}); if (!wsR[addr]) wsR[addr] = {t:'s', v:''}; const cell = wsR[addr]; cell.s = cell.s || {}; cell.s.border = bd(); cell.s.font = {name:'Calibri', sz:10}; cell.s.alignment = center;
+    if (R === 0){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; }
+    else if (R === 1){ cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+    else if (R === 2){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+    else if (R === 4){ cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; }
+    else if (R >= 5 && R <= 11){ if (Cc === 0){ cell.s.fill = fill(col.codeBg); cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; } else if (Cc === 1){ cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:col.zonaBg}}; } else if (Cc === 4){ const leyendas = ['Realizada','Pendiente','No Realizada','Pospuesta']; const leyenda = leyendas[R-5]; if (leyenda){ cell.s.font = {name:'Calibri', sz:10, bold:true}; if (leyenda === 'Realizada'){ cell.s.fill = fill(col.realBg); cell.s.font.color = {rgb:col.realFg}; } else if (leyenda === 'Pendiente'){ cell.s.fill = fill(col.pendBg); cell.s.font.color = {rgb:col.pendFg}; } else if (leyenda === 'No Realizada'){ cell.s.fill = fill(col.nreBg); cell.s.font.color = {rgb:col.nreFg}; } else if (leyenda === 'Pospuesta'){ cell.s.fill = fill(col.posBg); cell.s.font.color = {rgb:col.posFg}; } } } }
+    else if (R === 14){ cell.s.fill = fill(col.secDiaBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; }
+    else if (R === 15){ cell.s.fill = fill(col.dayBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.dayFg}}; }
+    else if (R === 16){ cell.s.font = {name:'Calibri', sz:16, bold:true, color:{rgb:col.zonaBg}}; cell.s.fill = fill('E2EFDA'); }
+    else if (R === 19){ cell.s.fill = fill('FFF2CC'); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+    else if (R === 21 || R === 22){ cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.font = {name:'Calibri', sz:10, italic:true}; }
+  } }
   XLSX.utils.book_append_sheet(wb, wsR, 'Resumen Mensual');
   return wb;
 }
@@ -1482,8 +1519,7 @@ function generarTextoVisita(cliente, v, nFotos, cod){
   const codigo = cliente ? cliente.codigo : cod;
   const dir = cliente && cliente.direccion ? cliente.direccion : '';
   const obs = v.obs || '(sin observaciones)';
-  let txt = '';
-  txt += '📋 VISITA NOC N2\n\n';
+  let txt = '📋 VISITA NOC N2\n\n';
   txt += '👤 Cliente: ' + nombre + '\n';
   txt += '🔢 Código: #' + codigo + '\n';
   if (dir) txt += '📍 Dirección: ' + dir + '\n';
@@ -1516,9 +1552,9 @@ async function cargarFotoComoBlob(foto){
       const timeoutId = setTimeout(() => controller.abort(), 45000);
       const res = await fetch(proxyUrl, { signal: controller.signal });
       clearTimeout(timeoutId);
-      if (!res.ok){ console.warn('Proxy falló para', foto.filename, res.status); return null; }
+      if (!res.ok) return null;
       const blobOrig = await res.blob();
-      if (!blobOrig || blobOrig.size < 100){ console.warn('Blob vacío', foto.filename); return null; }
+      if (!blobOrig || blobOrig.size < 100) return null;
       return new Blob([blobOrig], { type: tipo });
     }
     return null;
@@ -1567,7 +1603,7 @@ async function abrirWhatsAppVisita(){
   a.click();
   setTimeout(() => document.body.removeChild(a), 1000);
 }
-function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
+function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
 let searchDebounce = null;
 function toggleSearch(force){ const bar = document.getElementById('searchBar'); const open = (force !== undefined) ? force : !bar.classList.contains('open'); bar.classList.toggle('open', open); if (open){ const inp = document.getElementById('search'); setTimeout(() => { inp.focus(); inp.select(); }, 60); } }
 function onSearchInput(){ if (searchDebounce) clearTimeout(searchDebounce); searchDebounce = setTimeout(renderAgenda, 200); }
@@ -1653,18 +1689,17 @@ async function initApp(){
   loadFromCloud().catch(() => { driveStateReady = true; });
 }
 initApp();
-setInterval(sendHeartbeat, 30000);
-setTimeout(sendHeartbeat, 3000);
-window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); driveStateReady = false; loadFromCloud().then(() => { if (isDirty()){ toast('📤 Subiendo imágenes pendientes…'); syncToCloud(true); } }); sendHeartbeat(); });
+setInterval(sendHeartbeat, 60000);
+setTimeout(sendHeartbeat, 5000);
+window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); setTimeout(() => { loadFromCloud().then(() => { if (isDirty()){ toast('📤 Subiendo imágenes pendientes…'); syncToCloud(true); } }); sendHeartbeat(); }, 5000); });
 window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','warn'); updateActiveUsersBadge(0); });
-setInterval(async () => { if (!document.hidden && isOnline() && !syncInProgress){ try { await callBackendRead({ action:'ping' }, 8000); } catch(e){} } }, 240000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on') syncToCloud(true); } });
-setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on' && !syncInProgress) syncToCloud(true); } });
+setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 120000);
 const CATS = [['ZONA WIFI','#3b82f6'],['DEDICADO - ZONA WIFI','#ef4444'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['PYME','#f97316'],['ANTENA','#14b8a6'],['NODO','#60a5fa']];
 async function renderMasterStats(){
   const box = document.getElementById('masterStatsBox'); if (!box) return;
   let data = null;
-  try { const r = await callBackendRead({ action:'getMasterStats', mesAnio: DB.month }, 12000); if (r && r.ok && r.stats){ data = r; try{ localStorage.setItem('nocMasterStats', JSON.stringify(r)); }catch(e){} } } catch(e){}
+  try { const r = await callBackendRead({ action:'getMasterStats', mesAnio: DB.month }, 20000); if (r && r.ok && r.stats){ data = r; try{ localStorage.setItem('nocMasterStats', JSON.stringify(r)); }catch(e){} } } catch(e){}
   if (!data){ try { data = JSON.parse(localStorage.getItem('nocMasterStats') || 'null'); } catch(e){} }
   const cv = document.getElementById('chartCategorias');
   if (!data){ box.innerHTML = '<span style="color:var(--muted)">⚠ Master no disponible aún.</span>'; if (cv) cv.style.display = 'none'; return; }

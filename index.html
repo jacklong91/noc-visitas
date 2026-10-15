@@ -183,7 +183,7 @@ body{padding-bottom:170px}
         <button class="btn btn-gray" style="flex:1" onclick="document.getElementById('addClientForm').style.display='none';document.getElementById('addClientBtn').style.display='block'">Cancelar</button>
       </div>
     </div>
-    <div class="month-input"><input id="mesAnio" readonly title="Mes automático del sistema"></div>
+    <div class="month-input"><input id="mesAnio" readonly title="Mes actual del sistema"></div>
     <div id="clientList"></div>
   </div>
   <div id="tab-evid" style="display:none">
@@ -204,8 +204,8 @@ body{padding-bottom:170px}
   </div>
   <div id="tab-res" style="display:none">
     <div class="card">
-      <label>MES / AÑO</label>
-      <input id="mesAnio2" readonly title="Mes automático del sistema">
+      <label>📅 MES / AÑO (filtra los resúmenes)</label>
+      <select id="mesAnio2" onchange="cambiarMesResumen(this.value)"></select>
       <div style="text-align:center;margin-top:10px">
         <div style="font-size:.75rem;color:var(--muted)">% DE CUMPLIMIENTO DEL MES</div>
         <div class="big" id="pct">0%</div>
@@ -216,6 +216,10 @@ body{padding-bottom:170px}
       <div class="stat"><span style="color:#f87171">Visitas NO REALIZADAS</span><b id="stN">0</b></div>
       <div class="stat"><span style="color:#cbd5e1">Visitas POSPUESTAS</span><b id="stS">0</b></div>
       <div class="stat"><span>Evidencias (fotos/firmas)</span><b id="stE">0</b></div>
+      <div class="row2" style="margin-top:14px">
+        <button class="btn btn-green" style="flex:1" onclick="descargarResumenMes()">📥 Excel del mes</button>
+        <button class="btn btn-primary" style="flex:1" onclick="compartirResumenMes()">💬 Compartir WhatsApp</button>
+      </div>
     </div>
     <div class="card">
       <label>📊 DETALLE POR CATEGORÍA — VISITAS REALIZADAS (Master)</label>
@@ -341,6 +345,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5pRjb-Pu-O3De
 const TOKEN_SECRETO   = 'noc-zonawifi-2026-a8f3k9x2';
 const CLIENTES = [{"codigo":"2881","nombre":"PLAZA LOS ROBLES","direccion":"Los Robles"},{"codigo":"2025","nombre":"Unidad Integral De Salud Unisa C.A","direccion":"Av. El Carvario. Edif. Unisa, Piso PB"},{"codigo":"002881","nombre":"Sunshine Club C.A | Club Dynamo","direccion":"Av Principal de los Robles"},{"codigo":"9959","nombre":"Centro Medico Quirurgico La Fe, C.A.","direccion":"Av. Jovito Villalba"},{"codigo":"5229","nombre":"Makay Beach Club, C.A","direccion":"Boulevard Playa Guacuco"},{"codigo":"012578","nombre":"La Casona Colonial C.A","direccion":"Av. Aldonza Manrique"},{"codigo":"968","nombre":"Downtown Margarita Tibisay Beach, C.A.","direccion":"Av. Aldonza Manrique"},{"codigo":"014184","nombre":"Makay Beach Club, C.A","direccion":"Venetur"},{"codigo":"5281","nombre":"La Tribu 0295, C.A.","direccion":"Hotel Tibisay Beach Resort"},{"codigo":"002920","nombre":"GOA 007, C.A.","direccion":"Marina del Concorde"},{"codigo":"10757","nombre":"Grupo Menta 212, C.A","direccion":"CC Margarita City Place"},{"codigo":"674","nombre":"Guuao, C.A. | Sambil Margarita","direccion":"CC Sambil Margarita"},{"codigo":"8378","nombre":"Guuao C.A | CC La Vela, Local 2","direccion":"CC La Vela, Etapa II"},{"codigo":"4978","nombre":"Guuao C.A | CC La Vela","direccion":"CC La Vela, Etapa II"},{"codigo":"4868","nombre":"Guuao C.A | NOVA El Espinal","direccion":"Carretera principal vía San Juan Bautista"},{"codigo":"2851","nombre":"Emprendimientos Greccia Parra | La Pepitería","direccion":"CC Margarita City Place"},{"codigo":"15513","nombre":"Cocina 2026 C.A","direccion":"Av. Francisco Esteban Gómez"},{"codigo":"15549","nombre":"PASEO DEL MAR","direccion":"PASEO DEL MAR"},{"codigo":"4274","nombre":"Centro Venezolano Americano de Margarita (CEVAMAR) AC","direccion":"Jorge Coll"},{"codigo":"15812","nombre":"DGB Group C.A | Foodkart","direccion":"Foodkart Pampatar"},{"codigo":"2011","nombre":"Granja Kids, C.A. | Restaurante Maroush","direccion":"Playa El Angel"},{"codigo":"12317","nombre":"Alimentos Premium, C.A | AR GRILL","direccion":"Los Robles"},{"codigo":"1860","nombre":"Oscar Eduardo Mirabal Muñoz | Euphoria Bistro Bar","direccion":"Costa Azul"},{"codigo":"6594","nombre":"Emprendimiento Jhonattan Hernández | AM PM","direccion":"Porlamar"}];
 const DIAS = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const COMP_OPTS = { baja:{max:960,q:0.55}, media:{max:1280,q:0.72}, alta:{max:1600,q:0.82} };
 let DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
 let syncInProgress = false, syncTimer = null;
@@ -355,9 +360,10 @@ let formsAbiertos = new Set();
 let loadingFromCloud = false;
 let filtroDesde = '';
 let filtroHasta = '';
+let mesResumenFiltro = '';
 function isOnline(){ return navigator.onLine !== false; }
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
-function getMesAnioActual(){ const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']; const d = new Date(); return meses[d.getMonth()] + ' ' + d.getFullYear(); }
+function getMesAnioActual(){ const d = new Date(); return MESES_ES[d.getMonth()] + ' ' + d.getFullYear(); }
 function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 3600000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
 function getDeletionsList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}')); } catch(e){ return []; } }
 function clearDeletionsList(){ try { localStorage.removeItem('nocDeletedVisits'); } catch(e){} }
@@ -462,6 +468,32 @@ function ensureVisitsArr(cod){ if (!DB.visits[cod]) DB.visits[cod] = []; if (!Ar
 function getCurrentVisit(cod){ const arr = getVisits(cod); if (!arr.length) return null; const id = editingVisitId[cod]; if (id){ const v = arr.find(x => x.id === id); if (v) return v; } editingVisitId[cod] = arr[arr.length - 1].id; return arr[arr.length - 1]; }
 function getLatestVisit(cod){ const arr = getVisits(cod); return arr.length ? arr[arr.length - 1] : null; }
 function fechaADiaIndex(fechaYMD){ if (!fechaYMD) return -1; const partes = String(fechaYMD).split('-'); if (partes.length !== 3) return -1; const d = new Date(parseInt(partes[0],10), parseInt(partes[1],10)-1, parseInt(partes[2],10)); if (isNaN(d.getTime())) return -1; return (d.getDay() + 6) % 7; }
+function mesAnioAMesNum(mesAnio){ const p = String(mesAnio || '').split(' '); if (p.length !== 2) return null; const mi = MESES_ES.indexOf(p[0]); if (mi < 0) return null; return { year: parseInt(p[1],10), month: mi + 1 }; }
+function visitaEnMesAnio(v, mesAnio){ if (!mesAnio) return true; const info = mesAnioAMesNum(mesAnio); if (!info) return true; if (!v || !v.fecha) return false; const p = v.fecha.split('-'); if (p.length !== 3) return false; return parseInt(p[0],10) === info.year && parseInt(p[1],10) === info.month; }
+function getListaMesesDisponibles(){
+  const set = new Set();
+  set.add(getMesAnioActual());
+  for (const cod in DB.visits){
+    const arr = getVisits(cod);
+    for (const v of arr){
+      if (v && v.fecha){
+        const p = v.fecha.split('-');
+        if (p.length === 3){
+          const mi = parseInt(p[1],10) - 1;
+          if (mi >= 0 && mi < 12) set.add(MESES_ES[mi] + ' ' + p[0]);
+        }
+      }
+    }
+  }
+  return Array.from(set).sort((a,b) => {
+    const [ma,ya] = a.split(' ');
+    const [mb,yb] = b.split(' ');
+    const diff = parseInt(yb,10) - parseInt(ya,10);
+    if (diff !== 0) return diff;
+    return MESES_ES.indexOf(mb) - MESES_ES.indexOf(ma);
+  });
+}
+function cambiarMesResumen(mesAnio){ mesResumenFiltro = mesAnio; renderResumen(); }
 function onFechaChange(cod){
   saveVisit(cod);
   const v = getCurrentVisit(cod);
@@ -914,6 +946,121 @@ function clienteTieneVisitaEnRango(cod){
   }
   return false;
 }
+function buildDataResumenMes(mesAnio){
+  const data = [];
+  allClients().forEach(c => {
+    const arr = getVisits(c.codigo);
+    const visitasMes = arr.filter(v => v && visitaEnMesAnio(v, mesAnio));
+    if (visitasMes.length > 0){ data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', visitas: visitasMes }); }
+  });
+  return data;
+}
+function buildTextoResumen(clienteData, titulo){
+  let txt = '📊 ' + titulo + '\n';
+  txt += '━━━━━━━━━━━━━━━━━━━━\n\n';
+  let totalVis = 0, r=0, p=0, n=0, s=0;
+  clienteData.forEach(c => { c.visitas.forEach(v => {
+    totalVis++;
+    const e = v.estado || 'Pendiente';
+    if (e === 'Realizada') r++;
+    else if (e === 'Pendiente') p++;
+    else if (e === 'No Realizada') n++;
+    else s++;
+  }); });
+  txt += '👥 Clientes: ' + clienteData.length + '\n';
+  txt += '📋 Visitas: ' + totalVis + '\n';
+  txt += '✅ Realizadas: ' + r + '\n';
+  txt += '⏳ Pendientes: ' + p + '\n';
+  txt += '❌ No realizadas: ' + n + '\n';
+  txt += '⏸️ Pospuestas: ' + s + '\n\n';
+  txt += '━━━ DETALLE ━━━\n\n';
+  clienteData.forEach(c => {
+    txt += '▸ #' + c.codigo + ' ' + c.nombre + '\n';
+    c.visitas.forEach(v => {
+      const fecha = v.fecha ? v.fecha.split('-').reverse().join('/') : 'Sin fecha';
+      txt += '   📅 ' + fecha + (v.hora ? ' ' + v.hora : '') + ' · ' + (v.estado || 'Pendiente') + '\n';
+      if (v.obs) txt += '   📝 ' + v.obs + '\n';
+    });
+    txt += '\n';
+  });
+  return txt;
+}
+function buildExcelResumen(clienteData, titulo, nombreHoja){
+  const A = [];
+  A.push([titulo]);
+  A.push(['']);
+  A.push(['Código','Cliente','Dirección','Fecha','Hora','Estado','Observaciones']);
+  clienteData.forEach(c => {
+    c.visitas.forEach(v => {
+      A.push([c.codigo, c.nombre, c.direccion, v.fecha || '', v.hora || '', v.estado || 'Pendiente', v.obs || '']);
+    });
+  });
+  const ws = XLSX.utils.aoa_to_sheet(A);
+  ws['!cols'] = [{wch:12},{wch:38},{wch:45},{wch:13},{wch:8},{wch:14},{wch:60}];
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, nombreHoja || 'Resumen');
+  return wb;
+}
+async function compartirTextoWhatsApp(txt){
+  if (navigator.share){
+    try { await navigator.share({ text: txt }); return; } catch(e){ if (e && e.name === 'AbortError') return; }
+  }
+  const enc = encodeURIComponent(txt);
+  const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.rel = 'noopener noreferrer';
+  a.href = esMovil ? ('https://wa.me/?text=' + enc) : ('https://web.whatsapp.com/send?text=' + enc);
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 1000);
+}
+async function descargarResumenMes(){
+  const mesAnio = mesResumenFiltro || getMesAnioActual();
+  const clienteData = buildDataResumenMes(mesAnio);
+  if (!clienteData.length){ toast('⚠ No hay visitas en ' + mesAnio); return; }
+  const wb = buildExcelResumen(clienteData, 'RESUMEN DEL MES: ' + mesAnio, 'Resumen');
+  XLSX.writeFile(wb, 'Resumen_' + mesAnio.replace(/\s+/g,'_') + '.xlsx');
+  toast('✓ Excel del mes descargado');
+}
+async function compartirResumenMes(){
+  const mesAnio = mesResumenFiltro || getMesAnioActual();
+  const clienteData = buildDataResumenMes(mesAnio);
+  if (!clienteData.length){ toast('⚠ No hay visitas en ' + mesAnio); return; }
+  await compartirTextoWhatsApp(buildTextoResumen(clienteData, 'RESUMEN ' + mesAnio.toUpperCase()));
+}
+function buildDataFiltroFechas(){
+  const data = [];
+  allClients().forEach(c => {
+    const arr = getVisits(c.codigo);
+    const visitasRango = arr.filter(v => {
+      if (!v || !v.fecha) return false;
+      if (filtroDesde && v.fecha < filtroDesde) return false;
+      if (filtroHasta && v.fecha > filtroHasta) return false;
+      return true;
+    });
+    if (visitasRango.length > 0){ data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', visitas: visitasRango }); }
+  });
+  return data;
+}
+async function descargarFiltroFechas(){
+  const clienteData = buildDataFiltroFechas();
+  if (!clienteData.length){ toast('⚠ Sin visitas en el rango'); return; }
+  const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
+  const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
+  const wb = buildExcelResumen(clienteData, 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt, 'Filtro');
+  XLSX.writeFile(wb, 'Filtro_' + desdeTxt.replace(/\//g,'-') + '_a_' + hastaTxt.replace(/\//g,'-') + '.xlsx');
+  toast('✓ Excel del filtro descargado');
+}
+async function compartirFiltroFechas(){
+  const clienteData = buildDataFiltroFechas();
+  if (!clienteData.length){ toast('⚠ Sin visitas en el rango'); return; }
+  const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
+  const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
+  await compartirTextoWhatsApp(buildTextoResumen(clienteData, 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt));
+}
 function renderAgenda(){
   const q = (document.getElementById('search').value || '').toLowerCase();
   const list = document.getElementById('clientList');
@@ -925,10 +1072,10 @@ function renderAgenda(){
   const chipFiltroId = 'chipFiltroFechas';
   let chipFiltro = document.getElementById(chipFiltroId);
   if (filtroDesde || filtroHasta){
-    if (!chipFiltro){ chipFiltro = document.createElement('div'); chipFiltro.id = chipFiltroId; chipFiltro.style.cssText = 'background:rgba(245,158,11,.15);border:1px solid var(--warn);color:var(--warn);padding:8px 12px;border-radius:10px;font-size:.78rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between'; list.parentNode.insertBefore(chipFiltro, list); }
+    if (!chipFiltro){ chipFiltro = document.createElement('div'); chipFiltro.id = chipFiltroId; chipFiltro.style.cssText = 'background:rgba(245,158,11,.15);border:1px solid var(--warn);color:var(--warn);padding:8px 12px;border-radius:10px;font-size:.78rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px;justify-content:space-between'; list.parentNode.insertBefore(chipFiltro, list); }
     const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
     const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
-    chipFiltro.innerHTML = '<span>📅 Filtro: <b>' + desdeTxt + '</b> → <b>' + hastaTxt + '</b></span><button onclick="limpiarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
+    chipFiltro.innerHTML = '<span style="flex:1">📅 Filtro: <b>' + desdeTxt + '</b> → <b>' + hastaTxt + '</b></span><button onclick="descargarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:.9rem" title="Descargar Excel">📥</button><button onclick="compartirFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:.9rem" title="Compartir WhatsApp">💬</button><button onclick="limpiarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
     chipFiltro.style.display = 'flex';
   } else if (chipFiltro){ chipFiltro.style.display = 'none'; }
   const fechaFiltro = q ? detectarFechaBusqueda(q) : null;
@@ -997,7 +1144,6 @@ function renderAgenda(){
     if (current){ renderPhotos(c.codigo); updatePhotoReq(c.codigo); }
   });
   document.getElementById('mesAnio').value = DB.month || getMesAnioActual();
-  document.getElementById('mesAnio2').value = DB.month || getMesAnioActual();
   document.getElementById('responsable').value = DB.resp || '';
   const as = document.getElementById('autoSyncSelect'); if (as) as.value = DB.autoSync || 'on';
   updateSyncStatusBox();
@@ -1353,12 +1499,22 @@ function lightboxNav(dir){
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') lightboxNav(-1); if (e.key === 'ArrowRight') lightboxNav(1); });
 document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
 function renderResumen(){
+  const sel = document.getElementById('mesAnio2');
+  if (sel){
+    const lista = getListaMesesDisponibles();
+    const actual = mesResumenFiltro || DB.month || getMesAnioActual();
+    sel.innerHTML = lista.map(m => '<option value="' + m + '"' + (m === actual ? ' selected' : '') + '>' + m + '</option>').join('');
+    mesResumenFiltro = lista.includes(actual) ? actual : (lista[0] || getMesAnioActual());
+    sel.value = mesResumenFiltro;
+  }
+  const mesFiltro = mesResumenFiltro || getMesAnioActual();
   let r=0,p=0,n=0,s=0,ev=0; const dayCount=[0,0,0,0,0,0,0];
   let totalVisitas = 0;
   allClients().forEach(c => {
     const arr = getVisits(c.codigo);
     arr.forEach(v => {
       if (!v) return;
+      if (!visitaEnMesAnio(v, mesFiltro)) return;
       totalVisitas++;
       const e = v.estado || 'Pendiente';
       if (e === 'Realizada') r++;
@@ -1366,9 +1522,12 @@ function renderResumen(){
       else if (e === 'No Realizada') n++;
       else s++;
       if (Array.isArray(v.days)) v.days.forEach(d => dayCount[d]++);
+      if (v.firma && v.firma.filename) ev++;
     });
-    ev += safeArray(DB.photos[c.codigo]).length;
-    ev += arr.filter(v => v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)).length;
+    safeArray(DB.photos[c.codigo]).forEach(ph => {
+      if (!ph.fechaVisita) return;
+      if (visitaEnMesAnio({fecha: ph.fechaVisita}, mesFiltro)) ev++;
+    });
   });
   document.getElementById('stTotal').textContent = totalVisitas;
   document.getElementById('stR').textContent = r; document.getElementById('stP').textContent = p;
@@ -1678,12 +1837,12 @@ function drawChart(){
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
   const data = [['Realizadas', lastStats.r, '#22c55e'],['Pendientes', lastStats.p, '#f59e0b'],['No realizadas', lastStats.n, '#ef4444'],['Pospuestas', lastStats.s, '#94a3b8']];
   const max = Math.max(1, ...data.map(d => d[1]));
-  const padL = 36, padR = 16, padT = 34, padB = 44;
+  const padL = 36, padR = 16, padT = 62, padB = 44;
   const plotW = W - padL - padR, plotH = H - padT - padB;
   ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
   ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'left';
-  ctx.fillText('Visitas del mes — ' + (DB.month || 'sin mes definido'), padL, 20);
+  ctx.fillText('Visitas del mes — ' + (mesResumenFiltro || DB.month || 'sin mes definido'), padL, 24);
   const bw = Math.min(86, plotW / data.length * 0.55);
   data.forEach((d, i) => {
     const cx = padL + plotW * (i + 0.5) / data.length;

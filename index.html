@@ -150,6 +150,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 body{padding-bottom:170px}
 .comp-foto-thumb{display:inline-block;position:relative;width:64px;height:64px;margin:2px;border-radius:8px;overflow:hidden;background:var(--card2)}
 .comp-foto-thumb img{width:100%;height:100%;object-fit:cover}
+.preview-canvas{width:100%;height:200px;background:#0b1220;border-radius:10px;margin-top:8px;border:1px solid #334155}
 </style>
 </head>
 <body>
@@ -207,7 +208,7 @@ body{padding-bottom:170px}
       <label>📅 MES / AÑO (filtra los resúmenes)</label>
       <select id="mesAnio2" onchange="cambiarMesResumen(this.value)"></select>
       <div style="text-align:center;margin-top:10px">
-        <div style="font-size:.75rem;color:var(--muted)">% DE CUMPLIMIENTO DEL MES</div>
+        <div style="font-size:.75rem;color:var(--muted)">% DE CUMPLIMIENTO</div>
         <div class="big" id="pct">0%</div>
       </div>
       <div class="stat"><span>Visitas totales</span><b id="stTotal">0</b></div>
@@ -221,15 +222,16 @@ body{padding-bottom:170px}
         <button class="btn btn-primary" style="flex:1" onclick="compartirResumenMes()">💬 Compartir WhatsApp</button>
       </div>
     </div>
+    <div id="previewMesBox" style="display:none"></div>
+    <div class="card">
+      <label>📊 GRÁFICA GENERAL — ESTADO DE VISITAS</label>
+      <canvas id="chartCanvas" style="width:100%;border-radius:12px;background:#0f172a;border:1px solid #334155"></canvas>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="downloadChart()">⬇️ Descargar gráfica (PNG)</button>
+    </div>
     <div class="card">
       <label>📊 DETALLE POR CATEGORÍA — VISITAS REALIZADAS (Master)</label>
       <div id="masterStatsBox" style="margin-top:6px">Cargando datos del Master…</div>
       <canvas id="chartCategorias" style="width:100%;border-radius:12px;background:#0f172a;border:1px solid #334155;margin-top:10px"></canvas>
-    </div>
-    <div class="card">
-      <label>📊 GRÁFICA MENSUAL — ESTADO DE VISITAS</label>
-      <canvas id="chartCanvas" style="width:100%;border-radius:12px;background:#0f172a;border:1px solid #334155"></canvas>
-      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="downloadChart()">⬇️ Descargar gráfica (PNG)</button>
     </div>
     <div class="card">
       <label>Visitas programadas por día</label>
@@ -346,6 +348,7 @@ const TOKEN_SECRETO   = 'noc-zonawifi-2026-a8f3k9x2';
 const CLIENTES = [{"codigo":"2881","nombre":"PLAZA LOS ROBLES","direccion":"Los Robles"},{"codigo":"2025","nombre":"Unidad Integral De Salud Unisa C.A","direccion":"Av. El Carvario. Edif. Unisa, Piso PB"},{"codigo":"002881","nombre":"Sunshine Club C.A | Club Dynamo","direccion":"Av Principal de los Robles"},{"codigo":"9959","nombre":"Centro Medico Quirurgico La Fe, C.A.","direccion":"Av. Jovito Villalba"},{"codigo":"5229","nombre":"Makay Beach Club, C.A","direccion":"Boulevard Playa Guacuco"},{"codigo":"012578","nombre":"La Casona Colonial C.A","direccion":"Av. Aldonza Manrique"},{"codigo":"968","nombre":"Downtown Margarita Tibisay Beach, C.A.","direccion":"Av. Aldonza Manrique"},{"codigo":"014184","nombre":"Makay Beach Club, C.A","direccion":"Venetur"},{"codigo":"5281","nombre":"La Tribu 0295, C.A.","direccion":"Hotel Tibisay Beach Resort"},{"codigo":"002920","nombre":"GOA 007, C.A.","direccion":"Marina del Concorde"},{"codigo":"10757","nombre":"Grupo Menta 212, C.A","direccion":"CC Margarita City Place"},{"codigo":"674","nombre":"Guuao, C.A. | Sambil Margarita","direccion":"CC Sambil Margarita"},{"codigo":"8378","nombre":"Guuao C.A | CC La Vela, Local 2","direccion":"CC La Vela, Etapa II"},{"codigo":"4978","nombre":"Guuao C.A | CC La Vela","direccion":"CC La Vela, Etapa II"},{"codigo":"4868","nombre":"Guuao C.A | NOVA El Espinal","direccion":"Carretera principal vía San Juan Bautista"},{"codigo":"2851","nombre":"Emprendimientos Greccia Parra | La Pepitería","direccion":"CC Margarita City Place"},{"codigo":"15513","nombre":"Cocina 2026 C.A","direccion":"Av. Francisco Esteban Gómez"},{"codigo":"15549","nombre":"PASEO DEL MAR","direccion":"PASEO DEL MAR"},{"codigo":"4274","nombre":"Centro Venezolano Americano de Margarita (CEVAMAR) AC","direccion":"Jorge Coll"},{"codigo":"15812","nombre":"DGB Group C.A | Foodkart","direccion":"Foodkart Pampatar"},{"codigo":"2011","nombre":"Granja Kids, C.A. | Restaurante Maroush","direccion":"Playa El Angel"},{"codigo":"12317","nombre":"Alimentos Premium, C.A | AR GRILL","direccion":"Los Robles"},{"codigo":"1860","nombre":"Oscar Eduardo Mirabal Muñoz | Euphoria Bistro Bar","direccion":"Costa Azul"},{"codigo":"6594","nombre":"Emprendimiento Jhonattan Hernández | AM PM","direccion":"Porlamar"}];
 const DIAS = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MES_GENERAL = '__GENERAL__';
 const COMP_OPTS = { baja:{max:960,q:0.55}, media:{max:1280,q:0.72}, alta:{max:1600,q:0.82} };
 let DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
 let syncInProgress = false, syncTimer = null;
@@ -360,10 +363,12 @@ let formsAbiertos = new Set();
 let loadingFromCloud = false;
 let filtroDesde = '';
 let filtroHasta = '';
-let mesResumenFiltro = '';
+let mesResumenFiltro = MES_GENERAL;
+
 function isOnline(){ return navigator.onLine !== false; }
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
 function getMesAnioActual(){ const d = new Date(); return MESES_ES[d.getMonth()] + ' ' + d.getFullYear(); }
+
 function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 3600000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
 function getDeletionsList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}')); } catch(e){ return []; } }
 function clearDeletionsList(){ try { localStorage.removeItem('nocDeletedVisits'); } catch(e){} }
@@ -372,6 +377,7 @@ function getDeletedPhotosList(){ try { return Object.keys(JSON.parse(localStorag
 function clearDeletedPhotosList(){ try { localStorage.removeItem('nocDeletedPhotos'); } catch(e){} }
 function getDeviceId(){ let id = localStorage.getItem('nocDeviceId'); if (!id){ id = 'dev_' + Math.random().toString(36).slice(2, 8); localStorage.setItem('nocDeviceId', id); } return id; }
 function getDeviceName(){ let n = localStorage.getItem('nocDeviceName'); if (!n){ const ua = navigator.userAgent; let tipo = 'PC'; if (/Android/i.test(ua)) tipo = 'Android'; else if (/iPhone|iPad/i.test(ua)) tipo = 'iPhone'; else if (/Windows/i.test(ua)) tipo = 'Win'; else if (/Mac/i.test(ua)) tipo = 'Mac'; n = tipo + '-' + Math.random().toString(36).slice(2,5).toUpperCase(); localStorage.setItem('nocDeviceName', n); } return n; }
+
 function sanitizeDB(){
   if (!DB || typeof DB !== 'object') DB = {};
   if (!DB.visits || typeof DB.visits !== 'object') DB.visits = {};
@@ -547,7 +553,7 @@ function deleteVisit(cod, visitId){
   renderAgenda();
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
   closeHistorial();
-  toast('🗑️ Visita eliminada (fotos en Drive intactas)');
+  toast('🗑️ Visita eliminada');
 }
 function switchVisit(cod, visitId){
   editingVisitId[cod] = visitId;
@@ -609,6 +615,8 @@ function hoyYMD(){ const d = new Date(); const pad = n => String(n).padStart(2,'
 async function sendHeartbeat(){ if (!isOnline()) return; try { const res = await callBackendRead({ action: 'heartbeat', deviceId: getDeviceId(), deviceName: getDeviceName(), userName: DB.resp || '' }, 10000); if (res && res.ok){ activeUsersCache = res.devices || []; updateActiveUsersBadge(res.active); } } catch(e){} }
 function updateActiveUsersBadge(count){ const el = document.getElementById('activeUsersBadge'); if (!el) return; if (!count || count <= 0){ el.style.display = 'none'; return; } if (count === 1){ el.textContent = '👤 Solo tú'; } else { el.textContent = '👥 ' + count + ' técnicos'; } el.style.display = 'inline-block'; }
 function showActiveUsersModal(){ const modal = document.getElementById('historialModal'); const title = document.getElementById('historialTitle'); const list = document.getElementById('historialList'); title.textContent = '👥 Técnicos conectados (' + activeUsersCache.length + ')'; list.innerHTML = ''; if (!activeUsersCache.length){ list.innerHTML = '<div class="empty">Nadie más</div>'; } else { activeUsersCache.forEach(u => { const row = document.createElement('div'); row.className = 'card'; row.style.padding = '10px'; row.style.marginBottom = '8px'; row.innerHTML = '<b>📱 ' + (u.name || 'Dispositivo') + '</b>' + (u.user ? '<br><small style="color:var(--muted)">👤 ' + u.user + '</small>' : ''); list.appendChild(row); }); } modal.classList.add('open'); }
+
+/* === MASTER === */
 async function syncMasterNow(){
   if (!driveStateReady){ toast('⏳ Esperando Drive…'); return; }
   if (syncInProgress){ toast('⏳ Sincronización en curso'); return; }
@@ -663,14 +671,12 @@ function collectMasterUpdates(){
   return updates;
 }
 function renderMasterInfo(){ const el = document.getElementById('masterInfo'); if (!el) return; const lastSync = localStorage.getItem('nocLastMasterSync'); if (!lastSync){ el.innerHTML = '<span style="color:var(--warn)">⚠ Sin sincronizar</span>'; } else { el.innerHTML = '✓ Sincronizado · ' + new Date(lastSync).toLocaleString('es-VE'); } }
+
+/* === SYNC === */
 async function syncToCloud(silent){
   if (syncInProgress) return;
   if (!isOnline()){ setSyncBadge('📴 Sin conexión','warn'); return; }
-  if (!driveStateReady){
-    if (!silent) toast('⏳ Esperando Drive…');
-    setTimeout(() => { if (driveStateReady && !syncInProgress) syncToCloud(silent); }, 8000);
-    return;
-  }
+  if (!driveStateReady){ if (!silent) toast('⏳ Esperando Drive…'); setTimeout(() => { if (driveStateReady && !syncInProgress) syncToCloud(silent); }, 8000); return; }
   syncInProgress = true;
   if (!silent) setSyncBadge('☁️ Sincronizando…','info');
   let done = 0, failed = 0;
@@ -697,15 +703,7 @@ async function syncToCloud(silent){
     const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
     const excelBase64 = arrayBufferToBase64(excelBuffer);
     const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId(), excelBase64 });
-    if (resp && resp.ok && resp.merged){
-      try {
-        const merged = JSON.parse(resp.merged);
-        lastKnownRemoteTs = merged.updatedAt || null;
-        localStorage.setItem('nocLastLoadOk', String(Date.now()));
-        liberarEspacio();
-        await saveLocal();
-      } catch(e){}
-    }
+    if (resp && resp.ok && resp.merged){ try { const merged = JSON.parse(resp.merged); lastKnownRemoteTs = merged.updatedAt || null; localStorage.setItem('nocLastLoadOk', String(Date.now())); liberarEspacio(); await saveLocal(); } catch(e){} }
     setSyncProgress(100); setTimeout(()=>setSyncProgress(0), 800);
     clearDeletionsList(); clearDeletedPhotosList();
     if (failed === 0){
@@ -717,10 +715,7 @@ async function syncToCloud(silent){
       const restantes = pending.length - done;
       setSyncBadge('⚠ ' + restantes + ' pendiente(s)','warn');
       const msg = document.getElementById('partialSyncMsg');
-      if (msg){
-        msg.innerHTML = 'Se cargaron <b style="color:#4ade80">' + done + ' de ' + pending.length + '</b> imágenes.<br><br>Las <b style="color:#fbbf24">' + restantes + '</b> restantes se subirán al reconectar.';
-        document.getElementById('partialSyncModal').classList.add('open');
-      }
+      if (msg){ msg.innerHTML = 'Se cargaron <b style="color:#4ade80">' + done + ' de ' + pending.length + '</b> imágenes.<br><br>Las <b style="color:#fbbf24">' + restantes + '</b> restantes se subirán al reconectar.'; document.getElementById('partialSyncModal').classList.add('open'); }
     }
     updateSyncStatusBox();
   } catch(err){ setSyncBadge('⚠ Error','err'); }
@@ -762,10 +757,7 @@ function applyRemoteIndex(remote){
   sanitizeDB(); renderActiveTab();
 }
 async function pollForUpdates(){
-  if (!isOnline()) return;
-  if (syncInProgress) return;
-  if (loadingFromCloud) return;
-  if (!driveStateReady) return;
+  if (!isOnline() || syncInProgress || loadingFromCloud || !driveStateReady) return;
   if (document.hidden) return;
   if (formsAbiertos.size > 0) return;
   const lastLocal = parseInt(localStorage.getItem('nocLastLocalActivity') || '0', 10);
@@ -804,33 +796,23 @@ async function loadFromCloud(){
   if (loadingFromCloud) return false;
   const lastLoad = parseInt(localStorage.getItem('nocLastLoadOk') || '0', 10);
   const MIN = 3 * 60 * 1000;
-  if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN)){
-    setSyncBadge('✓ Drive reciente','ok');
-    updateSyncStatusBox();
-    return true;
-  }
+  if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN)){ setSyncBadge('✓ Drive reciente','ok'); updateSyncStatusBox(); return true; }
   loadingFromCloud = true;
   try {
     if (!isOnline()){ driveStateReady = true; setSyncBadge('📴 Sin conexión','warn'); updateSyncStatusBox(); return false; }
     setSyncBadge('📥 Cargando Drive…','info');
     updateSyncStatusBox();
-    const timeoutGlobal = setTimeout(() => {
-      if (!driveStateReady){ driveStateReady = true; setSyncBadge('⚠ Drive lento','warn'); updateSyncStatusBox(); }
-    }, 90000);
+    const timeoutGlobal = setTimeout(() => { if (!driveStateReady){ driveStateReady = true; setSyncBadge('⚠ Drive lento','warn'); updateSyncStatusBox(); } }, 90000);
     let res = null;
-    try { res = await callBackendRead({ action:'getIndex' }, 80000); }
-    catch(err){ clearTimeout(timeoutGlobal); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
+    try { res = await callBackendRead({ action:'getIndex' }, 80000); } catch(err){ clearTimeout(timeoutGlobal); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
     clearTimeout(timeoutGlobal);
     if (!res || !res.ok){
       if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); updateSyncStatusBox(); return false; }
       setSyncBadge('⚠ ' + (res && res.error ? String(res.error).slice(0,25) : 'sin respuesta'),'err');
-      driveStateReady = true;
-      updateSyncStatusBox();
-      return false;
+      driveStateReady = true; updateSyncStatusBox(); return false;
     }
     let remote;
-    try { remote = JSON.parse(res.content); }
-    catch(e){ driveStateReady = true; setSyncBadge('⚠ Error JSON','err'); updateSyncStatusBox(); return false; }
+    try { remote = JSON.parse(res.content); } catch(e){ driveStateReady = true; setSyncBadge('⚠ Error JSON','err'); updateSyncStatusBox(); return false; }
     if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('⚠ Formato inválido','warn'); updateSyncStatusBox(); return false; }
     const remoteHasData = (remote.visits && Object.keys(remote.visits).length > 0) || (remote.photosMeta && Object.keys(remote.photosMeta).length > 0);
     const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
@@ -856,9 +838,7 @@ async function loadFromCloud(){
       try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, ts: new Date().toISOString() })); } catch(e){}
       return false;
     }
-  } finally {
-    loadingFromCloud = false;
-  }
+  } finally { loadingFromCloud = false; }
 }
 async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
 async function forceSyncNow(){ if (!driveStateReady){ if (!confirm('⚠ Drive NO se ha cargado. ¿Continuar?')) return; driveStateReady = true; } markDirty(); await syncToCloud(false); }
@@ -910,25 +890,20 @@ function toggleFiltroFechas(force){
   const open = force !== undefined ? force : !m.classList.contains('open');
   m.classList.toggle('open', open);
   if (btn) btn.classList.toggle('active', open);
-  if (open){
-    document.getElementById('filtroDesdeInput').value = filtroDesde;
-    document.getElementById('filtroHastaInput').value = filtroHasta;
-  }
+  if (open){ document.getElementById('filtroDesdeInput').value = filtroDesde; document.getElementById('filtroHastaInput').value = filtroHasta; }
 }
 function aplicarFiltroFechas(){
   const d = document.getElementById('filtroDesdeInput').value;
   const h = document.getElementById('filtroHastaInput').value;
   if (!d && !h){ toast('⚠ Selecciona al menos una fecha'); return; }
   if (d && h && d > h){ toast('⚠ La fecha DESDE no puede ser mayor que HASTA'); return; }
-  filtroDesde = d;
-  filtroHasta = h;
+  filtroDesde = d; filtroHasta = h;
   toggleFiltroFechas(false);
   renderAgenda();
   toast('✓ Filtro aplicado');
 }
 function limpiarFiltroFechas(){
-  filtroDesde = '';
-  filtroHasta = '';
+  filtroDesde = ''; filtroHasta = '';
   document.getElementById('filtroDesdeInput').value = '';
   document.getElementById('filtroHastaInput').value = '';
   toggleFiltroFechas(false);
@@ -946,90 +921,18 @@ function clienteTieneVisitaEnRango(cod){
   }
   return false;
 }
+
+/* ============================================================
+   DATOS Y EXPORTACIÓN POR MES / RANGO
+   ============================================================ */
 function buildDataResumenMes(mesAnio){
   const data = [];
   allClients().forEach(c => {
     const arr = getVisits(c.codigo);
-    const visitasMes = arr.filter(v => v && visitaEnMesAnio(v, mesAnio));
+    const visitasMes = mesAnio ? arr.filter(v => v && visitaEnMesAnio(v, mesAnio)) : arr.slice();
     if (visitasMes.length > 0){ data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', visitas: visitasMes }); }
   });
   return data;
-}
-function buildTextoResumen(clienteData, titulo){
-  let txt = '📊 ' + titulo + '\n';
-  txt += '━━━━━━━━━━━━━━━━━━━━\n\n';
-  let totalVis = 0, r=0, p=0, n=0, s=0;
-  clienteData.forEach(c => { c.visitas.forEach(v => {
-    totalVis++;
-    const e = v.estado || 'Pendiente';
-    if (e === 'Realizada') r++;
-    else if (e === 'Pendiente') p++;
-    else if (e === 'No Realizada') n++;
-    else s++;
-  }); });
-  txt += '👥 Clientes: ' + clienteData.length + '\n';
-  txt += '📋 Visitas: ' + totalVis + '\n';
-  txt += '✅ Realizadas: ' + r + '\n';
-  txt += '⏳ Pendientes: ' + p + '\n';
-  txt += '❌ No realizadas: ' + n + '\n';
-  txt += '⏸️ Pospuestas: ' + s + '\n\n';
-  txt += '━━━ DETALLE ━━━\n\n';
-  clienteData.forEach(c => {
-    txt += '▸ #' + c.codigo + ' ' + c.nombre + '\n';
-    c.visitas.forEach(v => {
-      const fecha = v.fecha ? v.fecha.split('-').reverse().join('/') : 'Sin fecha';
-      txt += '   📅 ' + fecha + (v.hora ? ' ' + v.hora : '') + ' · ' + (v.estado || 'Pendiente') + '\n';
-      if (v.obs) txt += '   📝 ' + v.obs + '\n';
-    });
-    txt += '\n';
-  });
-  return txt;
-}
-function buildExcelResumen(clienteData, titulo, nombreHoja){
-  const A = [];
-  A.push([titulo]);
-  A.push(['']);
-  A.push(['Código','Cliente','Dirección','Fecha','Hora','Estado','Observaciones']);
-  clienteData.forEach(c => {
-    c.visitas.forEach(v => {
-      A.push([c.codigo, c.nombre, c.direccion, v.fecha || '', v.hora || '', v.estado || 'Pendiente', v.obs || '']);
-    });
-  });
-  const ws = XLSX.utils.aoa_to_sheet(A);
-  ws['!cols'] = [{wch:12},{wch:38},{wch:45},{wch:13},{wch:8},{wch:14},{wch:60}];
-  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, nombreHoja || 'Resumen');
-  return wb;
-}
-async function compartirTextoWhatsApp(txt){
-  if (navigator.share){
-    try { await navigator.share({ text: txt }); return; } catch(e){ if (e && e.name === 'AbortError') return; }
-  }
-  const enc = encodeURIComponent(txt);
-  const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const a = document.createElement('a');
-  a.style.display = 'none';
-  a.rel = 'noopener noreferrer';
-  a.href = esMovil ? ('https://wa.me/?text=' + enc) : ('https://web.whatsapp.com/send?text=' + enc);
-  a.target = '_blank';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => document.body.removeChild(a), 1000);
-}
-async function descargarResumenMes(){
-  const mesAnio = mesResumenFiltro || getMesAnioActual();
-  const clienteData = buildDataResumenMes(mesAnio);
-  if (!clienteData.length){ toast('⚠ No hay visitas en ' + mesAnio); return; }
-  const wb = buildExcelResumen(clienteData, 'RESUMEN DEL MES: ' + mesAnio, 'Resumen');
-  XLSX.writeFile(wb, 'Resumen_' + mesAnio.replace(/\s+/g,'_') + '.xlsx');
-  toast('✓ Excel del mes descargado');
-}
-async function compartirResumenMes(){
-  const mesAnio = mesResumenFiltro || getMesAnioActual();
-  const clienteData = buildDataResumenMes(mesAnio);
-  if (!clienteData.length){ toast('⚠ No hay visitas en ' + mesAnio); return; }
-  await compartirTextoWhatsApp(buildTextoResumen(clienteData, 'RESUMEN ' + mesAnio.toUpperCase()));
 }
 function buildDataFiltroFechas(){
   const data = [];
@@ -1045,22 +948,248 @@ function buildDataFiltroFechas(){
   });
   return data;
 }
+function calcularStatsData(clienteData){
+  let tot=0, r=0, p=0, n=0, s=0;
+  clienteData.forEach(c => c.visitas.forEach(v => {
+    tot++;
+    const e = v.estado || 'Pendiente';
+    if (e === 'Realizada') r++;
+    else if (e === 'Pendiente') p++;
+    else if (e === 'No Realizada') n++;
+    else s++;
+  }));
+  return { total: tot, realizadas: r, pendientes: p, noRealizadas: n, pospuestas: s, clientes: clienteData.length };
+}
+function buildTextoResumen(clienteData, titulo){
+  const st = calcularStatsData(clienteData);
+  let txt = '📊 ' + titulo + '\n';
+  txt += '━━━━━━━━━━━━━━━━━━━━\n\n';
+  txt += '👥 Clientes: ' + st.clientes + '\n';
+  txt += '📋 Visitas: ' + st.total + '\n';
+  txt += '✅ Realizadas: ' + st.realizadas + '\n';
+  txt += '⏳ Pendientes: ' + st.pendientes + '\n';
+  txt += '❌ No realizadas: ' + st.noRealizadas + '\n';
+  txt += '⏸️ Pospuestas: ' + st.pospuestas + '\n\n';
+  txt += '━━━ DETALLE ━━━\n\n';
+  clienteData.forEach(c => {
+    txt += '▸ #' + c.codigo + ' ' + c.nombre + '\n';
+    c.visitas.forEach(v => {
+      const fecha = v.fecha ? v.fecha.split('-').reverse().join('/') : 'Sin fecha';
+      txt += '   📅 ' + fecha + (v.hora ? ' ' + v.hora : '') + ' · ' + (v.estado || 'Pendiente') + '\n';
+      if (v.obs) txt += '   📝 ' + v.obs + '\n';
+    });
+    txt += '\n';
+  });
+  return txt;
+}
+function buildExcelResumen(clienteData, titulo, nombreHoja){
+  const st = calcularStatsData(clienteData);
+  const A = [];
+  A.push([titulo]);
+  A.push(['Generado: ' + new Date().toLocaleString('es-VE')]);
+  A.push(['']);
+  A.push(['RESUMEN']);
+  A.push(['Clientes', st.clientes, '', 'Total visitas', st.total]);
+  A.push(['Realizadas', st.realizadas, '', 'Pendientes', st.pendientes]);
+  A.push(['No realizadas', st.noRealizadas, '', 'Pospuestas', st.pospuestas]);
+  A.push(['']);
+  A.push(['Código','Cliente','Dirección','Fecha','Hora','Estado','Observaciones']);
+  clienteData.forEach(c => {
+    c.visitas.forEach(v => {
+      A.push([c.codigo, c.nombre, c.direccion, v.fecha || '', v.hora || '', v.estado || 'Pendiente', v.obs || '']);
+    });
+  });
+  const ws = XLSX.utils.aoa_to_sheet(A);
+  ws['!cols'] = [{wch:12},{wch:38},{wch:45},{wch:13},{wch:8},{wch:14},{wch:60}];
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}},{s:{r:3,c:0},e:{r:3,c:6}}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, nombreHoja || 'Resumen');
+  return wb;
+}
+
+/* ============================================================
+   GENERAR IMAGEN PNG DE GRÁFICA
+   ============================================================ */
+function dibujarGraficaEnCanvas(canvas, stats, titulo){
+  const dpr = window.devicePixelRatio || 1;
+  const W = 640, H = 340;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
+  const data = [['Realizadas', stats.realizadas || 0, '#22c55e'],['Pendientes', stats.pendientes || 0, '#f59e0b'],['No realizadas', stats.noRealizadas || 0, '#ef4444'],['Pospuestas', stats.pospuestas || 0, '#94a3b8']];
+  const max = Math.max(1, ...data.map(d => d[1]));
+  const padL = 36, padR = 16, padT = 62, padB = 44;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
+  ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillText(titulo, padL, 24);
+  ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI';
+  ctx.fillText('Total: ' + (stats.total || 0) + ' visitas', padL, 44);
+  const bw = Math.min(86, plotW / data.length * 0.55);
+  data.forEach((d, i) => {
+    const cx = padL + plotW * (i + 0.5) / data.length;
+    const bh = Math.max(plotH * d[1] / max, d[1] > 0 ? 4 : 1);
+    const x = cx - bw / 2, y = padT + plotH - bh;
+    ctx.fillStyle = d[2];
+    ctx.beginPath();
+    if (ctx.roundRect){ ctx.roundRect(x, y, bw, bh, 6); } else { ctx.rect(x, y, bw, bh); }
+    ctx.fill();
+    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText(String(d[1]), cx, y - 8);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI';
+    ctx.fillText(d[0], cx, padT + plotH + 20);
+  });
+}
+function generarGraficaBlob(stats, titulo){
+  return new Promise((resolve) => {
+    const c = document.createElement('canvas');
+    dibujarGraficaEnCanvas(c, stats, titulo);
+    c.toBlob((blob) => resolve(blob), 'image/png');
+  });
+}
+
+/* ============================================================
+   COMPARTIR TEXTO E IMAGEN POR WHATSAPP
+   ============================================================ */
+async function compartirTextoWhatsApp(txt, imagenBlob){
+  if (navigator.share){
+    try {
+      if (imagenBlob){
+        const file = new File([imagenBlob], 'grafica.png', { type: 'image/png' });
+        if (!navigator.canShare || navigator.canShare({ files: [file] })){
+          await navigator.share({ text: txt, files: [file] });
+          return;
+        }
+      }
+      await navigator.share({ text: txt });
+      return;
+    } catch(e){ if (e && e.name === 'AbortError') return; }
+  }
+  const enc = encodeURIComponent(txt);
+  const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.rel = 'noopener noreferrer';
+  a.href = esMovil ? ('https://wa.me/?text=' + enc) : ('https://web.whatsapp.com/send?text=' + enc);
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 1000);
+}
+
+/* ============================================================
+   EXPORTAR: EXCEL + GRÁFICA EN ZIP
+   ============================================================ */
+async function exportarZipConGrafica(clienteData, titulo, nombreBase, stats){
+  const wb = buildExcelResumen(clienteData, titulo, 'Resumen');
+  const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
+  const pngBlob = await generarGraficaBlob(stats, titulo);
+  const zip = new JSZip();
+  zip.file(nombreBase + '.xlsx', excelBuffer);
+  zip.file(nombreBase + '_grafica.png', pngBlob);
+  const blob = await zip.generateAsync({ type:'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nombreBase + '.zip';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+/* ============================================================
+   DESCARGAR / COMPARTIR: MES O GENERAL
+   ============================================================ */
+async function descargarResumenMes(){
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesAnio = esGeneral ? null : mesResumenFiltro;
+  const clienteData = buildDataResumenMes(mesAnio);
+  if (!clienteData.length){ toast('⚠ No hay visitas'); return; }
+  const stats = calcularStatsData(clienteData);
+  const titulo = esGeneral ? 'RESUMEN GENERAL' : ('RESUMEN ' + mesAnio.toUpperCase());
+  const sufijo = esGeneral ? 'General' : mesAnio.replace(/\s+/g,'_');
+  toast('📦 Generando ZIP…');
+  await exportarZipConGrafica(clienteData, titulo, 'Resumen_' + sufijo, stats);
+  toast('✓ ZIP descargado (Excel + gráfica)');
+}
+async function compartirResumenMes(){
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesAnio = esGeneral ? null : mesResumenFiltro;
+  const clienteData = buildDataResumenMes(mesAnio);
+  if (!clienteData.length){ toast('⚠ No hay visitas'); return; }
+  const stats = calcularStatsData(clienteData);
+  const titulo = esGeneral ? 'RESUMEN GENERAL' : ('RESUMEN ' + mesAnio.toUpperCase());
+  const pngBlob = await generarGraficaBlob(stats, titulo);
+  await compartirTextoWhatsApp(buildTextoResumen(clienteData, titulo), pngBlob);
+}
 async function descargarFiltroFechas(){
   const clienteData = buildDataFiltroFechas();
   if (!clienteData.length){ toast('⚠ Sin visitas en el rango'); return; }
   const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
   const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
-  const wb = buildExcelResumen(clienteData, 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt, 'Filtro');
-  XLSX.writeFile(wb, 'Filtro_' + desdeTxt.replace(/\//g,'-') + '_a_' + hastaTxt.replace(/\//g,'-') + '.xlsx');
-  toast('✓ Excel del filtro descargado');
+  const stats = calcularStatsData(clienteData);
+  toast('📦 Generando ZIP…');
+  await exportarZipConGrafica(clienteData, 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt, 'Filtro_' + desdeTxt.replace(/\//g,'-') + '_a_' + hastaTxt.replace(/\//g,'-'), stats);
+  toast('✓ ZIP descargado (Excel + gráfica)');
 }
 async function compartirFiltroFechas(){
   const clienteData = buildDataFiltroFechas();
   if (!clienteData.length){ toast('⚠ Sin visitas en el rango'); return; }
   const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
   const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
-  await compartirTextoWhatsApp(buildTextoResumen(clienteData, 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt));
+  const stats = calcularStatsData(clienteData);
+  const titulo = 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt;
+  const pngBlob = await generarGraficaBlob(stats, titulo);
+  await compartirTextoWhatsApp(buildTextoResumen(clienteData, titulo), pngBlob);
 }
+
+/* ============================================================
+   PREVIEW EN RESUMEN (con gráfica embebida)
+   ============================================================ */
+function renderPreviewMes(mesFiltro){
+  const cont = document.getElementById('previewMesBox');
+  if (!cont) return;
+  if (!mesFiltro){ cont.innerHTML = ''; cont.style.display = 'none'; return; }
+  const clienteData = buildDataResumenMes(mesFiltro);
+  if (!clienteData.length){ cont.innerHTML = '<div class="card" style="text-align:center;color:var(--muted);font-size:.8rem">Sin visitas en ' + mesFiltro + '</div>'; cont.style.display = 'block'; return; }
+  const st = calcularStatsData(clienteData);
+  let html = '<div class="card" style="border-left:4px solid var(--accent);background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(34,197,94,.05))">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:var(--accent);font-size:.95rem">📅 Vista previa: ' + mesFiltro + '</b><span style="font-size:.72rem;color:var(--muted)">' + st.clientes + ' cliente(s)</span></div>';
+  html += '<canvas id="previewCanvas' + Math.random().toString(36).slice(2,7) + '" class="preview-canvas"></canvas>';
+  html += '<div id="previewCanvasHolder" class="preview-canvas" style="display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--muted)">Generando gráfica…</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;text-align:center;font-size:.7rem;margin:10px 0">';
+  html += '<div style="background:rgba(34,197,94,.15);padding:6px;border-radius:8px"><div style="color:#4ade80;font-weight:800;font-size:1rem">' + st.realizadas + '</div>Realizadas</div>';
+  html += '<div style="background:rgba(245,158,11,.15);padding:6px;border-radius:8px"><div style="color:#fbbf24;font-weight:800;font-size:1rem">' + st.pendientes + '</div>Pendientes</div>';
+  html += '<div style="background:rgba(239,68,68,.15);padding:6px;border-radius:8px"><div style="color:#f87171;font-weight:800;font-size:1rem">' + st.noRealizadas + '</div>No realiz.</div>';
+  html += '<div style="background:rgba(148,163,184,.15);padding:6px;border-radius:8px"><div style="color:#cbd5e1;font-weight:800;font-size:1rem">' + st.pospuestas + '</div>Pospuestas</div>';
+  html += '</div>';
+  html += '<details style="font-size:.75rem;margin-top:6px"><summary style="cursor:pointer;color:var(--muted);padding:4px 0">Ver detalle (' + st.total + ' visitas)</summary><div style="max-height:220px;overflow-y:auto;margin-top:8px;padding-right:4px">';
+  clienteData.forEach(c => {
+    html += '<div style="padding:6px 0;border-bottom:1px solid rgba(148,163,184,.15)"><b style="color:var(--text)">#' + c.codigo + '</b> <span style="color:var(--muted)">' + c.nombre.slice(0,30) + '</span>';
+    c.visitas.forEach(v => {
+      const f = v.fecha ? v.fecha.split('-').reverse().join('/') : '—';
+      const icono = v.estado === 'Realizada' ? '✅' : v.estado === 'Pendiente' ? '⏳' : v.estado === 'No Realizada' ? '❌' : '⏸️';
+      html += '<div style="margin-left:10px;color:var(--muted);font-size:.72rem">' + icono + ' ' + f + (v.hora ? ' ' + v.hora : '') + '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div></details>';
+  html += '<div class="row2" style="margin-top:10px"><button class="btn btn-green btn-sm" style="flex:1" onclick="descargarResumenMes()">📥 Excel+Gráfica (ZIP)</button><button class="btn btn-primary btn-sm" style="flex:1" onclick="compartirResumenMes()">💬 WhatsApp</button></div>';
+  html += '</div>';
+  cont.innerHTML = html;
+  cont.style.display = 'block';
+  requestAnimationFrame(() => {
+    const holder = document.getElementById('previewCanvasHolder');
+    if (!holder) return;
+    const canvas = document.createElement('canvas');
+    canvas.className = 'preview-canvas';
+    dibujarGraficaEnCanvas(canvas, st, 'Visitas — ' + mesFiltro);
+    holder.replaceWith(canvas);
+  });
+}
+
+/* ============================================================
+   RENDER AGENDA
+   ============================================================ */
 function renderAgenda(){
   const q = (document.getElementById('search').value || '').toLowerCase();
   const list = document.getElementById('clientList');
@@ -1072,12 +1201,44 @@ function renderAgenda(){
   const chipFiltroId = 'chipFiltroFechas';
   let chipFiltro = document.getElementById(chipFiltroId);
   if (filtroDesde || filtroHasta){
-    if (!chipFiltro){ chipFiltro = document.createElement('div'); chipFiltro.id = chipFiltroId; chipFiltro.style.cssText = 'background:rgba(245,158,11,.15);border:1px solid var(--warn);color:var(--warn);padding:8px 12px;border-radius:10px;font-size:.78rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px;justify-content:space-between'; list.parentNode.insertBefore(chipFiltro, list); }
+    if (!chipFiltro){ chipFiltro = document.createElement('div'); chipFiltro.id = chipFiltroId; list.parentNode.insertBefore(chipFiltro, list); }
     const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
     const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
-    chipFiltro.innerHTML = '<span style="flex:1">📅 Filtro: <b>' + desdeTxt + '</b> → <b>' + hastaTxt + '</b></span><button onclick="descargarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:.9rem" title="Descargar Excel">📥</button><button onclick="compartirFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:.9rem" title="Compartir WhatsApp">💬</button><button onclick="limpiarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
-    chipFiltro.style.display = 'flex';
+    const clienteDataFiltro = buildDataFiltroFechas();
+    const stF = calcularStatsData(clienteDataFiltro);
+    let htmlChip = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:var(--warn);font-size:.9rem">📅 ' + desdeTxt + ' → ' + hastaTxt + '</b><button onclick="limpiarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:1.1rem">✕</button></div>';
+    htmlChip += '<div id="previewCanvasFiltro" class="preview-canvas" style="display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--muted)">Generando gráfica…</div>';
+    htmlChip += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;text-align:center;font-size:.65rem;margin:10px 0">';
+    htmlChip += '<div style="background:rgba(34,197,94,.15);padding:5px;border-radius:6px"><div style="color:#4ade80;font-weight:800">' + stF.realizadas + '</div>Realiz.</div>';
+    htmlChip += '<div style="background:rgba(245,158,11,.15);padding:5px;border-radius:6px"><div style="color:#fbbf24;font-weight:800">' + stF.pendientes + '</div>Pend.</div>';
+    htmlChip += '<div style="background:rgba(239,68,68,.15);padding:5px;border-radius:6px"><div style="color:#f87171;font-weight:800">' + stF.noRealizadas + '</div>No real.</div>';
+    htmlChip += '<div style="background:rgba(148,163,184,.15);padding:5px;border-radius:6px"><div style="color:#cbd5e1;font-weight:800">' + stF.pospuestas + '</div>Posp.</div>';
+    htmlChip += '</div>';
+    htmlChip += '<details style="font-size:.72rem;margin-bottom:8px"><summary style="cursor:pointer;color:var(--warn);padding:3px 0">Ver detalle (' + stF.total + ' visitas, ' + clienteDataFiltro.length + ' clientes)</summary><div style="max-height:180px;overflow-y:auto;margin-top:6px;padding-right:4px">';
+    clienteDataFiltro.forEach(c => {
+      htmlChip += '<div style="padding:4px 0;border-bottom:1px solid rgba(245,158,11,.15)"><b style="color:var(--warn)">#' + c.codigo + '</b> <span style="color:var(--muted)">' + c.nombre.slice(0,26) + '</span>';
+      c.visitas.forEach(v => {
+        const f = v.fecha ? v.fecha.split('-').reverse().join('/') : '—';
+        const icono = v.estado === 'Realizada' ? '✅' : v.estado === 'Pendiente' ? '⏳' : v.estado === 'No Realizada' ? '❌' : '⏸️';
+        htmlChip += '<div style="margin-left:8px;color:var(--muted);font-size:.68rem">' + icono + ' ' + f + (v.hora ? ' ' + v.hora : '') + '</div>';
+      });
+      htmlChip += '</div>';
+    });
+    htmlChip += '</div></details>';
+    htmlChip += '<div class="row2"><button class="btn btn-warn btn-sm" style="flex:1;background:var(--warn);color:#422006" onclick="descargarFiltroFechas()">📥 Excel+Gráfica (ZIP)</button><button class="btn btn-warn btn-sm" style="flex:1;background:var(--warn);color:#422006" onclick="compartirFiltroFechas()">💬 WhatsApp</button></div>';
+    chipFiltro.innerHTML = htmlChip;
+    chipFiltro.style.cssText = 'background:rgba(245,158,11,.1);border:1px solid var(--warn);border-radius:12px;padding:12px;margin-bottom:12px';
+    chipFiltro.style.display = 'block';
+    requestAnimationFrame(() => {
+      const holder = document.getElementById('previewCanvasFiltro');
+      if (!holder) return;
+      const canvas = document.createElement('canvas');
+      canvas.className = 'preview-canvas';
+      dibujarGraficaEnCanvas(canvas, stF, 'Filtro: ' + desdeTxt + ' → ' + hastaTxt);
+      holder.replaceWith(canvas);
+    });
   } else if (chipFiltro){ chipFiltro.style.display = 'none'; }
+
   const fechaFiltro = q ? detectarFechaBusqueda(q) : null;
   const setConVisitaFecha = fechaFiltro ? clientesConVisitaEnFecha(fechaFiltro) : null;
   const chipId = 'filtroFechaChip';
@@ -1088,6 +1249,7 @@ function renderAgenda(){
     chip.innerHTML = '<span>🗓️ Filtrando por fecha: <b>' + fechaFiltro.split('-').reverse().join('/') + '</b> · ' + n + ' cliente(s)</span><button onclick="document.getElementById(\'search\').value=\'\';onSearchInput();" style="background:transparent;border:none;color:var(--accent);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
     chip.style.display = 'flex';
   } else if (chip){ chip.style.display = 'none'; }
+
   allClients().filter(c => {
     if (filtroDesde || filtroHasta){ if (!clienteTieneVisitaEnRango(c.codigo)) return false; }
     if (!q) return true;
@@ -1498,23 +1660,30 @@ function lightboxNav(dir){
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') lightboxNav(-1); if (e.key === 'ArrowRight') lightboxNav(1); });
 document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
+
+/* ============================================================
+   RENDER RESUMEN
+   ============================================================ */
 function renderResumen(){
   const sel = document.getElementById('mesAnio2');
   if (sel){
     const lista = getListaMesesDisponibles();
-    const actual = mesResumenFiltro || DB.month || getMesAnioActual();
-    sel.innerHTML = lista.map(m => '<option value="' + m + '"' + (m === actual ? ' selected' : '') + '>' + m + '</option>').join('');
-    mesResumenFiltro = lista.includes(actual) ? actual : (lista[0] || getMesAnioActual());
+    const actual = mesResumenFiltro || MES_GENERAL;
+    let opts = '<option value="' + MES_GENERAL + '"' + (actual === MES_GENERAL ? ' selected' : '') + '>📊 Resumen General (todo)</option>';
+    opts += lista.map(m => '<option value="' + m + '"' + (m === actual ? ' selected' : '') + '>' + m + '</option>').join('');
+    sel.innerHTML = opts;
+    mesResumenFiltro = actual;
     sel.value = mesResumenFiltro;
   }
-  const mesFiltro = mesResumenFiltro || getMesAnioActual();
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesFiltro = esGeneral ? null : mesResumenFiltro;
   let r=0,p=0,n=0,s=0,ev=0; const dayCount=[0,0,0,0,0,0,0];
   let totalVisitas = 0;
   allClients().forEach(c => {
     const arr = getVisits(c.codigo);
     arr.forEach(v => {
       if (!v) return;
-      if (!visitaEnMesAnio(v, mesFiltro)) return;
+      if (mesFiltro && !visitaEnMesAnio(v, mesFiltro)) return;
       totalVisitas++;
       const e = v.estado || 'Pendiente';
       if (e === 'Realizada') r++;
@@ -1526,14 +1695,15 @@ function renderResumen(){
     });
     safeArray(DB.photos[c.codigo]).forEach(ph => {
       if (!ph.fechaVisita) return;
-      if (visitaEnMesAnio({fecha: ph.fechaVisita}, mesFiltro)) ev++;
+      if (mesFiltro && !visitaEnMesAnio({fecha: ph.fechaVisita}, mesFiltro)) return;
+      ev++;
     });
   });
   document.getElementById('stTotal').textContent = totalVisitas;
   document.getElementById('stR').textContent = r; document.getElementById('stP').textContent = p;
   document.getElementById('stN').textContent = n; document.getElementById('stS').textContent = s;
   document.getElementById('stE').textContent = ev;
-  lastStats = { r, p, n, s };
+  lastStats = { r, p, n, s, total: totalVisitas };
   drawChart();
   const pct = totalVisitas ? Math.round(r / totalVisitas * 100) : 0;
   document.getElementById('pct').textContent = pct + '%';
@@ -1545,8 +1715,10 @@ function renderResumen(){
   updateSyncStatusBox();
   renderMasterInfo();
   renderMasterStats();
+  renderPreviewMes(mesFiltro);
 }
 function updateStorageInfo(){ let bytes = 0; try{ bytes = (JSON.stringify(DB) || '').length; }catch(e){} const el = document.getElementById('storageInfo'); if (el) el.innerHTML = '📦 Local: <b style="color:var(--accent)">' + (bytes/1048576).toFixed(1) + ' MB</b>'; }
+
 function buildEvidenciasRows(){
   const rows = []; let n = 0;
   allClients().forEach(c => {
@@ -1693,6 +1865,8 @@ async function importarDatos(input){
   else toast('Formato no soportado');
   input.value = '';
 }
+
+/* === COMPARTIR VISITA === */
 async function abrirCompartir(cod){
   const v = getCurrentVisit(cod);
   if (!v){ toast('⚠ No hay visita activa'); return; }
@@ -1828,37 +2002,21 @@ let searchDebounce = null;
 function toggleSearch(force){ const bar = document.getElementById('searchBar'); const open = (force !== undefined) ? force : !bar.classList.contains('open'); bar.classList.toggle('open', open); if (open){ const inp = document.getElementById('search'); setTimeout(() => { inp.focus(); inp.select(); }, 60); } }
 function onSearchInput(){ if (searchDebounce) clearTimeout(searchDebounce); searchDebounce = setTimeout(renderAgenda, 200); }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('searchBar').classList.contains('open')) toggleSearch(false); });
-let lastStats = { r: 0, p: 0, n: 0, s: 0 };
+let lastStats = { r: 0, p: 0, n: 0, s: 0, total: 0 };
 function drawChart(){
   const cv = document.getElementById('chartCanvas'); if (!cv) return;
-  const dpr = window.devicePixelRatio || 1; const W = 640, H = 340;
-  cv.width = W * dpr; cv.height = H * dpr;
-  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-  ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
-  const data = [['Realizadas', lastStats.r, '#22c55e'],['Pendientes', lastStats.p, '#f59e0b'],['No realizadas', lastStats.n, '#ef4444'],['Pospuestas', lastStats.s, '#94a3b8']];
-  const max = Math.max(1, ...data.map(d => d[1]));
-  const padL = 36, padR = 16, padT = 62, padB = 44;
-  const plotW = W - padL - padR, plotH = H - padT - padB;
-  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
-  ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'left';
-  ctx.fillText('Visitas del mes — ' + (mesResumenFiltro || DB.month || 'sin mes definido'), padL, 24);
-  const bw = Math.min(86, plotW / data.length * 0.55);
-  data.forEach((d, i) => {
-    const cx = padL + plotW * (i + 0.5) / data.length;
-    const bh = Math.max(plotH * d[1] / max, d[1] > 0 ? 4 : 1);
-    const x = cx - bw / 2, y = padT + plotH - bh;
-    ctx.fillStyle = d[2];
-    ctx.beginPath();
-    if (ctx.roundRect){ ctx.roundRect(x, y, bw, bh, 6); } else { ctx.rect(x, y, bw, bh); }
-    ctx.fill();
-    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center';
-    ctx.fillText(String(d[1]), cx, y - 8);
-    ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI';
-    ctx.fillText(d[0], cx, padT + plotH + 20);
-  });
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const etiqueta = esGeneral ? 'General (todas las visitas)' : mesResumenFiltro;
+  dibujarGraficaEnCanvas(cv, lastStats, 'Visitas — ' + etiqueta);
 }
-function downloadChart(){ const cv = document.getElementById('chartCanvas'); if (!cv) return; const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'Grafica_Visitas_' + (DB.month || 'Mes').replace(/\s+/g, '_') + '.png'; a.click(); toast('✓ Gráfica descargada'); }
+function downloadChart(){
+  const cv = document.getElementById('chartCanvas'); if (!cv) return;
+  const a = document.createElement('a');
+  a.href = cv.toDataURL('image/png');
+  a.download = 'Grafica_Visitas_' + (DB.month || 'Mes').replace(/\s+/g, '_') + '.png';
+  a.click();
+  toast('✓ Gráfica descargada');
+}
 function liberarEspacio(){
   let freed = 0;
   const limpiar = p => { if (p && p.data && p.fileId && p.synced){ freed += p.data.length; delete p.data; } };

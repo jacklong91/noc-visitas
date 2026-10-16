@@ -150,7 +150,6 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 body{padding-bottom:170px}
 .comp-foto-thumb{display:inline-block;position:relative;width:64px;height:64px;margin:2px;border-radius:8px;overflow:hidden;background:var(--card2)}
 .comp-foto-thumb img{width:100%;height:100%;object-fit:cover}
-.preview-canvas{width:100%;height:200px;background:#0b1220;border-radius:10px;margin-top:8px;border:1px solid #334155}
 </style>
 </head>
 <body>
@@ -218,14 +217,14 @@ body{padding-bottom:170px}
       <div class="stat"><span style="color:#cbd5e1">Visitas POSPUESTAS</span><b id="stS">0</b></div>
       <div class="stat"><span>Evidencias (fotos/firmas)</span><b id="stE">0</b></div>
       <div class="row2" style="margin-top:14px">
-        <button class="btn btn-green" style="flex:1" onclick="descargarResumenMes()">📥 Excel del mes</button>
-        <button class="btn btn-primary" style="flex:1" onclick="compartirResumenMes()">💬 Compartir WhatsApp</button>
+        <button class="btn btn-green" style="flex:1" onclick="descargarResumenMes()">📥 Excel+Gráfica (ZIP)</button>
+        <button class="btn btn-primary" style="flex:1" onclick="compartirResumenMes()">💬 WhatsApp</button>
       </div>
     </div>
     <div id="previewMesBox" style="display:none"></div>
     <div class="card">
       <label>📊 GRÁFICA GENERAL — ESTADO DE VISITAS</label>
-      <canvas id="chartCanvas" style="width:100%;border-radius:12px;background:#0f172a;border:1px solid #334155"></canvas>
+      <canvas id="chartCanvas" style="width:100%;height:auto;display:block;border-radius:12px;background:#0f172a;border:1px solid #334155;margin-top:8px"></canvas>
       <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="downloadChart()">⬇️ Descargar gráfica (PNG)</button>
     </div>
     <div class="card">
@@ -616,7 +615,6 @@ async function sendHeartbeat(){ if (!isOnline()) return; try { const res = await
 function updateActiveUsersBadge(count){ const el = document.getElementById('activeUsersBadge'); if (!el) return; if (!count || count <= 0){ el.style.display = 'none'; return; } if (count === 1){ el.textContent = '👤 Solo tú'; } else { el.textContent = '👥 ' + count + ' técnicos'; } el.style.display = 'inline-block'; }
 function showActiveUsersModal(){ const modal = document.getElementById('historialModal'); const title = document.getElementById('historialTitle'); const list = document.getElementById('historialList'); title.textContent = '👥 Técnicos conectados (' + activeUsersCache.length + ')'; list.innerHTML = ''; if (!activeUsersCache.length){ list.innerHTML = '<div class="empty">Nadie más</div>'; } else { activeUsersCache.forEach(u => { const row = document.createElement('div'); row.className = 'card'; row.style.padding = '10px'; row.style.marginBottom = '8px'; row.innerHTML = '<b>📱 ' + (u.name || 'Dispositivo') + '</b>' + (u.user ? '<br><small style="color:var(--muted)">👤 ' + u.user + '</small>' : ''); list.appendChild(row); }); } modal.classList.add('open'); }
 
-/* === MASTER === */
 async function syncMasterNow(){
   if (!driveStateReady){ toast('⏳ Esperando Drive…'); return; }
   if (syncInProgress){ toast('⏳ Sincronización en curso'); return; }
@@ -672,7 +670,6 @@ function collectMasterUpdates(){
 }
 function renderMasterInfo(){ const el = document.getElementById('masterInfo'); if (!el) return; const lastSync = localStorage.getItem('nocLastMasterSync'); if (!lastSync){ el.innerHTML = '<span style="color:var(--warn)">⚠ Sin sincronizar</span>'; } else { el.innerHTML = '✓ Sincronizado · ' + new Date(lastSync).toLocaleString('es-VE'); } }
 
-/* === SYNC === */
 async function syncToCloud(silent){
   if (syncInProgress) return;
   if (!isOnline()){ setSyncBadge('📴 Sin conexión','warn'); return; }
@@ -922,9 +919,6 @@ function clienteTieneVisitaEnRango(cod){
   return false;
 }
 
-/* ============================================================
-   DATOS Y EXPORTACIÓN POR MES / RANGO
-   ============================================================ */
 function buildDataResumenMes(mesAnio){
   const data = [];
   allClients().forEach(c => {
@@ -1008,7 +1002,7 @@ function buildExcelResumen(clienteData, titulo, nombreHoja){
 }
 
 /* ============================================================
-   GENERAR IMAGEN PNG DE GRÁFICA
+   DIBUJAR GRÁFICA (con margen para valores y título)
    ============================================================ */
 function dibujarGraficaEnCanvas(canvas, stats, titulo){
   const dpr = window.devicePixelRatio || 1;
@@ -1016,29 +1010,48 @@ function dibujarGraficaEnCanvas(canvas, stats, titulo){
   canvas.width = W * dpr; canvas.height = H * dpr;
   const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
-  const data = [['Realizadas', stats.realizadas || 0, '#22c55e'],['Pendientes', stats.pendientes || 0, '#f59e0b'],['No realizadas', stats.noRealizadas || 0, '#ef4444'],['Pospuestas', stats.pospuestas || 0, '#94a3b8']];
+  const data = [
+    ['Realizadas', stats.realizadas || 0, '#22c55e'],
+    ['Pendientes', stats.pendientes || 0, '#f59e0b'],
+    ['No realizadas', stats.noRealizadas || 0, '#ef4444'],
+    ['Pospuestas', stats.pospuestas || 0, '#94a3b8']
+  ];
   const max = Math.max(1, ...data.map(d => d[1]));
-  const padL = 36, padR = 16, padT = 62, padB = 44;
+  const padL = 40, padR = 20, padT = 80, padB = 50;
   const plotW = W - padL - padR, plotH = H - padT - padB;
+  // Ejes
   ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
-  ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'left';
-  ctx.fillText(titulo, padL, 24);
+  // Líneas guía
+  ctx.strokeStyle = '#1e293b'; ctx.fillStyle = '#64748b'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++){
+    const v = Math.round(max * i / 4);
+    const y = padT + plotH - (plotH * i / 4);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+    ctx.fillText(String(v), padL - 6, y + 3);
+  }
+  // Título con espacio amplio
+  ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillText(titulo, padL, 26);
   ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI';
-  ctx.fillText('Total: ' + (stats.total || 0) + ' visitas', padL, 44);
-  const bw = Math.min(86, plotW / data.length * 0.55);
+  ctx.fillText('Total: ' + (stats.total || 0) + ' visitas', padL, 48);
+  // Barras
+  const bw = Math.min(80, plotW / data.length * 0.55);
   data.forEach((d, i) => {
     const cx = padL + plotW * (i + 0.5) / data.length;
-    const bh = Math.max(plotH * d[1] / max, d[1] > 0 ? 4 : 1);
+    const bh = Math.max(plotH * d[1] / max, d[1] > 0 ? 6 : 2);
     const x = cx - bw / 2, y = padT + plotH - bh;
     ctx.fillStyle = d[2];
     ctx.beginPath();
     if (ctx.roundRect){ ctx.roundRect(x, y, bw, bh, 6); } else { ctx.rect(x, y, bw, bh); }
     ctx.fill();
-    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center';
-    ctx.fillText(String(d[1]), cx, y - 8);
+    // Valor arriba de la barra, con tope para no montarse en el título
+    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center';
+    const yValor = Math.max(y - 12, padT + 20);
+    ctx.fillText(String(d[1]), cx, yValor);
+    // Etiqueta debajo
     ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI';
-    ctx.fillText(d[0], cx, padT + plotH + 20);
+    ctx.fillText(d[0], cx, padT + plotH + 22);
   });
 }
 function generarGraficaBlob(stats, titulo){
@@ -1049,9 +1062,6 @@ function generarGraficaBlob(stats, titulo){
   });
 }
 
-/* ============================================================
-   COMPARTIR TEXTO E IMAGEN POR WHATSAPP
-   ============================================================ */
 async function compartirTextoWhatsApp(txt, imagenBlob){
   if (navigator.share){
     try {
@@ -1078,9 +1088,6 @@ async function compartirTextoWhatsApp(txt, imagenBlob){
   setTimeout(() => document.body.removeChild(a), 1000);
 }
 
-/* ============================================================
-   EXPORTAR: EXCEL + GRÁFICA EN ZIP
-   ============================================================ */
 async function exportarZipConGrafica(clienteData, titulo, nombreBase, stats){
   const wb = buildExcelResumen(clienteData, titulo, 'Resumen');
   const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
@@ -1096,9 +1103,6 @@ async function exportarZipConGrafica(clienteData, titulo, nombreBase, stats){
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
 
-/* ============================================================
-   DESCARGAR / COMPARTIR: MES O GENERAL
-   ============================================================ */
 async function descargarResumenMes(){
   const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
   const mesAnio = esGeneral ? null : mesResumenFiltro;
@@ -1143,7 +1147,7 @@ async function compartirFiltroFechas(){
 }
 
 /* ============================================================
-   PREVIEW EN RESUMEN (con gráfica embebida)
+   PREVIEW DEL MES (un solo canvas)
    ============================================================ */
 function renderPreviewMes(mesFiltro){
   const cont = document.getElementById('previewMesBox');
@@ -1154,8 +1158,7 @@ function renderPreviewMes(mesFiltro){
   const st = calcularStatsData(clienteData);
   let html = '<div class="card" style="border-left:4px solid var(--accent);background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(34,197,94,.05))">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:var(--accent);font-size:.95rem">📅 Vista previa: ' + mesFiltro + '</b><span style="font-size:.72rem;color:var(--muted)">' + st.clientes + ' cliente(s)</span></div>';
-  html += '<canvas id="previewCanvas' + Math.random().toString(36).slice(2,7) + '" class="preview-canvas"></canvas>';
-  html += '<div id="previewCanvasHolder" class="preview-canvas" style="display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--muted)">Generando gráfica…</div>';
+  html += '<canvas id="previewCanvasUnico" style="width:100%;background:#0b1220;border-radius:10px;display:block;border:1px solid #334155"></canvas>';
   html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;text-align:center;font-size:.7rem;margin:10px 0">';
   html += '<div style="background:rgba(34,197,94,.15);padding:6px;border-radius:8px"><div style="color:#4ade80;font-weight:800;font-size:1rem">' + st.realizadas + '</div>Realizadas</div>';
   html += '<div style="background:rgba(245,158,11,.15);padding:6px;border-radius:8px"><div style="color:#fbbf24;font-weight:800;font-size:1rem">' + st.pendientes + '</div>Pendientes</div>';
@@ -1178,12 +1181,11 @@ function renderPreviewMes(mesFiltro){
   cont.innerHTML = html;
   cont.style.display = 'block';
   requestAnimationFrame(() => {
-    const holder = document.getElementById('previewCanvasHolder');
-    if (!holder) return;
-    const canvas = document.createElement('canvas');
-    canvas.className = 'preview-canvas';
+    const canvas = document.getElementById('previewCanvasUnico');
+    if (!canvas) return;
     dibujarGraficaEnCanvas(canvas, st, 'Visitas — ' + mesFiltro);
-    holder.replaceWith(canvas);
+    const ancho = canvas.clientWidth || 320;
+    canvas.style.height = Math.round(ancho * 340 / 640) + 'px';
   });
 }
 
@@ -1207,7 +1209,7 @@ function renderAgenda(){
     const clienteDataFiltro = buildDataFiltroFechas();
     const stF = calcularStatsData(clienteDataFiltro);
     let htmlChip = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:var(--warn);font-size:.9rem">📅 ' + desdeTxt + ' → ' + hastaTxt + '</b><button onclick="limpiarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:1.1rem">✕</button></div>';
-    htmlChip += '<div id="previewCanvasFiltro" class="preview-canvas" style="display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--muted)">Generando gráfica…</div>';
+    htmlChip += '<canvas id="previewCanvasFiltro" style="width:100%;background:#0b1220;border-radius:10px;display:block;border:1px solid #334155"></canvas>';
     htmlChip += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;text-align:center;font-size:.65rem;margin:10px 0">';
     htmlChip += '<div style="background:rgba(34,197,94,.15);padding:5px;border-radius:6px"><div style="color:#4ade80;font-weight:800">' + stF.realizadas + '</div>Realiz.</div>';
     htmlChip += '<div style="background:rgba(245,158,11,.15);padding:5px;border-radius:6px"><div style="color:#fbbf24;font-weight:800">' + stF.pendientes + '</div>Pend.</div>';
@@ -1230,12 +1232,11 @@ function renderAgenda(){
     chipFiltro.style.cssText = 'background:rgba(245,158,11,.1);border:1px solid var(--warn);border-radius:12px;padding:12px;margin-bottom:12px';
     chipFiltro.style.display = 'block';
     requestAnimationFrame(() => {
-      const holder = document.getElementById('previewCanvasFiltro');
-      if (!holder) return;
-      const canvas = document.createElement('canvas');
-      canvas.className = 'preview-canvas';
+      const canvas = document.getElementById('previewCanvasFiltro');
+      if (!canvas) return;
       dibujarGraficaEnCanvas(canvas, stF, 'Filtro: ' + desdeTxt + ' → ' + hastaTxt);
-      holder.replaceWith(canvas);
+      const ancho = canvas.clientWidth || 320;
+      canvas.style.height = Math.round(ancho * 340 / 640) + 'px';
     });
   } else if (chipFiltro){ chipFiltro.style.display = 'none'; }
 
@@ -1661,9 +1662,6 @@ function lightboxNav(dir){
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') lightboxNav(-1); if (e.key === 'ArrowRight') lightboxNav(1); });
 document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
 
-/* ============================================================
-   RENDER RESUMEN
-   ============================================================ */
 function renderResumen(){
   const sel = document.getElementById('mesAnio2');
   if (sel){
@@ -1866,7 +1864,6 @@ async function importarDatos(input){
   input.value = '';
 }
 
-/* === COMPARTIR VISITA === */
 async function abrirCompartir(cod){
   const v = getCurrentVisit(cod);
   if (!v){ toast('⚠ No hay visita activa'); return; }
@@ -2007,7 +2004,15 @@ function drawChart(){
   const cv = document.getElementById('chartCanvas'); if (!cv) return;
   const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
   const etiqueta = esGeneral ? 'General (todas las visitas)' : mesResumenFiltro;
-  dibujarGraficaEnCanvas(cv, lastStats, 'Visitas — ' + etiqueta);
+  // ✅ FIX: mapear r/p/n/s a las claves que espera la gráfica
+  const stats = {
+    realizadas: lastStats.r || 0,
+    pendientes: lastStats.p || 0,
+    noRealizadas: lastStats.n || 0,
+    pospuestas: lastStats.s || 0,
+    total: lastStats.total || 0
+  };
+  dibujarGraficaEnCanvas(cv, stats, 'Visitas — ' + etiqueta);
 }
 function downloadChart(){
   const cv = document.getElementById('chartCanvas'); if (!cv) return;

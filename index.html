@@ -337,7 +337,6 @@ body{padding-bottom:170px}
       <button class="btn btn-primary" style="flex:1" onclick="descargarZipVisita()">📦 Descargar ZIP</button>
     </div>
     <button class="btn btn-green btn-block" onclick="abrirWhatsAppVisita()" id="btnCompartirWhats" disabled style="opacity:.6">⏳ Preparando…</button>
-    <button class="btn btn-primary btn-block" onclick="enviarSoloFotos()" id="btnSoloFotos" style="display:none;margin-top:8px">📷 Enviar SOLO las fotos</button>
   </div>
 </div>
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
@@ -358,7 +357,7 @@ let editingVisitId = {};
 let driveStateReady = false;
 let lastKnownRemoteTs = null;
 let activeUsersCache = [];
-let compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null };
+let compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null, loteActual: 0 };
 let formsAbiertos = new Set();
 let loadingFromCloud = false;
 let filtroDesde = '';
@@ -1855,7 +1854,9 @@ async function abrirCompartir(cod){
   if (!v){ toast('⚠ No hay visita activa'); return; }
   if (!v.fecha){ toast('⚠ La visita no tiene fecha'); return; }
   const cliente = getClientByCode(cod);
-  const todasFotos = safeArray(DB.photos[cod]).filter(p => (p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)).filter(p => p.fileId || p.data);
+  const todasFotos = safeArray(DB.photos[cod]).filter(p =>
+    (p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)
+  ).filter(p => p.fileId || p.data);
   compartirCtx.cod = cod;
   compartirCtx.visitId = v.id;
   compartirCtx.fotos = todasFotos;
@@ -1864,9 +1865,7 @@ async function abrirCompartir(cod){
   document.getElementById('compartirModal').classList.add('open');
   const prev = document.getElementById('compartirPreview');
   const btn = document.getElementById('btnCompartirWhats');
-  const btnFotos = document.getElementById('btnSoloFotos');
   btn.disabled = true; btn.style.opacity = .6; btn.textContent = '⏳ Preparando…';
-  btnFotos.style.display = 'none';
   let html = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">';
   todasFotos.forEach(p => {
     let src = null;
@@ -1886,18 +1885,15 @@ async function abrirCompartir(cod){
   const nOk = compartirCtx.blobs.length;
   document.getElementById('compartirInfo').textContent = nOk + ' de ' + todasFotos.length + ' foto(s) listas' + (fallos ? ' · ' + fallos + ' con error' : '');
   btn.disabled = false; btn.style.opacity = 1;
-  // ✅ Si hay más de 8 fotos → 2 botones: PASO 1 = FOTOS, PASO 2 = TEXTO
   if (nOk > 8){
-    btn.textContent = '📷 PASO 1: Enviar ' + nOk + ' fotos';
-    btnFotos.style.display = 'block';
-    btnFotos.textContent = '💬 PASO 2: Enviar texto';
+    const numCollages = Math.ceil(nOk / 6);
+    btn.textContent = '💬 Compartir texto + ' + numCollages + ' collage' + (numCollages > 1 ? 's' : '');
   } else {
     btn.textContent = '💬 Compartir por WhatsApp (' + nOk + ' fotos)';
-    btnFotos.style.display = 'none';
   }
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function cerrarCompartir(){ document.getElementById('compartirModal').classList.remove('open'); compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null }; }
+function cerrarCompartir(){ document.getElementById('compartirModal').classList.remove('open'); compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null, loteActual: 0 }; }
 function generarTextoVisita(cliente, v, nFotos, cod){
   const fecha = v.fecha ? v.fecha.split('-').reverse().join('/') : '';
   const hora = v.hora || '--:--';
@@ -1968,90 +1964,112 @@ async function descargarZipVisita(){
   toast('✓ ZIP descargado');
 }
 
-// ✅ PASO 1: Envía SOLO las FOTOS (o todo si son ≤8)
+async function cargarBlobComoImagen(blob){
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+async function generarCollage(blobs, inicio, fin, nFotosTotal){
+  const imgs = [];
+  for (let i = inicio; i < fin; i++){
+    const img = await cargarBlobComoImagen(blobs[i]);
+    if (img) imgs.push({ img, index: i });
+  }
+  if (imgs.length === 1){
+    return blobs[inicio];
+  }
+  const W = 1200;
+  const HEADER_H = 50;
+  const COL = 2;
+  const ROW = Math.ceil(imgs.length / COL);
+  const CELL_W = W / COL;
+  const CELL_H = 450;
+  const H = HEADER_H + ROW * CELL_H + 30;
+  const cv = document.createElement('canvas');
+  const dpr = 2;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(14,165,233,.4)';
+  ctx.fillRect(0, 0, W, HEADER_H);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px Segoe UI, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('📷 Fotos ' + (inicio+1) + ' a ' + fin + ' de ' + nFotosTotal, 20, 33);
+  imgs.forEach((item, idx) => {
+    const col = idx % COL;
+    const row = Math.floor(idx / COL);
+    const x = col * CELL_W;
+    const y = HEADER_H + row * CELL_H;
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + 6, y + 6, CELL_W - 12, CELL_H - 12);
+    const img = item.img;
+    const cellW = CELL_W - 24;
+    const cellH = CELL_H - 24;
+    const ratio = Math.min(cellW / img.width, cellH / img.height);
+    const dw = img.width * ratio;
+    const dh = img.height * ratio;
+    const dx = x + 12 + (cellW - dw) / 2;
+    const dy = y + 12 + (cellH - dh) / 2;
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.fillStyle = 'rgba(0,0,0,.75)';
+    ctx.fillRect(x + 14, y + 14, 60, 34);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('#' + (item.index + 1), x + 44, y + 38);
+  });
+  return new Promise(resolve => cv.toBlob(b => resolve(b), 'image/jpeg', 0.85));
+}
+
 async function abrirWhatsAppVisita(){
   const nFotos = compartirCtx.blobs ? compartirCtx.blobs.length : 0;
-
-  if (!navigator.share){
-    // Fallback: descargar ZIP
-    toast('📦 Chrome no soporta compartir aquí. Descargando ZIP…');
-    await descargarZipVisita();
-    return;
-  }
-
-  // Menos de 8 fotos: envío normal (todo junto)
-  if (nFotos <= 8){
-    try {
-      if (nFotos > 0){
-        const files = [];
-        for (let i = 0; i < compartirCtx.blobs.length; i++){
-          const b = compartirCtx.blobs[i];
-          files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
-        }
-        if (!navigator.canShare || navigator.canShare({ files })){
-          await navigator.share({ text: compartirCtx.texto, files });
-          return;
-        }
-      }
-      await navigator.share({ text: compartirCtx.texto });
-      return;
-    } catch(e){
-      if (e && e.name === 'AbortError') return;
-      console.warn('share() falló:', e);
-    }
-    // Fallback
-    toast('📦 Descargando ZIP…');
-    await descargarZipVisita();
-    return;
-  }
-
-  // Más de 8 fotos: PASO 1 = SOLO fotos
+  if (!navigator.share){ toast('⚠ Chrome no soporta compartir'); return; }
+  if (!nFotos){ toast('⚠ No hay fotos'); return; }
   try {
-    const files = [];
-    for (let i = 0; i < compartirCtx.blobs.length; i++){
-      const b = compartirCtx.blobs[i];
-      files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
+    if (nFotos <= 8){
+      const files = [];
+      for (let i = 0; i < nFotos; i++){
+        const b = compartirCtx.blobs[i];
+        files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
+      }
+      if (navigator.canShare && !navigator.canShare({ files })){
+        toast('⚠ Chrome no permite. Descargando ZIP…');
+        await descargarZipVisita();
+        return;
+      }
+      await navigator.share({ text: compartirCtx.texto, files });
+      toast('✓ Enviado');
+      return;
     }
-    if (navigator.canShare && !navigator.canShare({ files })){
-      toast('⚠ No se pueden compartir archivos. Descargando ZIP…');
+    toast('🎨 Generando collages...');
+    const POR_COLLAGE = 6;
+    const totalLotes = Math.ceil(nFotos / POR_COLLAGE);
+    const collageFiles = [];
+    for (let lote = 0; lote < totalLotes; lote++){
+      const inicio = lote * POR_COLLAGE;
+      const fin = Math.min(inicio + POR_COLLAGE, nFotos);
+      const blob = await generarCollage(compartirCtx.blobs, inicio, fin, nFotos);
+      collageFiles.push(new File([blob], 'collage_' + String(lote+1).padStart(2,'0') + '.jpg', { type: 'image/jpeg' }));
+    }
+    if (navigator.canShare && !navigator.canShare({ files: collageFiles })){
+      toast('⚠ Chrome no permite. Descargando ZIP…');
       await descargarZipVisita();
       return;
     }
-    await navigator.share({ files });
-    toast('✓ Fotos enviadas — ahora toca PASO 2');
+    await navigator.share({ text: compartirCtx.texto, files: collageFiles });
+    toast('✓ ' + totalLotes + ' collage(s) + texto enviados');
   } catch(e){
     if (e && e.name === 'AbortError') return;
-    console.warn('Error al compartir fotos:', e);
-    toast('📦 Chrome bloqueó el envío. Descargando ZIP…');
-    await descargarZipVisita();
+    console.warn('Error al compartir:', e);
+    toast('⚠ Error. Usa 📦 Descargar ZIP');
   }
-}
-
-// ✅ PASO 2: Envía SOLO el TEXTO
-async function enviarSoloFotos(){
-  if (navigator.share){
-    try {
-      await navigator.share({ text: compartirCtx.texto });
-      toast('✓ Texto enviado');
-      return;
-    } catch(e){
-      if (e && e.name === 'AbortError') return;
-      console.warn('share() falló:', e);
-    }
-  }
-  // Fallback: WhatsApp con texto via wa.me
-  const texto = encodeURIComponent(compartirCtx.texto);
-  const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const url = esMovil ? ('https://wa.me/?text=' + texto) : ('https://web.whatsapp.com/send?text=' + texto);
-  const a = document.createElement('a');
-  a.style.display = 'none';
-  a.rel = 'noopener noreferrer';
-  a.href = url;
-  a.target = '_blank';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => document.body.removeChild(a), 1000);
-  toast('📱 Abriendo WhatsApp con el texto…');
 }
 function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
 let searchDebounce = null;

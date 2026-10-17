@@ -1001,9 +1001,6 @@ function buildExcelResumen(clienteData, titulo, nombreHoja){
   return wb;
 }
 
-/* ============================================================
-   DIBUJAR GRÁFICA (con margen para valores y título)
-   ============================================================ */
 function dibujarGraficaEnCanvas(canvas, stats, titulo){
   const dpr = window.devicePixelRatio || 1;
   const W = 640, H = 340;
@@ -1019,10 +1016,8 @@ function dibujarGraficaEnCanvas(canvas, stats, titulo){
   const max = Math.max(1, ...data.map(d => d[1]));
   const padL = 40, padR = 20, padT = 80, padB = 50;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-  // Ejes
   ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
-  // Líneas guía
   ctx.strokeStyle = '#1e293b'; ctx.fillStyle = '#64748b'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++){
     const v = Math.round(max * i / 4);
@@ -1030,12 +1025,10 @@ function dibujarGraficaEnCanvas(canvas, stats, titulo){
     ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
     ctx.fillText(String(v), padL - 6, y + 3);
   }
-  // Título con espacio amplio
   ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'left';
   ctx.fillText(titulo, padL, 26);
   ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI';
   ctx.fillText('Total: ' + (stats.total || 0) + ' visitas', padL, 48);
-  // Barras
   const bw = Math.min(80, plotW / data.length * 0.55);
   data.forEach((d, i) => {
     const cx = padL + plotW * (i + 0.5) / data.length;
@@ -1045,11 +1038,9 @@ function dibujarGraficaEnCanvas(canvas, stats, titulo){
     ctx.beginPath();
     if (ctx.roundRect){ ctx.roundRect(x, y, bw, bh, 6); } else { ctx.rect(x, y, bw, bh); }
     ctx.fill();
-    // Valor arriba de la barra, con tope para no montarse en el título
     ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center';
     const yValor = Math.max(y - 12, padT + 20);
     ctx.fillText(String(d[1]), cx, yValor);
-    // Etiqueta debajo
     ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI';
     ctx.fillText(d[0], cx, padT + plotH + 22);
   });
@@ -1146,9 +1137,6 @@ async function compartirFiltroFechas(){
   await compartirTextoWhatsApp(buildTextoResumen(clienteData, titulo), pngBlob);
 }
 
-/* ============================================================
-   PREVIEW DEL MES (un solo canvas)
-   ============================================================ */
 function renderPreviewMes(mesFiltro){
   const cont = document.getElementById('previewMesBox');
   if (!cont) return;
@@ -1189,9 +1177,6 @@ function renderPreviewMes(mesFiltro){
   });
 }
 
-/* ============================================================
-   RENDER AGENDA
-   ============================================================ */
 function renderAgenda(){
   const q = (document.getElementById('search').value || '').toLowerCase();
   const list = document.getElementById('clientList');
@@ -1972,27 +1957,74 @@ async function descargarZipVisita(){
   toast('✓ ZIP descargado');
 }
 async function abrirWhatsAppVisita(){
-  if (navigator.share){
-    try {
-      if (compartirCtx.blobs && compartirCtx.blobs.length){
-        const files = [];
-        for (let i = 0; i < compartirCtx.blobs.length; i++){ const b = compartirCtx.blobs[i]; files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' })); }
-        if (!navigator.canShare || navigator.canShare({ files })){ await navigator.share({ text: compartirCtx.texto, files }); return; }
-      }
-      await navigator.share({ text: compartirCtx.texto });
-      return;
-    } catch(e){ if (e && e.name === 'AbortError') return; }
+  const nFotos = compartirCtx.blobs ? compartirCtx.blobs.length : 0;
+  const LIMITE = 8; // ✅ Si hay más de 8 fotos, dividir el envío para evitar corrupción de emojis
+  
+  if (!navigator.share){
+    // Fallback navegador de escritorio
+    const texto = encodeURIComponent(compartirCtx.texto);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.rel = 'noopener noreferrer';
+    a.href = 'https://web.whatsapp.com/send?text=' + texto;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 1000);
+    return;
   }
-  const texto = encodeURIComponent(compartirCtx.texto);
-  const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const a = document.createElement('a');
-  a.style.display = 'none';
-  a.rel = 'noopener noreferrer';
-  if (esMovil){ a.href = 'https://wa.me/?text=' + texto; a.target = '_blank'; }
-  else { a.href = 'https://web.whatsapp.com/send?text=' + texto; a.target = '_blank'; }
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => document.body.removeChild(a), 1000);
+
+  // ✅ CASO 1: Muchas fotos → 2 pasos para evitar corrupción de emojis
+  if (nFotos > LIMITE){
+    const quiere = confirm('Esta visita tiene ' + nFotos + ' fotos.\n\n⚠ WhatsApp puede corromper los emojis del texto con tantas fotos.\n\nSolución: enviar en 2 pasos.\n\n1️⃣ Primero el texto (con emojis perfectos)\n2️⃣ Luego las ' + nFotos + ' fotos\n\n¿Continuar?');
+    if (!quiere) return;
+    
+    try {
+      // PASO 1: Solo texto
+      await navigator.share({ text: compartirCtx.texto });
+    } catch(e){
+      if (e && e.name === 'AbortError') return;
+    }
+    
+    // Esperar 1.5s para que WhatsApp procese
+    await new Promise(r => setTimeout(r, 1500));
+    
+    try {
+      // PASO 2: Solo fotos
+      const files = [];
+      for (let i = 0; i < compartirCtx.blobs.length; i++){
+        const b = compartirCtx.blobs[i];
+        files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
+      }
+      if (!navigator.canShare || navigator.canShare({ files })){
+        await navigator.share({ files });
+      } else {
+        toast('⚠ No se pudieron adjuntar todas las fotos');
+      }
+    } catch(e){
+      if (e && e.name === 'AbortError') return;
+      toast('⚠ Error al enviar fotos: ' + e.message);
+    }
+    return;
+  }
+
+  // ✅ CASO 2: Pocas fotos → flujo normal
+  try {
+    if (compartirCtx.blobs && compartirCtx.blobs.length){
+      const files = [];
+      for (let i = 0; i < compartirCtx.blobs.length; i++){
+        const b = compartirCtx.blobs[i];
+        files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
+      }
+      if (!navigator.canShare || navigator.canShare({ files })){
+        await navigator.share({ text: compartirCtx.texto, files });
+        return;
+      }
+    }
+    await navigator.share({ text: compartirCtx.texto });
+  } catch(e){
+    if (e && e.name === 'AbortError') return;
+  }
 }
 function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
 let searchDebounce = null;
@@ -2004,7 +2036,6 @@ function drawChart(){
   const cv = document.getElementById('chartCanvas'); if (!cv) return;
   const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
   const etiqueta = esGeneral ? 'General (todas las visitas)' : mesResumenFiltro;
-  // ✅ FIX: mapear r/p/n/s a las claves que espera la gráfica
   const stats = {
     realizadas: lastStats.r || 0,
     pendientes: lastStats.p || 0,

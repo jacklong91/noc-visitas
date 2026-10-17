@@ -1886,11 +1886,11 @@ async function abrirCompartir(cod){
   const nOk = compartirCtx.blobs.length;
   document.getElementById('compartirInfo').textContent = nOk + ' de ' + todasFotos.length + ' foto(s) listas' + (fallos ? ' · ' + fallos + ' con error' : '');
   btn.disabled = false; btn.style.opacity = 1;
-  // ✅ Si hay más de 8 fotos → 2 botones separados
+  // ✅ Si hay más de 8 fotos → 2 botones: PASO 1 = FOTOS, PASO 2 = TEXTO
   if (nOk > 8){
-    btn.textContent = '💬 PASO 1: Enviar texto';
+    btn.textContent = '📷 PASO 1: Enviar ' + nOk + ' fotos';
     btnFotos.style.display = 'block';
-    btnFotos.textContent = '📷 PASO 2: Enviar ' + nOk + ' fotos';
+    btnFotos.textContent = '💬 PASO 2: Enviar texto';
   } else {
     btn.textContent = '💬 Compartir por WhatsApp (' + nOk + ' fotos)';
     btnFotos.style.display = 'none';
@@ -1967,53 +1967,45 @@ async function descargarZipVisita(){
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   toast('✓ ZIP descargado');
 }
+
+// ✅ PASO 1: Envía SOLO las FOTOS (o todo si son ≤8)
 async function abrirWhatsAppVisita(){
   const nFotos = compartirCtx.blobs ? compartirCtx.blobs.length : 0;
+
   if (!navigator.share){
-    const texto = encodeURIComponent(compartirCtx.texto);
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.rel = 'noopener noreferrer';
-    a.href = 'https://web.whatsapp.com/send?text=' + texto;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => document.body.removeChild(a), 1000);
+    // Fallback: descargar ZIP
+    toast('📦 Chrome no soporta compartir aquí. Descargando ZIP…');
+    await descargarZipVisita();
     return;
   }
-  // Si hay >8 fotos: este botón SOLO envía el texto
-  if (nFotos > 8){
+
+  // Menos de 8 fotos: envío normal (todo junto)
+  if (nFotos <= 8){
     try {
+      if (nFotos > 0){
+        const files = [];
+        for (let i = 0; i < compartirCtx.blobs.length; i++){
+          const b = compartirCtx.blobs[i];
+          files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
+        }
+        if (!navigator.canShare || navigator.canShare({ files })){
+          await navigator.share({ text: compartirCtx.texto, files });
+          return;
+        }
+      }
       await navigator.share({ text: compartirCtx.texto });
-      toast('✓ Texto enviado — ahora toca PASO 2');
+      return;
     } catch(e){
       if (e && e.name === 'AbortError') return;
+      console.warn('share() falló:', e);
     }
+    // Fallback
+    toast('📦 Descargando ZIP…');
+    await descargarZipVisita();
     return;
   }
-  // Menos de 8 fotos: envío normal
-  try {
-    if (compartirCtx.blobs && compartirCtx.blobs.length){
-      const files = [];
-      for (let i = 0; i < compartirCtx.blobs.length; i++){
-        const b = compartirCtx.blobs[i];
-        files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
-      }
-      if (!navigator.canShare || navigator.canShare({ files })){
-        await navigator.share({ text: compartirCtx.texto, files });
-        return;
-      }
-    }
-    await navigator.share({ text: compartirCtx.texto });
-  } catch(e){
-    if (e && e.name === 'AbortError') return;
-  }
-}
-// ✅ NUEVA: Envía solo las fotos (para el PASO 2)
-async function enviarSoloFotos(){
-  const nFotos = compartirCtx.blobs ? compartirCtx.blobs.length : 0;
-  if (!nFotos){ toast('⚠ No hay fotos'); return; }
-  if (!navigator.share){ toast('⚠ Share no disponible'); return; }
+
+  // Más de 8 fotos: PASO 1 = SOLO fotos
   try {
     const files = [];
     for (let i = 0; i < compartirCtx.blobs.length; i++){
@@ -2021,15 +2013,45 @@ async function enviarSoloFotos(){
       files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
     }
     if (navigator.canShare && !navigator.canShare({ files })){
-      toast('⚠ No se pueden compartir archivos en este dispositivo');
+      toast('⚠ No se pueden compartir archivos. Descargando ZIP…');
+      await descargarZipVisita();
       return;
     }
     await navigator.share({ files });
-    toast('✓ Fotos enviadas');
+    toast('✓ Fotos enviadas — ahora toca PASO 2');
   } catch(e){
     if (e && e.name === 'AbortError') return;
-    toast('⚠ Error: ' + e.message);
+    console.warn('Error al compartir fotos:', e);
+    toast('📦 Chrome bloqueó el envío. Descargando ZIP…');
+    await descargarZipVisita();
   }
+}
+
+// ✅ PASO 2: Envía SOLO el TEXTO
+async function enviarSoloFotos(){
+  if (navigator.share){
+    try {
+      await navigator.share({ text: compartirCtx.texto });
+      toast('✓ Texto enviado');
+      return;
+    } catch(e){
+      if (e && e.name === 'AbortError') return;
+      console.warn('share() falló:', e);
+    }
+  }
+  // Fallback: WhatsApp con texto via wa.me
+  const texto = encodeURIComponent(compartirCtx.texto);
+  const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const url = esMovil ? ('https://wa.me/?text=' + texto) : ('https://web.whatsapp.com/send?text=' + texto);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.rel = 'noopener noreferrer';
+  a.href = url;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 1000);
+  toast('📱 Abriendo WhatsApp con el texto…');
 }
 function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
 let searchDebounce = null;

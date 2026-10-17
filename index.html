@@ -337,6 +337,7 @@ body{padding-bottom:170px}
       <button class="btn btn-primary" style="flex:1" onclick="descargarZipVisita()">📦 Descargar ZIP</button>
     </div>
     <button class="btn btn-green btn-block" onclick="abrirWhatsAppVisita()" id="btnCompartirWhats" disabled style="opacity:.6">⏳ Preparando…</button>
+    <button class="btn btn-primary btn-block" onclick="enviarSoloFotos()" id="btnSoloFotos" style="display:none;margin-top:8px">📷 Enviar SOLO las fotos</button>
   </div>
 </div>
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
@@ -1863,7 +1864,9 @@ async function abrirCompartir(cod){
   document.getElementById('compartirModal').classList.add('open');
   const prev = document.getElementById('compartirPreview');
   const btn = document.getElementById('btnCompartirWhats');
+  const btnFotos = document.getElementById('btnSoloFotos');
   btn.disabled = true; btn.style.opacity = .6; btn.textContent = '⏳ Preparando…';
+  btnFotos.style.display = 'none';
   let html = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">';
   todasFotos.forEach(p => {
     let src = null;
@@ -1883,7 +1886,15 @@ async function abrirCompartir(cod){
   const nOk = compartirCtx.blobs.length;
   document.getElementById('compartirInfo').textContent = nOk + ' de ' + todasFotos.length + ' foto(s) listas' + (fallos ? ' · ' + fallos + ' con error' : '');
   btn.disabled = false; btn.style.opacity = 1;
-  btn.textContent = '💬 Compartir por WhatsApp (' + nOk + ' fotos)';
+  // ✅ Si hay más de 8 fotos → 2 botones separados
+  if (nOk > 8){
+    btn.textContent = '💬 PASO 1: Enviar texto';
+    btnFotos.style.display = 'block';
+    btnFotos.textContent = '📷 PASO 2: Enviar ' + nOk + ' fotos';
+  } else {
+    btn.textContent = '💬 Compartir por WhatsApp (' + nOk + ' fotos)';
+    btnFotos.style.display = 'none';
+  }
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function cerrarCompartir(){ document.getElementById('compartirModal').classList.remove('open'); compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null }; }
@@ -1958,10 +1969,7 @@ async function descargarZipVisita(){
 }
 async function abrirWhatsAppVisita(){
   const nFotos = compartirCtx.blobs ? compartirCtx.blobs.length : 0;
-  const LIMITE = 8; // ✅ Si hay más de 8 fotos, dividir el envío para evitar corrupción de emojis
-  
   if (!navigator.share){
-    // Fallback navegador de escritorio
     const texto = encodeURIComponent(compartirCtx.texto);
     const a = document.createElement('a');
     a.style.display = 'none';
@@ -1973,42 +1981,17 @@ async function abrirWhatsAppVisita(){
     setTimeout(() => document.body.removeChild(a), 1000);
     return;
   }
-
-  // ✅ CASO 1: Muchas fotos → 2 pasos para evitar corrupción de emojis
-  if (nFotos > LIMITE){
-    const quiere = confirm('Esta visita tiene ' + nFotos + ' fotos.\n\n⚠ WhatsApp puede corromper los emojis del texto con tantas fotos.\n\nSolución: enviar en 2 pasos.\n\n1️⃣ Primero el texto (con emojis perfectos)\n2️⃣ Luego las ' + nFotos + ' fotos\n\n¿Continuar?');
-    if (!quiere) return;
-    
+  // Si hay >8 fotos: este botón SOLO envía el texto
+  if (nFotos > 8){
     try {
-      // PASO 1: Solo texto
       await navigator.share({ text: compartirCtx.texto });
+      toast('✓ Texto enviado — ahora toca PASO 2');
     } catch(e){
       if (e && e.name === 'AbortError') return;
-    }
-    
-    // Esperar 1.5s para que WhatsApp procese
-    await new Promise(r => setTimeout(r, 1500));
-    
-    try {
-      // PASO 2: Solo fotos
-      const files = [];
-      for (let i = 0; i < compartirCtx.blobs.length; i++){
-        const b = compartirCtx.blobs[i];
-        files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
-      }
-      if (!navigator.canShare || navigator.canShare({ files })){
-        await navigator.share({ files });
-      } else {
-        toast('⚠ No se pudieron adjuntar todas las fotos');
-      }
-    } catch(e){
-      if (e && e.name === 'AbortError') return;
-      toast('⚠ Error al enviar fotos: ' + e.message);
     }
     return;
   }
-
-  // ✅ CASO 2: Pocas fotos → flujo normal
+  // Menos de 8 fotos: envío normal
   try {
     if (compartirCtx.blobs && compartirCtx.blobs.length){
       const files = [];
@@ -2024,6 +2007,28 @@ async function abrirWhatsAppVisita(){
     await navigator.share({ text: compartirCtx.texto });
   } catch(e){
     if (e && e.name === 'AbortError') return;
+  }
+}
+// ✅ NUEVA: Envía solo las fotos (para el PASO 2)
+async function enviarSoloFotos(){
+  const nFotos = compartirCtx.blobs ? compartirCtx.blobs.length : 0;
+  if (!nFotos){ toast('⚠ No hay fotos'); return; }
+  if (!navigator.share){ toast('⚠ Share no disponible'); return; }
+  try {
+    const files = [];
+    for (let i = 0; i < compartirCtx.blobs.length; i++){
+      const b = compartirCtx.blobs[i];
+      files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
+    }
+    if (navigator.canShare && !navigator.canShare({ files })){
+      toast('⚠ No se pueden compartir archivos en este dispositivo');
+      return;
+    }
+    await navigator.share({ files });
+    toast('✓ Fotos enviadas');
+  } catch(e){
+    if (e && e.name === 'AbortError') return;
+    toast('⚠ Error: ' + e.message);
   }
 }
 function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }

@@ -372,7 +372,7 @@ function isOnline(){ return navigator.onLine !== false; }
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
 function getMesAnioActual(){ const d = new Date(); return MESES_ES[d.getMonth()] + ' ' + d.getFullYear(); }
 
-function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 604800000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
+function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 3600000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
 function getDeletionsList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}')); } catch(e){ return []; } }
 function clearDeletionsList(){ try { localStorage.removeItem('nocDeletedVisits'); } catch(e){} }
 function markPhotoDeleted(codigo, filename){ if (!codigo || !filename) return; try { const key = String(codigo).trim() + '|' + filename; const deleted = JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}'); deleted[key] = Date.now(); localStorage.setItem('nocDeletedPhotos', JSON.stringify(deleted)); } catch(e){} }
@@ -477,7 +477,7 @@ function ensureVisitsArr(cod){ if (!DB.visits[cod]) DB.visits[cod] = []; if (!Ar
 function getCurrentVisit(cod){ const arr = getVisits(cod); if (!arr.length) return null; const id = editingVisitId[cod]; if (id){ const v = arr.find(x => x.id === id); if (v) return v; } editingVisitId[cod] = arr[arr.length - 1].id; return arr[arr.length - 1]; }
 function getLatestVisit(cod){ const arr = getVisits(cod); return arr.length ? arr[arr.length - 1] : null; }
 
-// ✅ VERIFICAR FECHA DUPLICADA
+// ✅ NUEVA FUNCIÓN: Verificar si la fecha ya existe para este cliente
 function verificarFechaDuplicada(cod, fecha, idActual){
   if (!fecha) return false;
   const arr = getVisits(cod);
@@ -515,15 +515,18 @@ function getListaMesesDisponibles(){
 }
 function cambiarMesResumen(mesAnio){ mesResumenFiltro = mesAnio; renderResumen(); }
 
+// ✅ MODIFICADO: Validar fecha duplicada al cambiar
 function onFechaChange(cod){
   const fEl = document.getElementById('f-' + cod);
   const nuevaFecha = fEl ? fEl.value : '';
   const v = getCurrentVisit(cod);
+  
   if (v && nuevaFecha && verificarFechaDuplicada(cod, nuevaFecha, v.id)){
     toast('⚠ Ya existe una visita guardada con esta misma fecha');
     if (fEl) fEl.value = v.fecha || '';
     return;
   }
+
   saveVisit(cod);
   if (!v || !v.fecha) return;
   const di = fechaADiaIndex(v.fecha);
@@ -578,9 +581,6 @@ function deleteVisit(cod, visitId){
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
   closeHistorial();
   toast('🗑️ Visita eliminada');
-  if (driveStateReady){
-    syncToCloud(false).then(() => { toast('✓ Cambio sincronizado'); }).catch(() => { toast('⚠ Sincronización pendiente'); });
-  }
 }
 
 function switchVisit(cod, visitId){
@@ -626,8 +626,8 @@ async function callBackendRead(payload, timeoutMs){
   const baseUrl = APPS_SCRIPT_URL + '?' + params.toString();
   let result = null;
   for (let intento = 0; intento < 2; intento++){
-    try { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 8000); const res = await fetch(baseUrl, { method: 'GET', signal: controller.signal }); clearTimeout(timer); if (res.ok){ const text = await res.text(); try { result = JSON.parse(text); break; } catch(e){} } } catch(e){}
-    if (intento === 0){ setSyncBadge('⏳ Conectando…', 'warn'); await new Promise(r => setTimeout(r, 500)); }
+    try { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 25000); const res = await fetch(baseUrl, { method: 'GET', signal: controller.signal }); clearTimeout(timer); if (res.ok){ const text = await res.text(); try { result = JSON.parse(text); break; } catch(e){} } } catch(e){}
+    if (intento === 0){ setSyncBadge('⏳ Conectando…', 'warn'); await new Promise(r => setTimeout(r, 2000)); }
   }
   if (!result){ result = await jsonpRequest(baseUrl, timeoutMs); }
   const badge = document.getElementById('syncBadge');
@@ -729,8 +729,9 @@ async function syncToCloud(silent){
     const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
     const excelBase64 = arrayBufferToBase64(excelBuffer);
     const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId(), excelBase64 });
-    if (resp && resp.ok && resp.merged){ try { const merged = JSON.parse(resp.merged); applyRemoteIndex(merged); lastKnownRemoteTs = merged.updatedAt || null; localStorage.setItem('nocLastLoadOk', String(Date.now())); liberarEspacio(); await saveLocal(); } catch(e){} }
+    if (resp && resp.ok && resp.merged){ try { const merged = JSON.parse(resp.merged); lastKnownRemoteTs = merged.updatedAt || null; localStorage.setItem('nocLastLoadOk', String(Date.now())); liberarEspacio(); await saveLocal(); } catch(e){} }
     setSyncProgress(100); setTimeout(()=>setSyncProgress(0), 800);
+    clearDeletionsList(); clearDeletedPhotosList();
     if (failed === 0){
       clearDirty();
       localStorage.setItem('nocLastSync', new Date().toISOString());
@@ -746,33 +747,20 @@ async function syncToCloud(silent){
   } catch(err){ setSyncBadge('⚠ Error','err'); }
   finally { syncInProgress = false; }
 }
-
 function applyRemoteIndex(remote){
   if (!remote || typeof remote !== 'object') return;
   const remoteVisits = remote.visits || {};
   const remotePhotos = remote.photosMeta || {};
-  const deletedVisitsSet = new Set(getDeletionsList());
-  const deletedPhotosSet = new Set(getDeletedPhotosList());
-
   const allCodes = new Set([...Object.keys(remoteVisits), ...Object.keys(DB.visits || {})]);
   for (const cod of allCodes){
     const rArr = Array.isArray(remoteVisits[cod]) ? remoteVisits[cod] : [];
     const lArr = Array.isArray(DB.visits[cod]) ? DB.visits[cod] : [];
     const byId = {};
-    for (const v of lArr){
-      if (v && v.id && !deletedVisitsSet.has(v.id)) byId[v.id] = v;
-    }
-    for (const v of rArr){
-      if (!v || !v.id) continue;
-      if (deletedVisitsSet.has(v.id)) continue;
-      const ex = byId[v.id];
-      if (!ex) { byId[v.id] = v; continue; }
-      const rTs = v.updatedAt || ''; const lTs = ex.updatedAt || '';
-      if (rTs >= lTs) byId[v.id] = Object.assign({}, ex, v);
-    }
+    for (const v of lArr){ if (v && v.id) byId[v.id] = v; }
+    for (const v of rArr){ if (!v || !v.id) continue; const ex = byId[v.id]; if (!ex) { byId[v.id] = v; continue; } const rTs = v.updatedAt || ''; const lTs = ex.updatedAt || ''; if (rTs >= lTs) byId[v.id] = Object.assign({}, ex, v); }
     DB.visits[cod] = Object.values(byId);
   }
-
+  const deletedPhotosSet = new Set(getDeletedPhotosList());
   const allPC = new Set([...Object.keys(remotePhotos), ...Object.keys(DB.photos || {})]);
   for (const cod of allPC){
     const map = {};
@@ -782,15 +770,11 @@ function applyRemoteIndex(remote){
       if (deletedPhotosSet.has(cod + '|' + p.filename)) continue;
       const ex = map[p.filename];
       if (!ex) map[p.filename] = p;
-      else {
-        const merged = Object.assign({}, ex, p);
-        if (!p.visitId && ex.visitId) merged.visitId = ex.visitId;
-        map[p.filename] = merged;
-      }
+      else { const merged = Object.assign({}, ex, p); if (!p.visitId && ex.visitId) merged.visitId = ex.visitId; map[p.filename] = merged; }
     }
     DB.photos[cod] = Object.values(map);
   }
-  const ccMap = {}; for (const c of (DB.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = c; for (const c of (remote.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = Object.assign({}, ccMap[String(c.codigo)] || {}, c); DB.customClients = Object.values(ccMap);
+  const ccMap = {}; for (const c of (DB.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = c; for (const c of (remote.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = c; DB.customClients = Object.values(ccMap);
   if (Array.isArray(remote.hiddenClients)){ const hs = new Set([...(DB.hiddenClients || []), ...remote.hiddenClients]); DB.hiddenClients = Array.from(hs); }
   DB.evidMeta = Object.assign({}, DB.evidMeta || {}, remote.evidMeta || {});
   if (remote.month) DB.month = remote.month;
@@ -837,27 +821,28 @@ function setSyncProgress(pct){ const el = document.getElementById('syncProgress'
 async function loadFromCloud(){
   if (loadingFromCloud) return false;
   const lastLoad = parseInt(localStorage.getItem('nocLastLoadOk') || '0', 10);
-  const MIN = 10 * 60 * 1000;
-  if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN)){ setSyncBadge('✓ Drive listo','ok'); updateSyncStatusBox(); return true; }
+  const MIN = 3 * 60 * 1000;
+  if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN)){ setSyncBadge('✓ Drive reciente','ok'); updateSyncStatusBox(); return true; }
   loadingFromCloud = true;
   try {
     if (!isOnline()){ driveStateReady = true; setSyncBadge('📴 Sin conexión','warn'); updateSyncStatusBox(); return false; }
-    setSyncBadge('📥 Sincronizando…','info');
+    setSyncBadge('📥 Cargando Drive…','info');
     updateSyncStatusBox();
-    const timeoutGlobal = setTimeout(() => { if (!driveStateReady){ driveStateReady = true; setSyncBadge('✓ Datos locales','ok'); updateSyncStatusBox(); } }, 12000);
+    const timeoutGlobal = setTimeout(() => { if (!driveStateReady){ driveStateReady = true; setSyncBadge('⚠ Drive lento','warn'); updateSyncStatusBox(); } }, 90000);
     let res = null;
-    try { res = await callBackendRead({ action:'getIndex' }, 10000); } catch(err){ clearTimeout(timeoutGlobal); driveStateReady = true; setSyncBadge('✓ Datos locales','ok'); updateSyncStatusBox(); return false; }
+    try { res = await callBackendRead({ action:'getIndex' }, 80000); } catch(err){ clearTimeout(timeoutGlobal); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
     clearTimeout(timeoutGlobal);
-    if (!res || !res.ok){ driveStateReady = true; setSyncBadge('✓ Datos locales','ok'); updateSyncStatusBox(); return false; }
+    if (!res || !res.ok){
+      if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); updateSyncStatusBox(); return false; }
+      setSyncBadge('⚠ ' + (res && res.error ? String(res.error).slice(0,25) : 'sin respuesta'),'err');
+      driveStateReady = true; updateSyncStatusBox(); return false;
+    }
     let remote;
-    try { remote = JSON.parse(res.content); } catch(e){ driveStateReady = true; setSyncBadge('✓ Datos locales','ok'); updateSyncStatusBox(); return false; }
-    if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('✓ Datos locales','ok'); updateSyncStatusBox(); return false; }
+    try { remote = JSON.parse(res.content); } catch(e){ driveStateReady = true; setSyncBadge('⚠ Error JSON','err'); updateSyncStatusBox(); return false; }
+    if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('⚠ Formato inválido','warn'); updateSyncStatusBox(); return false; }
     const remoteHasData = (remote.visits && Object.keys(remote.visits).length > 0) || (remote.photosMeta && Object.keys(remote.photosMeta).length > 0);
     const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
-    if (!remoteHasData && localHasData){ driveStateReady = true; setSyncBadge('✓ Datos locales','ok'); updateSyncStatusBox(); return false; }
-    if (lastKnownRemoteTs && remote.updatedAt === lastKnownRemoteTs){
-      driveStateReady = true; setSyncBadge('✓ Drive actualizado','ok'); updateSyncStatusBox(); localStorage.setItem('nocLastLoadOk', String(Date.now())); return true;
-    }
+    if (!remoteHasData && localHasData){ driveStateReady = true; setSyncBadge('⚠ Drive vacío','warn'); updateSyncStatusBox(); return false; }
     try {
       applyRemoteIndex(remote);
       lastKnownRemoteTs = remote.updatedAt || new Date().toISOString();
@@ -872,7 +857,12 @@ async function loadFromCloud(){
       updateSyncStatusBox();
       return true;
     } catch (criticalError){
-      driveStateReady = true; setSyncBadge('✓ Datos locales','ok'); updateSyncStatusBox(); return false;
+      driveStateReady = true;
+      const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
+      setSyncBadge('⚠ Error','err');
+      updateSyncStatusBox();
+      try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, ts: new Date().toISOString() })); } catch(e){}
+      return false;
     }
   } finally { loadingFromCloud = false; }
 }
@@ -1299,10 +1289,10 @@ function renderAgenda(){
     const fechaActual = current && current.fecha ? current.fecha.split('-').reverse().join('/') : 'Sin fecha';
     const formAbierto = formsAbiertos.has(c.codigo);
     
-    // ✅ Cédula y Teléfono
+    // ✅ Agregar Cédula y Teléfono a la tarjeta
     const strCed = c.cedula ? `<div class="dir">🆔 C.I./RIF: ${c.cedula}</div>` : '';
     const strTel = c.telefono ? `<div class="dir">📞 Tel: ${c.telefono}</div>` : '';
-    
+
     card.innerHTML = `
       <div class="top"><div><span class="code">#${c.codigo}</span><h3>${c.nombre}</h3></div><span class="badge ${statusClass(estado)}">${estado.toUpperCase()}</span></div>
       <div class="dir">📍 ${c.direccion}</div>
@@ -1360,27 +1350,34 @@ function onObsInput(cod, value){
 function toggleDay(cod, di){ const v = getCurrentVisit(cod) || getLatestVisit(cod); if (!v){ toast('⚠ Crea una visita primero'); return; } v.days = v.days || []; const i = v.days.indexOf(di); if (i >= 0) v.days.splice(i, 1); else v.days.push(di); v.updatedAt = new Date().toISOString(); const scrollY = window.scrollY; save(); renderAgenda(); requestAnimationFrame(() => window.scrollTo(0, scrollY)); }
 function toggleForm(cod){ const f = document.getElementById('form-' + cod); const vaAbrir = !f.classList.contains('open'); const scrollY = window.scrollY; f.classList.toggle('open'); if (vaAbrir) formsAbiertos.add(cod); else formsAbiertos.delete(cod); if (vaAbrir){ requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); }); } }
 function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; const fEl = document.getElementById('f-' + cod); if (fEl) v.fecha = fEl.value; const hEl = document.getElementById('h-' + cod); if (hEl) v.hora = hEl.value; const eEl = document.getElementById('e-' + cod); if (eEl) v.estado = eEl.value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
+
+// ✅ MODIFICADO: Capturar cédula y teléfono al agregar cliente
 function addClient(){
   const cod = document.getElementById('ncCodigo').value.trim();
   const nom = document.getElementById('ncNombre').value.trim();
   const dir = document.getElementById('ncDir').value.trim();
   const ced = document.getElementById('ncCedula').value.trim();
   const tel = document.getElementById('ncTelefono').value.trim();
+  
   if (!cod || !nom){ toast('⚠ Código y nombre obligatorios'); return; }
   if (allClients().some(c => c.codigo === cod)){ toast('⚠ Ya existe'); return; }
+  
   DB.customClients.push({ codigo: cod, nombre: nom, direccion: dir || '—', cedula: ced, telefono: tel, custom: true });
   DB.visits[cod] = [];
   save();
+  
   document.getElementById('ncCodigo').value = '';
   document.getElementById('ncNombre').value = '';
   document.getElementById('ncDir').value = '';
   document.getElementById('ncCedula').value = '';
   document.getElementById('ncTelefono').value = '';
+  
   document.getElementById('addClientForm').style.display = 'none';
   document.getElementById('addClientBtn').style.display = 'block';
   renderAgenda();
   toast('✓ Cliente agregado');
 }
+
 function editClient(cod){
   const c = getClientByCode(cod);
   if (!c){ toast('⚠ Cliente no encontrado'); return; }
@@ -1399,6 +1396,7 @@ async function saveClientEdit(){
   const newDir = document.getElementById('ecDir').value.trim();
   const newCed = document.getElementById('ecCedula').value.trim();
   const newTel = document.getElementById('ecTelefono').value.trim();
+  
   if (!newCod || !newNom){ toast('⚠ Código y nombre son obligatorios'); return; }
   const cambioCodigo = (newCod !== oldCod);
   if (cambioCodigo){
@@ -1417,12 +1415,7 @@ async function saveClientEdit(){
   }
   const isCustom = (DB.customClients || []).find(c => String(c.codigo).trim() === oldCod);
   if (isCustom){ isCustom.codigo = newCod; isCustom.nombre = newNom; isCustom.direccion = newDir || '—'; isCustom.cedula = newCed; isCustom.telefono = newTel; }
-  else { 
-    if (!DB.hiddenClients.includes(oldCod)) DB.hiddenClients.push(oldCod); 
-    const dup = (DB.customClients || []).find(c => String(c.codigo).trim() === newCod); 
-    if (dup){ dup.nombre = newNom; dup.direccion = newDir || '—'; dup.cedula = newCed; dup.telefono = newTel; } 
-    else DB.customClients.push({ codigo: newCod, nombre: newNom, direccion: newDir || '—', cedula: newCed, telefono: newTel, custom: true }); 
-  }
+  else { if (!DB.hiddenClients.includes(oldCod)) DB.hiddenClients.push(oldCod); const dup = (DB.customClients || []).find(c => String(c.codigo).trim() === newCod); if (dup){ dup.nombre = newNom; dup.direccion = newDir || '—'; dup.cedula = newCed; dup.telefono = newTel; } else DB.customClients.push({ codigo: newCod, nombre: newNom, direccion: newDir || '—', cedula: newCed, telefono: newTel, custom: true }); }
   await save();
   renderAgenda();
   document.getElementById('editClientModal').classList.remove('open');
@@ -1587,6 +1580,8 @@ function delPhoto(cod, i){
   save(); renderPhotos(cod); renderAgenda();
   toast('🗑️ Foto eliminada');
 }
+
+// ✅ MODIFICADO: Validar fecha duplicada al guardar
 function guardarVisita(cod, nombre){
   const v = getCurrentVisit(cod);
   if (!v){ toast('⚠ No hay visita activa'); return; }
@@ -2228,9 +2223,7 @@ async function initApp(){
   sanitizeDB();
   try { renderAgenda(); } catch(e){}
   try { if (liberarEspacio() > 0) await saveLocal(); } catch(e){}
-  driveStateReady = true;
-  setSyncBadge('✓ Listo', 'ok');
-  updateSyncStatusBox();
+  setSyncBadge('📥 Drive…','info');
   loadFromCloud().catch(() => { driveStateReady = true; });
 }
 initApp();

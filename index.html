@@ -1727,19 +1727,52 @@ function renderEvidFolderContent(codigo){
   const client = getClientByCode(codigo);
   const nombre = client ? client.nombre : (codigo === '_supervisor' ? 'Supervisor NOC' : codigo);
   document.getElementById('evidFolderName').textContent = nombre;
-  const fotos = (codigo === '_supervisor') ? [] : safeArray(DB.photos[codigo]);
+  
+  const todasFotos = (codigo === '_supervisor') ? [] : safeArray(DB.photos[codigo]);
   const visits = (codigo === '_supervisor') ? [] : getVisits(codigo);
+  
   const grupos = {};
-  fotos.forEach((p, i) => { const fecha = p.fechaVisita || 'sin-fecha'; if (!grupos[fecha]) grupos[fecha] = []; grupos[fecha].push({ type:'foto', item: p, idx: i }); });
-  visits.forEach(v => { if (v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)){ const fecha = v.fecha || v.firma.fechaVisita || 'sin-fecha'; if (!grupos[fecha]) grupos[fecha] = []; grupos[fecha].push({ type:'firma', item: v.firma, visitInfo: v }); } });
-  const totalArchivos = fotos.length + visits.filter(v => v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)).length;
-  const pendientesFolder = fotos.filter(p => !p.fileId && !p.data).length + visits.filter(v => v && v.firma && typeof v.firma === 'object' && !v.firma.fileId && !v.firma.data).length;
-  document.getElementById('evidFolderMeta').textContent = `${totalArchivos} archivo(s) · ${Object.keys(grupos).length} fecha(s)`;
+  
+  // 1. Crear listas de visitas que sí existen en la agenda
+  const fechasValidas = new Set(visits.map(v => v.fecha).filter(f => f));
+  const idsValidos = new Set(visits.map(v => v.id));
+  
+  // 2. Filtrar fotos: solo mostrar las que pertenezcan a una visita actual
+  todasFotos.forEach((p, i) => { 
+    // Verificamos si la foto pertenece a una visita que aún existe
+    const perteneceAVisitaActual = (p.visitId && idsValidos.has(p.visitId)) || (!p.visitId && fechasValidas.has(p.fechaVisita));
+    
+    // Si la visita fue borrada de la agenda, ocultamos la foto de esta vista
+    if (!perteneceAVisitaActual) return; 
+
+    const fecha = p.fechaVisita || 'sin-fecha'; 
+    if (!grupos[fecha]) grupos[fecha] = []; 
+    grupos[fecha].push({ type:'foto', item: p, idx: i }); 
+  });
+  
+  // 3. Agregar las firmas de las visitas actuales
+  visits.forEach(v => { 
+    if (v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)){ 
+      const fecha = v.fecha || v.firma.fechaVisita || 'sin-fecha'; 
+      if (!grupos[fecha]) grupos[fecha] = []; 
+      grupos[fecha].push({ type:'firma', item: v.firma, visitInfo: v }); 
+    } 
+  });
+
+  // Contadores
+  const totalArchivosFiltrados = Object.values(grupos).reduce((acc, curr) => acc + curr.length, 0);
+  const pendientesFolder = Object.values(grupos).flat().filter(it => it.type === 'foto' && !it.item.fileId && !it.item.data).length + 
+                           visits.filter(v => v && v.firma && typeof v.firma === 'object' && !v.firma.fileId && !v.firma.data).length;
+
+  document.getElementById('evidFolderMeta').textContent = `${totalArchivosFiltrados} archivo(s) · ${Object.keys(grupos).length} fecha(s)`;
+  
   const dlAllBtn = document.getElementById('dlAllBtn');
   if (dlAllBtn){ if (pendientesFolder > 0){ dlAllBtn.style.display = 'inline-block'; dlAllBtn.textContent = '⬇ Preparar ' + pendientesFolder; } else dlAllBtn.style.display = 'none'; }
+  
   const cont = document.getElementById('evidPhotosList');
   cont.innerHTML = ''; lightboxItems = [];
   const fechasOrdenadas = Object.keys(grupos).sort().reverse();
+  
   fechasOrdenadas.forEach(fecha => {
     const items = grupos[fecha];
     const section = document.createElement('div'); section.className = 'date-section';
@@ -1748,6 +1781,7 @@ function renderEvidFolderContent(codigo){
     header.innerHTML = `<span>${fechaBonita}</span><span class="count">${items.length} archivo(s)</span>`;
     section.appendChild(header);
     const grid = document.createElement('div'); grid.className = 'photo-grid';
+    
     items.forEach(it => {
       const p = it.item;
       let src = null;
@@ -1756,14 +1790,23 @@ function renderEvidFolderContent(codigo){
       lightboxItems.push(item);
       const thisIdx = lightboxItems.length - 1;
       const tile = document.createElement('div'); tile.className = 'photo-tile';
-      if (src){ tile.innerHTML = `<img src="${src}" loading="lazy">${it.type === 'firma' ? '<div class="badge-firma">FIRMA</div>' : ''}`; tile.onclick = () => openLightbox(thisIdx); }
-      else { const fname = p.filename || 'archivo'; const icono = it.type === 'firma' ? '✍️' : '📷'; tile.innerHTML = `<div class="placeholder"><div style="font-size:1.4rem">${icono}</div><div style="font-size:.58rem">${fname.slice(0,18)}</div><button class="dl-btn" onclick="downloadOne('${codigo}','${fname}',event)">⬇ Cargar</button></div>`; }
+      
+      if (src){ 
+        tile.innerHTML = `<img src="${src}" loading="lazy">${it.type === 'firma' ? '<div class="badge-firma">FIRMA</div>' : ''}`; 
+        tile.onclick = () => openLightbox(thisIdx); 
+      }
+      else { 
+        const fname = p.filename || 'archivo'; 
+        const icono = it.type === 'firma' ? '✍️' : '📷'; 
+        tile.innerHTML = `<div class="placeholder"><div style="font-size:1.4rem">${icono}</div><div style="font-size:.58rem">${fname.slice(0,18)}</div><button class="dl-btn" onclick="downloadOne('${codigo}','${fname}',event)">⬇ Cargar</button></div>`; 
+      }
       grid.appendChild(tile);
     });
     section.appendChild(grid);
     cont.appendChild(section);
   });
-  document.getElementById('evidFolderEmpty').style.display = totalArchivos ? 'none' : 'block';
+  
+  document.getElementById('evidFolderEmpty').style.display = totalArchivosFiltrados ? 'none' : 'block';
 }
 function openLightbox(index){
   if (!lightboxItems.length) return;

@@ -427,8 +427,58 @@ function sanitizeDB(){
 function markDirty(){ try{ localStorage.setItem('nocDirty','1'); localStorage.setItem('nocLastLocalActivity', String(Date.now())); }catch(e){} }
 function clearDirty(){ try{ localStorage.removeItem('nocDirty'); }catch(e){} }
 function isDirty(){ try{ return localStorage.getItem('nocDirty') === '1'; }catch(e){ return false; } }
-async function saveLocal(){ try{ if (typeof localForage !== 'undefined'){ await localForage.ready(); await localForage.setItem('nocVisitasDB', DB); } } catch(e){} }
-async function loadLocal(){ try{ if (typeof localForage !== 'undefined'){ await localForage.ready(); return await localForage.getItem('nocVisitasDB'); } }catch(e){} return null; }
+
+// ⚡ OPTIMIZACIÓN: Guardar metadatos pesados en localStorage y fotos en localforage
+async function saveLocal(){
+  try {
+    const metaCritica = {
+      visits: DB.visits,
+      customClients: DB.customClients,
+      hiddenClients: DB.hiddenClients,
+      evid: DB.evid,
+      month: DB.month,
+      resp: DB.resp,
+      comp: DB.comp,
+      autoSync: DB.autoSync
+    };
+    localStorage.setItem('nocVisitasMeta', JSON.stringify(metaCritica));
+
+    if (typeof localForage !== 'undefined'){
+      await localForage.ready();
+      await localForage.setItem('nocVisitasDB', DB);
+    }
+  } catch(e){ console.warn('Error guardando local:', e); }
+}
+
+// ⚡ OPTIMIZACIÓN: Cargar y fusionar datos
+async function loadLocal(){
+  let db = null;
+  try{
+    if (typeof localForage !== 'undefined'){
+      await localForage.ready();
+      db = await localForage.getItem('nocVisitasDB');
+    }
+  }catch(e){}
+
+  try {
+    const metaRaw = localStorage.getItem('nocVisitasMeta');
+    if (metaRaw) {
+      const meta = JSON.parse(metaRaw);
+      if (!db) db = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
+      
+      if (meta.visits) db.visits = meta.visits;
+      if (meta.customClients) db.customClients = meta.customClients;
+      if (meta.hiddenClients) db.hiddenClients = meta.hiddenClients;
+      if (meta.evid) db.evid = meta.evid;
+      if (meta.month) db.month = meta.month;
+      if (meta.resp !== undefined) db.resp = meta.resp;
+      if (meta.comp) db.comp = meta.comp;
+      if (meta.autoSync) db.autoSync = meta.autoSync;
+    }
+  } catch(e){}
+  return db;
+}
+
 async function save(){ sanitizeDB(); await saveLocal(); markDirty(); scheduleSync(); updateSyncStatusBox(); }
 function scheduleSync(){ if (DB.autoSync === 'off') return; if (syncTimer) clearTimeout(syncTimer); setSyncBadge('⏳ Pendiente…','warn'); syncTimer = setTimeout(()=>{ syncToCloud(true); }, 8000); }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',3500); }
@@ -477,7 +527,6 @@ function ensureVisitsArr(cod){ if (!DB.visits[cod]) DB.visits[cod] = []; if (!Ar
 function getCurrentVisit(cod){ const arr = getVisits(cod); if (!arr.length) return null; const id = editingVisitId[cod]; if (id){ const v = arr.find(x => x.id === id); if (v) return v; } editingVisitId[cod] = arr[arr.length - 1].id; return arr[arr.length - 1]; }
 function getLatestVisit(cod){ const arr = getVisits(cod); return arr.length ? arr[arr.length - 1] : null; }
 
-// ✅ NUEVA FUNCIÓN: Verificar si la fecha ya existe para este cliente
 function verificarFechaDuplicada(cod, fecha, idActual){
   if (!fecha) return false;
   const arr = getVisits(cod);
@@ -515,7 +564,6 @@ function getListaMesesDisponibles(){
 }
 function cambiarMesResumen(mesAnio){ mesResumenFiltro = mesAnio; renderResumen(); }
 
-// ✅ MODIFICADO: Validar fecha duplicada al cambiar
 function onFechaChange(cod){
   const fEl = document.getElementById('f-' + cod);
   const nuevaFecha = fEl ? fEl.value : '';
@@ -1289,7 +1337,6 @@ function renderAgenda(){
     const fechaActual = current && current.fecha ? current.fecha.split('-').reverse().join('/') : 'Sin fecha';
     const formAbierto = formsAbiertos.has(c.codigo);
     
-    // ✅ Agregar Cédula y Teléfono a la tarjeta
     const strCed = c.cedula ? `<div class="dir">🆔 C.I./RIF: ${c.cedula}</div>` : '';
     const strTel = c.telefono ? `<div class="dir">📞 Tel: ${c.telefono}</div>` : '';
 
@@ -1351,7 +1398,6 @@ function toggleDay(cod, di){ const v = getCurrentVisit(cod) || getLatestVisit(co
 function toggleForm(cod){ const f = document.getElementById('form-' + cod); const vaAbrir = !f.classList.contains('open'); const scrollY = window.scrollY; f.classList.toggle('open'); if (vaAbrir) formsAbiertos.add(cod); else formsAbiertos.delete(cod); if (vaAbrir){ requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); }); } }
 function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; const fEl = document.getElementById('f-' + cod); if (fEl) v.fecha = fEl.value; const hEl = document.getElementById('h-' + cod); if (hEl) v.hora = hEl.value; const eEl = document.getElementById('e-' + cod); if (eEl) v.estado = eEl.value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
 
-// ✅ MODIFICADO: Capturar cédula y teléfono al agregar cliente
 function addClient(){
   const cod = document.getElementById('ncCodigo').value.trim();
   const nom = document.getElementById('ncNombre').value.trim();
@@ -1581,7 +1627,6 @@ function delPhoto(cod, i){
   toast('🗑️ Foto eliminada');
 }
 
-// ✅ MODIFICADO: Validar fecha duplicada al guardar
 function guardarVisita(cod, nombre){
   const v = getCurrentVisit(cod);
   if (!v){ toast('⚠ No hay visita activa'); return; }
@@ -2196,8 +2241,10 @@ function captureGPS(cod){ const info = document.getElementById('gpsInfo-' + cod)
 function saveResp(){ DB.resp = document.getElementById('responsable').value; save(); sendHeartbeat(); }
 function saveComp(){ DB.comp = document.getElementById('compSelect').value; save(); toast('🗜️ ' + DB.comp); }
 function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
+
+// ⚡ INICIO OPTIMIZADO: Carga rápida sin esperar a Drive
 async function initApp(){
-  setSyncBadge('⏳ Cargando…','info');
+  setSyncBadge('⏳ Cargando local…','info');
   try {
     const local = await loadLocal();
     if (local && typeof local === 'object'){
@@ -2217,15 +2264,30 @@ async function initApp(){
       if (typeof DB.evid !== 'object' || DB.evid === null) DB.evid = {};
     }
   } catch(e){ DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; }
+  
   if (!DB.month) DB.month = getMesAnioActual();
   sanitizeDB();
   try { migrateVisits(); } catch(e){}
   sanitizeDB();
+
+  // 1. PINTAR RÁPIDO (La app ya es usable)
   try { renderAgenda(); } catch(e){}
-  try { if (liberarEspacio() > 0) await saveLocal(); } catch(e){}
-  setSyncBadge('📥 Drive…','info');
-  loadFromCloud().catch(() => { driveStateReady = true; });
+  setSyncBadge('✓ Local listo', 'ok');
+  driveStateReady = true;
+
+  // 2. Liberar espacio en background
+  setTimeout(async () => {
+    try { if (liberarEspacio() > 0) await saveLocal(); } catch(e){}
+  }, 2000);
+
+  // 3. Sincronizar con Drive sin bloquear la UI
+  setTimeout(() => {
+    if (!isOnline()) { setSyncBadge('📴 Sin conexión','warn'); return; }
+    setSyncBadge('📥 Sync Drive…','info');
+    loadFromCloud().catch(() => { driveStateReady = true; setSyncBadge('✓ Local','ok'); });
+  }, 1500);
 }
+
 initApp();
 setInterval(sendHeartbeat, 60000);
 setTimeout(sendHeartbeat, 5000);

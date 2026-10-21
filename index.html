@@ -20,7 +20,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
 header{background:linear-gradient(135deg,#0ea5e9,#0369a1);padding:18px 16px;position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(0,0,0,.4)}
-header h1{font-size:1.05rem;font-weight:700}
+header h1{font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header p{font-size:.78rem;color:#e0f2fe;opacity:.9}
 .tabs{display:flex;position:sticky;top:64px;z-index:49;background:var(--bg);border-bottom:1px solid #334155;transition:top .15s}
 body.banner-visible .tabs{top:92px}
@@ -135,7 +135,8 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .visit-bar .nav:disabled{opacity:.35;cursor:not-allowed}
 .visit-actions{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
 .visit-actions .btn{flex:1;min-width:90px;padding:10px 6px;font-size:.78rem}
-.hrow{display:flex;align-items:center;gap:10px}
+.hrow{display:flex;align-items:center;gap:10px; width:100%;}
+.hrow > div { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .icon-btn{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:1.15rem;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .icon-btn:active{background:rgba(255,255,255,.35)}
 .icon-btn.active{background:rgba(245,158,11,.6)}
@@ -154,9 +155,14 @@ body{padding-bottom:170px}
 </head>
 <body>
 <header>
-  <div class="hrow"><div style="flex:1;min-width:0"><h1>📡 Registro de Visitas — NOC N2</h1>
-  <p>ZONA WIFI · Sincronizado con Drive <span id="syncBadge" style="display:none;font-size:.7rem;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;margin-left:6px"></span> <span id="activeUsersBadge" style="display:none;font-size:.7rem;background:rgba(34,197,94,.35);padding:2px 8px;border-radius:12px;margin-left:6px;cursor:pointer" onclick="showActiveUsersModal()"></span></p>
-  </div><button class="icon-btn" id="btnFiltro" onclick="toggleFiltroFechas()" title="Filtrar por fechas">📅</button><button class="icon-btn" style="margin-left:6px" onclick="toggleSearch()" title="Buscar cliente">🔍</button></div>
+  <div class="hrow">
+    <div>
+      <h1>📡 Registro de Visitas — NOC N2</h1>
+      <p>ZONA WIFI · Sincronizado con Drive <span id="syncBadge" style="display:none;font-size:.7rem;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;margin-left:6px"></span> <span id="activeUsersBadge" style="display:none;font-size:.7rem;background:rgba(34,197,94,.35);padding:2px 8px;border-radius:12px;margin-left:6px;cursor:pointer" onclick="showActiveUsersModal()"></span></p>
+    </div>
+    <button class="icon-btn" id="btnFiltro" onclick="toggleFiltroFechas()" title="Filtrar por fechas">📅</button>
+    <button class="icon-btn" style="margin-left:6px" onclick="toggleSearch()" title="Buscar cliente">🔍</button>
+  </div>
 </header>
 <div class="download-banner" id="downloadBanner">
   <div class="spin"></div>
@@ -428,29 +434,43 @@ function markDirty(){ try{ localStorage.setItem('nocDirty','1'); localStorage.se
 function clearDirty(){ try{ localStorage.removeItem('nocDirty'); }catch(e){} }
 function isDirty(){ try{ return localStorage.getItem('nocDirty') === '1'; }catch(e){ return false; } }
 
-// ⚡ OPTIMIZACIÓN: Guardar metadatos pesados en localStorage y fotos en localforage
+// ⚡ OPTIMIZACIÓN CRÍTICA: Guardar en localForage primero para evitar cuota de localStorage
 async function saveLocal(){
+  // 1. Guardar todo (incluyendo fotos) en la base de datos IndexedDB (localForage)
+  try {
+    if (typeof localForage !== 'undefined'){
+      await localForage.ready();
+      await localForage.setItem('nocVisitasDB', DB);
+    }
+  } catch(e){ console.warn('Error guardando localForage:', e); }
+
+  // 2. Guardar respaldo ligero en localStorage (sin fotos base64 para no llenar los 5MB)
   try {
     const metaCritica = {
-      visits: DB.visits,
+      visits: {},
       customClients: DB.customClients,
       hiddenClients: DB.hiddenClients,
-      evid: DB.evid,
       month: DB.month,
       resp: DB.resp,
       comp: DB.comp,
       autoSync: DB.autoSync
     };
-    localStorage.setItem('nocVisitasMeta', JSON.stringify(metaCritica));
-
-    if (typeof localForage !== 'undefined'){
-      await localForage.ready();
-      await localForage.setItem('nocVisitasDB', DB);
+    
+    // Copiamos las visitas pero eliminamos la firma base64 pesada
+    for (const cod in DB.visits) {
+      metaCritica.visits[cod] = DB.visits[cod].map(v => {
+        const vCopy = Object.assign({}, v);
+        if (vCopy.firma && vCopy.firma.data) {
+          vCopy.firma = { filename: vCopy.firma.filename, fileId: vCopy.firma.fileId, fechaVisita: vCopy.firma.fechaVisita, synced: true };
+        }
+        return vCopy;
+      });
     }
-  } catch(e){ console.warn('Error guardando local:', e); }
+    localStorage.setItem('nocVisitasMeta', JSON.stringify(metaCritica));
+  } catch(e){ console.warn('LocalStorage lleno o error:', e); }
 }
 
-// ⚡ OPTIMIZACIÓN: Cargar y fusionar datos
+// ⚡ OPTIMIZACIÓN CRÍTICA: Cargar y fusionar datos de forma segura
 async function loadLocal(){
   let db = null;
   try{
@@ -466,10 +486,12 @@ async function loadLocal(){
       const meta = JSON.parse(metaRaw);
       if (!db) db = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
       
-      if (meta.visits) db.visits = meta.visits;
+      // Si localForage no tiene las visitas (se borró el caché o falló), usamos el respaldo ligero
+      if (!db.visits || Object.keys(db.visits).length === 0) {
+        if (meta.visits) db.visits = meta.visits;
+      }
       if (meta.customClients) db.customClients = meta.customClients;
       if (meta.hiddenClients) db.hiddenClients = meta.hiddenClients;
-      if (meta.evid) db.evid = meta.evid;
       if (meta.month) db.month = meta.month;
       if (meta.resp !== undefined) db.resp = meta.resp;
       if (meta.comp) db.comp = meta.comp;
@@ -2242,7 +2264,7 @@ function saveResp(){ DB.resp = document.getElementById('responsable').value; sav
 function saveComp(){ DB.comp = document.getElementById('compSelect').value; save(); toast('🗜️ ' + DB.comp); }
 function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
 
-// ⚡ INICIO OPTIMIZADO: Carga rápida sin esperar a Drive
+// ⚡ INICIO OPTIMIZADO: Carga rápida desde la memoria del teléfono sin esperar a Drive
 async function initApp(){
   setSyncBadge('⏳ Cargando local…','info');
   try {
@@ -2270,8 +2292,9 @@ async function initApp(){
   try { migrateVisits(); } catch(e){}
   sanitizeDB();
 
-  // 1. PINTAR RÁPIDO (La app ya es usable)
+  // 1. PINTAR RÁPIDO (La app ya es usable con todas las visitas locales)
   try { renderAgenda(); } catch(e){}
+  try { renderResumen(); } catch(e){} 
   setSyncBadge('✓ Local listo', 'ok');
   driveStateReady = true;
 

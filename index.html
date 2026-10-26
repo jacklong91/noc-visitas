@@ -318,8 +318,50 @@ body{padding-bottom:170px}
   <div class="tab" onclick="setTabEvid();showTab('evid',this)">📷<br>Evidencias</div>
   <div class="tab" onclick="setTabRes();showTab('res',this)">📊<br>Resumen</div>
 </div>
+<div class="modal-bg" id="filtroFechasModal">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:1rem">📅 Filtrar por rango de fechas</h3>
+      <button class="btn btn-gray btn-sm" onclick="toggleFiltroFechas(false)">✕</button>
+    </div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Muestra solo clientes con al menos UNA visita en el rango.</p>
+    <label>DESDE</label>
+    <input type="date" id="filtroDesdeInput">
+    <label style="margin-top:12px">HASTA</label>
+    <input type="date" id="filtroHastaInput">
+    <div class="row2" style="margin-top:16px">
+      <button class="btn btn-primary" style="flex:2" onclick="aplicarFiltroFechas()">✓ Aplicar</button>
+      <button class="btn btn-gray" style="flex:1" onclick="limpiarFiltroFechas()">Limpiar</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="gpsModal"><div class="modal"><h3 style="margin-bottom:8px">📍 Ubicación no disponible</h3><p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">El GPS está apagado o sin permiso.</p><button class="btn btn-primary btn-block" onclick="tryOpenLocationSettings()">⚙️ Abrir ajustes</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="closeGpsHelp()">Cerrar</button></div></div>
+<div class="modal-bg" id="historialModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 id="historialTitle" style="font-size:1rem">Historial de visitas</h3><button class="btn btn-gray btn-sm" onclick="closeHistorial()">✕</button></div><div id="historialList"></div></div></div>
+<div class="modal-bg" id="debugMasterModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔍 Diagnóstico</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('debugMasterModal').classList.remove('open')">✕</button></div><div id="debugMasterContent" style="font-size:.78rem;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow-y:auto;font-family:monospace;line-height:1.4"></div></div></div>
+<div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre"><label>DIRECCIÓN</label><input id="ecDir"><div class="row2"><div><label>CÉDULA / RIF (opcional)</label><input id="ecCedula"></div><div><label>TELÉFONO (opcional)</label><input id="ecTelefono"></div></div><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
+<div class="lightbox" id="lightbox"><button class="lb-close" onclick="closeLightbox()">✕</button><button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button><button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button><img id="lightboxImg" src=""><div class="lb-caption"><b id="lightboxTitle">—</b><small id="lightboxSubtitle">—</small></div></div>
+<div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><label>CLIENTE ORIGEN</label><select id="rpOrigen"></select><label>CLIENTE DESTINO</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
+<div class="modal-bg" id="compartirModal">
+  <div class="modal" style="max-width:560px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:1rem">📤 Compartir visita</h3>
+      <button class="btn btn-gray btn-sm" onclick="cerrarCompartir()">✕</button>
+    </div>
+    <div id="compartirPreview" style="max-height:55vh;overflow-y:auto;margin-bottom:12px;background:#0b1220;border-radius:10px;padding:10px">
+      <div style="color:var(--muted);padding:40px;text-align:center">Preparando fotos…</div>
+    </div>
+    <div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;text-align:center" id="compartirInfo"></div>
+    <div class="row2" style="margin-bottom:8px">
+      <button class="btn btn-gray" style="flex:1" onclick="copiarTextoVisita()">📋 Copiar texto</button>
+      <button class="btn btn-primary" style="flex:1" onclick="descargarZipVisita()">📦 Descargar ZIP</button>
+    </div>
+    <button class="btn btn-green btn-block" onclick="abrirWhatsAppVisita()" id="btnCompartirWhats" disabled style="opacity:.6">⏳ Preparando…</button>
+  </div>
+</div>
+<div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
+<div class="toast" id="toast"></div>
 <script>
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5pRjb-Pu-O3DeTUh07TfiaXG5VPdxS64RyNyioRRXhjK4HWkQoDDtEoysBqRX8NsGXQ/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5pRjb-Pu-O3DeTUh07TfiaXG5VPdxS64RyNyioRRXhjK4HWkQoDDtEoysBqRX8NsGXQ/exec';
 const TOKEN_SECRETO   = 'noc-zonawifi-2026-a8f3k9x2';
 const CLIENTES = [{"codigo":"2881","nombre":"PLAZA LOS ROBLES","direccion":"Los Robles"},{"codigo":"2025","nombre":"Unidad Integral De Salud Unisa C.A","direccion":"Av. El Carvario. Edif. Unisa, Piso PB"},{"codigo":"002881","nombre":"Sunshine Club C.A | Club Dynamo","direccion":"Av Principal de los Robles"},{"codigo":"9959","nombre":"Centro Medico Quirurgico La Fe, C.A.","direccion":"Av. Jovito Villalba"},{"codigo":"5229","nombre":"Makay Beach Club, C.A","direccion":"Boulevard Playa Guacuco"},{"codigo":"012578","nombre":"La Casona Colonial C.A","direccion":"Av. Aldonza Manrique"},{"codigo":"968","nombre":"Downtown Margarita Tibisay Beach, C.A.","direccion":"Av. Aldonza Manrique"},{"codigo":"014184","nombre":"Makay Beach Club, C.A","direccion":"Venetur"},{"codigo":"5281","nombre":"La Tribu 0295, C.A.","direccion":"Hotel Tibisay Beach Resort"},{"codigo":"002920","nombre":"GOA 007, C.A.","direccion":"Marina del Concorde"},{"codigo":"10757","nombre":"Grupo Menta 212, C.A","direccion":"CC Margarita City Place"},{"codigo":"674","nombre":"Guuao, C.A. | Sambil Margarita","direccion":"CC Sambil Margarita"},{"codigo":"8378","nombre":"Guuao C.A | CC La Vela, Local 2","direccion":"CC La Vela, Etapa II"},{"codigo":"4978","nombre":"Guuao C.A | CC La Vela","direccion":"CC La Vela, Etapa II"},{"codigo":"4868","nombre":"Guuao C.A | NOVA El Espinal","direccion":"Carretera principal vía San Juan Bautista"},{"codigo":"2851","nombre":"Emprendimientos Greccia Parra | La Pepitería","direccion":"CC Margarita City Place"},{"codigo":"15513","nombre":"Cocina 2026 C.A","direccion":"Av. Francisco Esteban Gómez"},{"codigo":"15549","nombre":"PASEO DEL MAR","direccion":"PASEO DEL MAR"},{"codigo":"4274","nombre":"Centro Venezolano Americano de Margarita (CEVAMAR) AC","direccion":"Jorge Coll"},{"codigo":"15812","nombre":"DGB Group C.A | Foodkart","direccion":"Foodkart Pampatar"},{"codigo":"2011","nombre":"Granja Kids, C.A. | Restaurante Maroush","direccion":"Playa El Angel"},{"codigo":"12317","nombre":"Alimentos Premium, C.A | AR GRILL","direccion":"Los Robles"},{"codigo":"1860","nombre":"Oscar Eduardo Mirabal Muñoz | Euphoria Bistro Bar","direccion":"Costa Azul"},{"codigo":"6594","nombre":"Emprendimiento Jhonattan Hernández | AM PM","direccion":"Porlamar"}];
 const DIAS = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
@@ -1046,7 +1088,6 @@ function buildExcelResumen(clienteData, titulo, nombreHoja){
   XLSX.utils.book_append_sheet(wb, ws, nombreHoja || 'Resumen');
   return wb;
 }
-
 function dibujarGraficaEnCanvas(canvas, stats, titulo){
   const dpr = window.devicePixelRatio || 1;
   const W = 640, H = 340;
@@ -1953,7 +1994,6 @@ async function importarDatos(input){
   else toast('Formato no soportado');
   input.value = '';
 }
-
 async function abrirCompartir(cod){
   const v = getCurrentVisit(cod);
   if (!v){ toast('⚠ No hay visita activa'); return; }
@@ -2224,13 +2264,19 @@ function saveComp(){ DB.comp = document.getElementById('compSelect').value; save
 function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
 
 /* ==========================================================
-   📸 REPORTE FOTOGRÁFICO (EXCEL) — Formato Corporativo NOC
+   📸 REPORTE FOTOGRÁFICO (EXCEL) — Formato Idéntico a la Plantilla
    ========================================================== */
 function generarReporteFotografico() {
   const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
   const mesAnio = esGeneral ? null : mesResumenFiltro;
   const wb = XLSX.utils.book_new();
   let hasData = false;
+
+  // Estilos base para el formato corporativo
+  const bd = { top: {style: "thin", color: {rgb: "CCCCCC"}}, bottom: {style: "thin", color: {rgb: "CCCCCC"}}, left: {style: "thin", color: {rgb: "CCCCCC"}}, right: {style: "thin", color: {rgb: "CCCCCC"}} };
+  const boldFont = { name: "Arial", sz: 10, bold: true };
+  const normalFont = { name: "Arial", sz: 10 };
+  const linkFont = { name: "Arial", sz: 9, color: { rgb: "0563C1" }, underline: true };
 
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
@@ -2242,109 +2288,120 @@ function generarReporteFotografico() {
     while (wb.SheetNames.includes(sheetName)) { sheetName = sheetName.substring(0, 28) + '_' + suffix; suffix++; }
 
     const A = [];
+    const merges = [];
+
     visitasMes.forEach(v => {
       const fotos = safeArray(DB.photos[c.codigo]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha));
+      const startRow = A.length; // Guardar índice para fusiones
+
+      // --- Construcción de Filas ---
+      A.push(['', '', 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO', '', '', '', '', 'USUARIO: NOC N2']); // 0
+      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']); // 1
+      A.push(['', '', 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2', '', '', '', 'SOPORTE NOC NIVEL 2', '']); // 2
+      A.push(['', '', '', '', '', '', '', '']); // 3
       
-      // Encabezado
-      A.push(['', '', 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO', '', '', '', '', 'USUARIO: NOC N2']);
-      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']);
-      A.push(['', '', 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2', '', '', '', 'SOPORTE NOC NIVEL 2', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      
-      // Fila de Evidencias y Links (Hasta 4 fotos por fila para mantener el formato)
-      const rowId = ['ID', c.codigo, '', ''];
-      const rowLinks = ['', '', '', ''];
-      for (let i = 0; i < Math.max(1, fotos.length); i++) {
+      // Fila ID y Evidencias
+      const rowId = ['', '', 'ID', c.codigo, 'EVIDENCIAS:', '', '', ''];
+      const rowLinks = ['', '', '', '', '', '', '', ''];
+      for (let i = 0; i < 4; i++) {
         rowId.push('EVIDENCIAS:', '', '', '');
         const foto = fotos[i];
         const link = foto && foto.fileId ? 'https://drive.google.com/file/d/' + foto.fileId + '/view' : '';
         rowLinks.push(link, '', '', '');
       }
-      A.push(rowId);
-      A.push(rowLinks);
-      A.push(['', '', '', '', '', '', '', '']);
+      A.push(rowId); // 4
+      A.push(rowLinks); // 5
+      A.push(['', '', '', '', '', '', '', '']); // 6
       
-      // Metadatos del cliente
-      A.push(['USUARIO:', c.nombre, '', '', '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      A.push(['DIRECCIÓN:', c.direccion || '', '', '', '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      A.push(['UBICACIÓN (COORDENADAS):', v.gps ? (v.gps.lat + ', ' + v.gps.lng) : (c.direccion || ''), '', '', '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      A.push(['TELÉFONO:', c.telefono || '', '', '', '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      A.push(['TIPO DE PLAN:', v.tipo || 'ZONA WIFI', '', '', '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      A.push(['SERIAL DE ONU/ONT:', v.serialOnu || '', '', '', '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      A.push(['OBSERVACIONES:', v.obs || 'Sin observaciones', '', '', '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      A.push(['FECHA:', v.fecha || '', '', '', '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['', '', 'USUARIO:', c.nombre, '', '', '', '']); // 7
+      A.push(['', '', 'DIRECCIÓN:', c.direccion || '', '', '', '', '']); // 8
+      A.push(['', '', 'UBICACIÓN (COORDENADAS):', v.gps ? (v.gps.lat + ', ' + v.gps.lng) : (c.direccion || ''), '', '', '', '']); // 9
+      A.push(['', '', 'TELÉFONO:', c.telefono || '', '', '', '', '']); // 10
+      A.push(['', '', 'TIPO DE PLAN:', v.tipo || 'ZONA WIFI', '', '', '', '']); // 11
+      A.push(['', '', 'SERIAL DE ONU/ONT:', v.serialOnu || '', '', '', '', '']); // 12
+      A.push(['', '', 'OBSERVACIONES:', v.obs || 'Sin observaciones', '', '', '', '']); // 13
+      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']); // 14
+      A.push(['', '', '', '', '', '', '', '']); // 15
+      A.push(['', '', 'Firma del Responsable NOC N2', '', '', '', '', '']); // 16
+      A.push(['', '', '', '', '', '', '', '']); // 17
+
+      // --- Fusiones (Merges) ---
+      merges.push({ s: { r: startRow, c: 2 }, e: { r: startRow, c: 6 } }); // TIPO
+      merges.push({ s: { r: startRow + 2, c: 2 }, e: { r: startRow + 2, c: 5 } }); // TÍTULO
+      merges.push({ s: { r: startRow + 2, c: 6 }, e: { r: startRow + 2, c: 7 } }); // SOPORTE
+      
+      // EVIDENCIAS
+      merges.push({ s: { r: startRow + 4, c: 4 }, e: { r: startRow + 4, c: 7 } });
+      merges.push({ s: { r: startRow + 4, c: 8 }, e: { r: startRow + 4, c: 11 } });
+      merges.push({ s: { r: startRow + 4, c: 12 }, e: { r: startRow + 4, c: 15 } });
+      merges.push({ s: { r: startRow + 4, c: 16 }, e: { r: startRow + 4, c: 19 } });
+      
+      // Links
+      merges.push({ s: { r: startRow + 5, c: 4 }, e: { r: startRow + 5, c: 7 } });
+      merges.push({ s: { r: startRow + 5, c: 8 }, e: { r: startRow + 5, c: 11 } });
+      merges.push({ s: { r: startRow + 5, c: 12 }, e: { r: startRow + 5, c: 15 } });
+      merges.push({ s: { r: startRow + 5, c: 16 }, e: { r: startRow + 5, c: 19 } });
+
+      // Valores D:H
+      for (let i = 7; i <= 14; i++) {
+        merges.push({ s: { r: startRow + i, c: 3 }, e: { r: startRow + i, c: 7 } });
+      }
+
+      // Firma
+      merges.push({ s: { r: startRow + 16, c: 2 }, e: { r: startRow + 16, c: 7 } });
+
       hasData = true;
     });
 
     if (A.length > 0) {
       const ws = XLSX.utils.aoa_to_sheet(A);
-      const cols = [{ wch: 24 }, { wch: 34 }, { wch: 24 }, { wch: 34 }];
-      for (let i = 0; i < 12; i++) cols.push({ wch: 22 }, { wch: 4 }, { wch: 4 }, { wch: 4 });
-      ws['!cols'] = cols;
       
-      // Aplicar formato visual (colores y negritas)
+      // --- Aplicar Estilos ---
       const range = XLSX.utils.decode_range(ws['!ref']);
       for (let R = range.s.r; R <= range.e.r; ++R) {
         for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cell_address = {c:C, r:R};
-          const cell_ref = XLSX.utils.encode_cell(cell_address);
-          if (!ws[cell_ref]) continue;
+          const cell = ws[XLSX.utils.encode_cell({c:C, r:R})];
+          if (!cell) continue;
           
-          ws[cell_ref].s = {
-            font: { name: 'Arial', sz: 10 },
-            alignment: { vertical: 'center', wrapText: true },
-            border: {
-              top: { style: 'thin', color: { rgb: 'CCCCCC' } },
-              bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
-              left: { style: 'thin', color: { rgb: 'CCCCCC' } },
-              right: { style: 'thin', color: { rgb: 'CCCCCC' } }
-            }
-          };
+          cell.s = { font: normalFont, border: bd, alignment: { vertical: 'center', wrapText: true } };
           
-          if (ws[cell_ref].v === 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO' || ws[cell_ref].v === 'ID' || ws[cell_ref].v === 'USUARIO:' || ws[cell_ref].v === 'DIRECCIÓN:' || ws[cell_ref].v === 'FECHA:' || ws[cell_ref].v === 'TELÉFONO:' || ws[cell_ref].v === 'UBICACIÓN (COORDENADAS):' || ws[cell_ref].v === 'TIPO DE PLAN:' || ws[cell_ref].v === 'SERIAL DE ONU/ONT:' || ws[cell_ref].v === 'OBSERVACIONES:' || ws[cell_ref].v === 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2') {
-             ws[cell_ref].s.font.bold = true;
-          }
-          if (ws[cell_ref].v === 'EVIDENCIAS:') {
-             ws[cell_ref].s.font.bold = true;
-             ws[cell_ref].s.fill = { patternType: 'solid', fgColor: { rgb: 'DDEBF7' } };
+          const rowInBlock = R % 18; // Cada bloque tiene 18 filas
+          
+          if (rowInBlock === 0 || rowInBlock === 2) { // Títulos
+             if (C >= 2) cell.s.font = boldFont;
+          } else if (rowInBlock === 4) { // ID y EVIDENCIAS
+             if (C === 2 || C === 4 || C === 8 || C === 12 || C === 16) {
+                cell.s.font = boldFont;
+             }
+             if (C >= 4 && cell.v === 'EVIDENCIAS:') {
+                cell.s.fill = { fgColor: { rgb: 'DDEBF7' } };
+                cell.s.alignment = { horizontal: 'center', vertical: 'center' };
+             }
+          } else if (rowInBlock === 5) { // Links
+             if (C === 4 || C === 8 || C === 12 || C === 16) {
+                cell.s.font = linkFont;
+             }
+          } else if (rowInBlock >= 7 && rowInBlock <= 14) { // Labels
+             if (C === 2) cell.s.font = boldFont;
+          } else if (rowInBlock === 16) { // Firma
+             if (C === 2) cell.s.font = boldFont;
           }
         }
       }
-      
-      // Fusionar celdas para los títulos
-      const merges = [];
-      for (let i = 0; i < A.length; i += 19) { 
-         if (A[i] && A[i][2] === 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO') {
-            merges.push({ s: { r: i, c: 2 }, e: { r: i, c: 6 } });
-            merges.push({ s: { r: i + 2, c: 2 }, e: { r: i + 2, c: 6 } });
-            merges.push({ s: { r: i + 6, c: 4 }, e: { r: i + 6, c: 7 } }); 
-            merges.push({ s: { r: i + 6, c: 8 }, e: { r: i + 6, c: 11 } }); 
-            merges.push({ s: { r: i + 6, c: 12 }, e: { r: i + 6, c: 15 } }); 
-            merges.push({ s: { r: i + 6, c: 16 }, e: { r: i + 6, c: 19 } }); 
-            merges.push({ s: { r: i + 7, c: 4 }, e: { r: i + 7, c: 7 } }); 
-            merges.push({ s: { r: i + 7, c: 8 }, e: { r: i + 7, c: 11 } }); 
-            merges.push({ s: { r: i + 7, c: 12 }, e: { r: i + 7, c: 15 } }); 
-            merges.push({ s: { r: i + 7, c: 16 }, e: { r: i + 7, c: 19 } }); 
-         }
-      }
-      if (merges.length) ws['!merges'] = merges;
 
+      // Ancho de columnas
+      const cols = [{ wch: 2 }, { wch: 2 }, { wch: 30 }, { wch: 20 }];
+      for (let i = 0; i < 16; i++) cols.push({ wch: 15 });
+      ws['!cols'] = cols;
+
+      ws['!merges'] = merges;
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
   });
 
   if (!hasData) { toast('⚠ No hay visitas en este período'); return; }
   const mesStr = esGeneral ? 'General' : mesAnio.replace(/\s+/g, '_');
-  XLSX.writeFile(wb, 'Reporte_Fotografico_NOC_' + mesStr + '.xlsx');
+  XLSX.writeFile(wb, 'Reporte_Fotografico_NOC_' + mesStr + '.xlsx', { cellStyles: true });
   toast('✓ Reporte Fotográfico (Excel) descargado');
 }
 

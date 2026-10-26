@@ -1,0 +1,2759 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Visitas NOC">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Registro de Visitas — NOC N2 | Zona WiFi</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--card2:#273549;--accent:#38bdf8;--accent2:#22c55e;--text:#e2e8f0;--muted:#94a3b8;--danger:#ef4444;--warn:#f59e0b}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+header{background:linear-gradient(135deg,#0ea5e9,#0369a1);padding:18px 16px;position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+header h1{font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header p{font-size:.78rem;color:#e0f2fe;opacity:.9}
+.tabs{display:flex;position:sticky;top:64px;z-index:49;background:var(--bg);border-bottom:1px solid #334155;transition:top .15s}
+body.banner-visible .tabs{top:92px}
+.tab{flex:1;padding:12px 4px;text-align:center;font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+main{padding:14px;max-width:720px;margin:0 auto}
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #334155;background:var(--card);color:var(--text);font-size:1rem;margin-bottom:12px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid #334155}
+.card.done{border-left:4px solid var(--accent2)}
+.card.pending-visit{border-left:4px solid var(--warn)}
+.card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card h3{font-size:.95rem;line-height:1.3}
+.badge{font-size:.7rem;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
+.badge.r{background:rgba(34,197,94,.15);color:#4ade80}
+.badge.p{background:rgba(245,158,11,.15);color:#fbbf24}
+.badge.n{background:rgba(239,68,68,.15);color:#f87171}
+.badge.s{background:rgba(148,163,184,.15);color:#cbd5e1}
+.card .dir{font-size:.78rem;color:var(--muted);margin:5px 0 10px}
+.card .code{font-size:.72rem;color:var(--accent);font-weight:700}
+.btn{display:inline-block;padding:10px 16px;border-radius:10px;border:none;font-size:.88rem;font-weight:700;cursor:pointer}
+.btn-primary{background:var(--accent);color:#082f49}
+.btn-green{background:var(--accent2);color:#052e16}
+.btn-gray{background:#475569;color:#e2e8f0}
+.btn-red{background:var(--danger);color:#fff}
+.btn-warn{background:var(--warn);color:#422006}
+.btn-block{width:100%;padding:14px}
+.btn-sm{padding:7px 11px;font-size:.75rem}
+.days{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}
+.day{flex:1;min-width:38px;text-align:center;font-size:.65rem;padding:8px 2px;border-radius:8px;background:var(--card2);color:var(--muted);cursor:pointer;border:1px solid transparent;font-weight:700}
+.day.sel{background:rgba(56,189,248,.2);color:var(--accent);border-color:var(--accent)}
+.form{display:none;margin-top:12px;border-top:1px dashed #334155;padding-top:12px}
+.form.open{display:block}
+label{display:block;font-size:.75rem;color:var(--muted);margin:10px 0 4px;font-weight:600}
+input,select,textarea{width:100%;padding:11px 12px;border-radius:10px;border:1px solid #334155;background:var(--card2);color:var(--text);font-size:.95rem;font-family:inherit}
+input[readonly]{cursor:default;opacity:.85;background:#1a2436}
+textarea{min-height:70px;resize:vertical}
+.row2{display:flex;gap:10px}
+.row2>div{flex:1}
+canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;display:block}
+.photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.photo-box{position:relative;width:72px;height:72px}
+.photo-box img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.photo-box .placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--card2);border-radius:10px;font-size:.6rem;color:var(--muted);text-align:center;padding:4px}
+.photo-box button{position:absolute;top:-6px;right:-6px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:.7rem;cursor:pointer}
+.btn-photo{display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border:2px dashed #475569;border-radius:10px;color:var(--muted);font-size:.65rem;cursor:pointer;gap:3px}
+.btn-photo input{display:none}
+.btn-photo span{font-size:1.3rem}
+.stat{display:flex;justify-content:space-between;padding:12px 4px;border-bottom:1px solid #334155;font-size:.9rem}
+.stat b{font-size:1rem}
+.big{font-size:2.2rem;font-weight:800;color:var(--accent2);text-align:center;padding:18px}
+.export-bar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid #334155;padding:10px 14px;display:flex;gap:10px;z-index:60}
+.export-bar .btn{flex:1;padding:13px}
+.empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:.9rem}
+.month-input{display:flex;gap:8px;margin-bottom:12px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border:1px solid #334155;border-radius:16px;padding:18px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto}
+#compartirPreview img{display:block;margin:0 auto}
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#052e16;padding:12px 22px;border-radius:12px;font-weight:700;font-size:.88rem;z-index:100;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:88%}
+.progress{height:4px;background:var(--card2);border-radius:2px;overflow:hidden;margin-top:8px}
+.progress>div{height:100%;background:var(--accent);transition:width .3s}
+.download-banner{position:fixed;top:64px;left:0;right:0;z-index:51;background:rgba(30,41,59,.98);border-bottom:1px solid rgba(56,189,248,.4);padding:6px 12px;display:none;align-items:center;gap:10px;font-size:.72rem;backdrop-filter:blur(6px)}
+.download-banner.visible{display:flex}
+.download-banner .spin{width:12px;height:12px;border:2px solid rgba(56,189,248,.25);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.download-banner .text{color:var(--text);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.download-banner .prog{flex:1;height:3px;background:rgba(56,189,248,.15);border-radius:2px;overflow:hidden;min-width:40px}
+.download-banner .prog>div{height:100%;background:var(--accent);transition:width .2s}
+.download-banner .close-btn{background:transparent;border:none;color:var(--muted);font-size:.85rem;cursor:pointer;padding:0 4px}
+.evid-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 12px;background:var(--card);border-radius:12px;border:1px solid #334155;flex-wrap:wrap}
+.evid-header .folder-icon{font-size:1.6rem}
+.evid-header .info{flex:1;min-width:120px}
+.evid-header .info b{display:block;font-size:.92rem;color:var(--text)}
+.evid-header .info small{display:block;font-size:.72rem;color:var(--muted)}
+.folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.folder-card{background:var(--card);border-radius:12px;border:1px solid #334155;overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s;display:flex;flex-direction:column}
+.folder-card:hover,.folder-card:active{transform:translateY(-2px);border-color:var(--accent)}
+.folder-card .thumb{height:100px;background:var(--card2);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.folder-card .thumb img{width:100%;height:100%;object-fit:cover}
+.folder-card .thumb .folder-emoji{font-size:2.6rem;opacity:.75}
+.folder-card .thumb .count-badge{position:absolute;top:6px;right:6px;background:rgba(15,23,42,.85);color:var(--accent);font-size:.68rem;font-weight:800;padding:3px 8px;border-radius:10px}
+.folder-card .meta{padding:9px 10px}
+.folder-card .meta b{font-size:.78rem;line-height:1.25;display:block;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.1em}
+.folder-card .meta small{font-size:.68rem;color:var(--accent);font-weight:700;display:block;margin-top:4px}
+.date-section{margin-bottom:16px}
+.date-section .date-header{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:8px;background:var(--card2);border-radius:10px;border-left:3px solid var(--accent);font-size:.78rem;font-weight:700;color:var(--accent)}
+.date-section .date-header .count{color:var(--muted);font-weight:400;font-size:.72rem;margin-left:auto}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.photo-tile{position:relative;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:var(--card);border:1px solid #334155;cursor:pointer;transition:transform .15s}
+.photo-tile:hover,.photo-tile:active{transform:scale(1.02);border-color:var(--accent)}
+.photo-tile img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-tile .placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--card2);color:var(--muted);font-size:.62rem;text-align:center;padding:6px;gap:4px}
+.photo-tile .placeholder .dl-btn{background:var(--accent);color:#082f49;border:none;border-radius:8px;padding:5px 10px;font-size:.68rem;font-weight:800;cursor:pointer}
+.photo-tile .badge-firma{position:absolute;bottom:6px;left:6px;background:rgba(34,197,94,.9);color:#052e16;font-size:.6rem;font-weight:800;padding:2px 7px;border-radius:8px}
+.photo-tile .spin-mini{width:18px;height:18px;border:2px solid rgba(56,189,248,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;flex-direction:column;gap:14px}
+.lightbox.open{display:flex}
+.lightbox img{max-width:100%;max-height:80vh;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+.lightbox .lb-caption{color:var(--text);font-size:.85rem;text-align:center;max-width:90%}
+.lightbox .lb-caption b{color:var(--accent);display:block;font-size:.95rem}
+.lightbox .lb-caption small{color:var(--muted);display:block;margin-top:4px}
+.lightbox .lb-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.lightbox .lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:1.5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.lightbox .lb-prev{left:16px}
+.lightbox .lb-next{right:16px}
+@media (max-width:500px){.lightbox .lb-nav{width:40px;height:40px;font-size:1.2rem}}
+.visit-bar{display:flex;align-items:center;gap:8px;margin:10px 0;padding:8px 10px;background:var(--card2);border-radius:10px;font-size:.75rem}
+.visit-bar .lbl{color:var(--muted);font-weight:600}
+.visit-bar .num{color:var(--accent);font-weight:800}
+.visit-bar .fecha{color:var(--text);font-weight:600}
+.visit-bar .nav{background:transparent;border:1px solid #475569;color:var(--text);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.8rem}
+.visit-bar .nav:disabled{opacity:.35;cursor:not-allowed}
+.visit-actions{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.visit-actions .btn{flex:1;min-width:90px;padding:10px 6px;font-size:.78rem}
+.hrow{display:flex;align-items:center;gap:10px; width:100%;}
+.hrow > div { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.icon-btn{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:1.15rem;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.icon-btn:active{background:rgba(255,255,255,.35)}
+.icon-btn.active{background:rgba(245,158,11,.6)}
+.top-tools{position:sticky;top:64px;z-index:48;padding-bottom:10px;background:var(--bg)}
+.search-bar{position:fixed;top:64px;left:0;right:0;z-index:80;display:none;gap:8px;padding:10px 12px;background:var(--bg);border-bottom:1px solid #334155;align-items:center}
+.search-bar.open{display:flex}
+.search-bar .search{margin-bottom:0;flex:1}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid #334155;z-index:61}
+.bottom-nav .tab{flex:1;padding:13px 4px;font-size:.8rem;border-bottom:none;border-top:3px solid transparent}
+.bottom-nav .tab.active{border-bottom-color:transparent;border-top-color:var(--accent)}
+.export-bar{bottom:57px}
+body{padding-bottom:170px}
+.comp-foto-thumb{display:inline-block;position:relative;width:64px;height:64px;margin:2px;border-radius:8px;overflow:hidden;background:var(--card2)}
+.comp-foto-thumb img{width:100%;height:100%;object-fit:cover}
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <div>
+      <h1>📡 Registro de Visitas — NOC N2</h1>
+      <p>ZONA WIFI · Sincronizado con Drive <span id="syncBadge" style="display:none;font-size:.7rem;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;margin-left:6px"></span> <span id="activeUsersBadge" style="display:none;font-size:.7rem;background:rgba(34,197,94,.35);padding:2px 8px;border-radius:12px;margin-left:6px;cursor:pointer" onclick="showActiveUsersModal()"></span></p>
+    </div>
+    <button class="icon-btn" id="btnFiltro" onclick="toggleFiltroFechas()" title="Filtrar por fechas">📅</button>
+    <button class="icon-btn" style="margin-left:6px" onclick="toggleSearch()" title="Buscar cliente">🔍</button>
+  </div>
+</header>
+<div class="download-banner" id="downloadBanner">
+  <div class="spin"></div>
+  <span class="text" id="downloadBannerText">Descargando…</span>
+  <div class="prog"><div id="downloadBannerProgress" style="width:0%"></div></div>
+  <button class="close-btn" onclick="dismissBanner()">✕</button>
+</div>
+<div class="search-bar" id="searchBar">
+  <input class="search" id="search" placeholder="🔍 Cliente, código o fecha (12/10/2026)" oninput="onSearchInput()">
+  <button class="btn btn-gray" style="padding:10px 14px;flex-shrink:0" onclick="toggleSearch(false)">✕</button>
+</div>
+<main>
+  <div id="tab-agenda">
+    <div class="top-tools">
+      <button class="btn btn-green btn-block" id="addClientBtn" onclick="document.getElementById('addClientForm').style.display='block';this.style.display='none'">➕ Agregar nuevo cliente</button>
+    </div>
+    <div class="card" id="addClientForm" style="display:none;border-left:4px solid var(--accent2)">
+      <h3 style="font-size:.95rem;margin-bottom:4px">Nuevo cliente</h3>
+      <label>CÓDIGO DEL CLIENTE</label><input id="ncCodigo" placeholder="Ej.: 99123">
+      <label>CLIENTE / RAZÓN SOCIAL</label><input id="ncNombre" placeholder="Nombre del cliente o negocio">
+      <label>DIRECCIÓN</label><input id="ncDir" placeholder="Dirección completa">
+      <div class="row2">
+        <div><label>CÉDULA / RIF (opcional)</label><input id="ncCedula" placeholder="Ej.: V-12345678"></div>
+        <div><label>TELÉFONO (opcional)</label><input id="ncTelefono" placeholder="Ej.: 0414-1234567"></div>
+      </div>
+      <div class="row2" style="margin-top:12px">
+        <button class="btn btn-green" style="flex:2" onclick="addClient()">💾 Guardar cliente</button>
+        <button class="btn btn-gray" style="flex:1" onclick="document.getElementById('addClientForm').style.display='none';document.getElementById('addClientBtn').style.display='block'">Cancelar</button>
+      </div>
+    </div>
+    <div class="month-input"><input id="mesAnio" readonly title="Mes actual del sistema"></div>
+    <div id="clientList"></div>
+  </div>
+  <div id="tab-evid" style="display:none">
+    <div id="evidFoldersView">
+      <div class="empty" id="evidEmpty">No hay evidencias registradas todavía.</div>
+      <div id="evidFoldersList" class="folder-grid"></div>
+    </div>
+    <div id="evidFolderView" style="display:none">
+      <div class="evid-header">
+        <button class="btn btn-gray" style="padding:8px 12px" onclick="closeEvidFolder()">←</button>
+        <div class="folder-icon">📂</div>
+        <div class="info"><b id="evidFolderName">—</b><small id="evidFolderMeta">—</small></div>
+        <button class="btn btn-primary" style="padding:8px 12px" onclick="downloadAllPending()" id="dlAllBtn">⬇ Todas</button>
+      </div>
+      <div id="evidPhotosList"></div>
+      <div class="empty" id="evidFolderEmpty" style="display:none">Esta carpeta está vacía.</div>
+    </div>
+  </div>
+  <div id="tab-res" style="display:none">
+    <div class="card">
+      <label>📅 MES / AÑO (filtra los resúmenes)</label>
+      <select id="mesAnio2" onchange="cambiarMesResumen(this.value)"></select>
+      <div style="text-align:center;margin-top:10px">
+        <div style="font-size:.75rem;color:var(--muted)">% DE CUMPLIMIENTO</div>
+        <div class="big" id="pct">0%</div>
+      </div>
+      <div class="stat"><span>Visitas totales</span><b id="stTotal">0</b></div>
+      <div class="stat"><span style="color:#4ade80">Visitas REALIZADAS</span><b id="stR">0</b></div>
+      <div class="stat"><span style="color:#fbbf24">Visitas PENDIENTES</span><b id="stP">0</b></div>
+      <div class="stat"><span style="color:#f87171">Visitas NO REALIZADAS</span><b id="stN">0</b></div>
+      <div class="stat"><span style="color:#cbd5e1">Visitas POSPUESTAS</span><b id="stS">0</b></div>
+      <div class="stat"><span>Evidencias (fotos/firmas)</span><b id="stE">0</b></div>
+      <div class="row2" style="margin-top:14px">
+        <button class="btn btn-green" style="flex:1" onclick="descargarResumenMes()">📥 Excel+Gráfica (ZIP)</button>
+        <button class="btn btn-primary" style="flex:1" onclick="compartirResumenMes()">💬 WhatsApp</button>
+      </div>
+    </div>
+    <div id="previewMesBox" style="display:none"></div>
+    <!-- ⭐ BLOQUE NUEVO: GENERACIÓN DE INFORMES PROFESIONALES -->
+    <div class="card" style="border-left:4px solid var(--accent2); background:linear-gradient(135deg, rgba(34,197,94,.1), transparent);">
+      <label>📄 GENERACIÓN DE INFORMES PROFESIONALES</label>
+      <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Exporta los datos del mes seleccionado en formatos listos para entregar.</p>
+      <div class="row2">
+        <button class="btn btn-primary" style="flex:1" onclick="generarReporteFotografico()">📸 Reporte Fotográfico (Excel)</button>
+        <button class="btn btn-warn" style="flex:1" onclick="generarInformeIA()" id="btnIA">🧠 Redactar Informe (IA)</button>
+      </div>
+    </div>
+    <div class="card">
+      <label>📊 GRÁFICA GENERAL — ESTADO DE VISITAS</label>
+      <canvas id="chartCanvas" style="width:100%;height:auto;display:block;border-radius:12px;background:#0f172a;border:1px solid #334155;margin-top:8px"></canvas>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="downloadChart()">⬇️ Descargar gráfica (PNG)</button>
+    </div>
+    <div class="card">
+      <label>📊 DETALLE POR CATEGORÍA — VISITAS REALIZADAS (Master)</label>
+      <div id="masterStatsBox" style="margin-top:6px">Cargando datos del Master…</div>
+      <canvas id="chartCategorias" style="width:100%;border-radius:12px;background:#0f172a;border:1px solid #334155;margin-top:10px"></canvas>
+    </div>
+    <div class="card">
+      <label>Visitas programadas por día</label>
+      <div id="daysSummary" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--warn)">
+      <label>🗜️ Compresión de fotos</label>
+      <select id="compSelect" onchange="saveComp()">
+        <option value="baja">Baja — máx. 960px, 55%</option>
+        <option value="media">Media — máx. 1280px, 72%</option>
+        <option value="alta">Alta — máx. 1600px, 82%</option>
+      </select>
+      <div id="storageInfo" style="font-size:.75rem;color:var(--muted);margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <label>Responsable NOC N2 (nombre y firma)</label>
+      <input id="responsable" placeholder="Nombre del técnico" onchange="saveResp()">
+      <label>Firma del supervisor</label>
+      <canvas class="sig" id="sigSuper"></canvas>
+      <button class="btn btn-gray" style="margin-top:6px" onclick="clearSig('sigSuper')">Limpiar firma</button>
+    </div>
+    <div class="card" style="border-left:4px solid var(--danger)">
+      <label>🛠️ HERRAMIENTAS DE REPARACIÓN</label>
+      <button class="btn btn-warn btn-block" onclick="openRepairModal()">🛠️ Reparar ID de cliente</button>
+      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="diagnosticarIds()">🔍 Diagnosticar IDs y datos</button>
+      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="if(confirm('¿Vaciar la lista de fotos marcadas como eliminadas?')){clearDeletedPhotosList();toast('✓ Tombstones de fotos vaciados');}">🧹 Vaciar tombstones de fotos</button>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent2)">
+      <label>📋 MASTER ZONAS WIFI (Google Sheets)</label>
+      <div id="masterInfo" style="font-size:.8rem;color:var(--muted);margin:8px 0 10px">Cargando…</div>
+      <button class="btn btn-primary btn-block" onclick="syncMasterNow()">🔄 Sincronizar Master ahora</button>
+      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="showLastMasterDebug()">🔍 Ver último diagnóstico</button>
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent)">
+      <label>☁️ SINCRONIZACIÓN</label>
+      <div id="syncStatusBox" style="font-size:.8rem;color:var(--muted);line-height:1.6">
+        <div>Backend: <b style="color:#4ade80">Apps Script configurado</b></div>
+        <div id="syncLastInfo">Última sincronización: —</div>
+        <div id="syncQueueInfo">Pendientes de subir: 0 archivo(s)</div>
+        <div id="driveReadyInfo">Estado de Drive: <b style="color:#fbbf24">cargando…</b></div>
+      </div>
+      <div class="progress" style="margin-top:8px"><div id="syncProgress" style="width:0%"></div></div>
+      <button class="btn btn-green btn-block" style="margin-top:12px" onclick="forceSyncNow()">🔄 Sincronizar ahora</button>
+      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="downloadAllPhotos()">⬇️ Preparar todas las imágenes</button>
+      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="liberarEspacioManual()">🧹 Liberar espacio</button>
+      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="testBackend()">🔬 Probar conexión al backend</button>
+      <button class="btn btn-warn btn-block" style="margin-top:8px" onclick="reorganizeDrive()">🗂️ Reorganizar Drive</button>
+      <button class="btn btn-warn btn-block" style="margin-top:8px" onclick="rescanDriveNow()">🔍 Reconstruir índice desde Drive</button>
+      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="cleanOrphanPhotos()">🧹 Limpiar fotos huérfanas</button>
+      <button class="btn btn-red btn-block" style="margin-top:8px" onclick="forceDownloadFromDrive()">⬇️ Forzar descarga de Drive</button>
+      <div id="driveStatus" style="font-size:.75rem;color:var(--muted);margin-top:8px"></div>
+      <label style="margin-top:12px">Sincronización automática</label>
+      <select id="autoSyncSelect" onchange="saveAutoSync()"><option value="on">Activada</option><option value="off">Desactivada (manual)</option></select>
+    </div>
+  </div>
+</main>
+<div class="export-bar">
+  <label class="btn btn-gray" style="padding:13px; text-align:center; flex:1; cursor:pointer;">📂 Importar<input type="file" accept=".xlsx, .xls, .zip, .json" style="display:none" onchange="importarDatos(this)"></label>
+  <button class="btn btn-green" onclick="exportExcel()">⬇️ Excel</button>
+  <button class="btn btn-primary" onclick="exportPhotos()">📷 ZIP</button>
+  <button class="btn btn-primary" id="syncBarBtn" onclick="forceSyncNow()">☁️ Sync</button>
+  <button class="btn btn-red" onclick="resetAll()">🗑️</button>
+</div>
+<div class="bottom-nav">
+  <div class="tab active" onclick="showTab('agenda',this)">📋<br>Agenda</div>
+  <div class="tab" onclick="setTabEvid();showTab('evid',this)">📷<br>Evidencias</div>
+  <div class="tab" onclick="setTabRes();showTab('res',this)">📊<br>Resumen</div>
+</div>
+<div class="modal-bg" id="filtroFechasModal">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:1rem">📅 Filtrar por rango de fechas</h3>
+      <button class="btn btn-gray btn-sm" onclick="toggleFiltroFechas(false)">✕</button>
+    </div>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Muestra solo clientes con al menos UNA visita en el rango.</p>
+    <label>DESDE</label>
+    <input type="date" id="filtroDesdeInput">
+    <label style="margin-top:12px">HASTA</label>
+    <input type="date" id="filtroHastaInput">
+    <div class="row2" style="margin-top:16px">
+      <button class="btn btn-primary" style="flex:2" onclick="aplicarFiltroFechas()">✓ Aplicar</button>
+      <button class="btn btn-gray" style="flex:1" onclick="limpiarFiltroFechas()">Limpiar</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="gpsModal"><div class="modal"><h3 style="margin-bottom:8px">📍 Ubicación no disponible</h3><p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">El GPS está apagado o sin permiso.</p><button class="btn btn-primary btn-block" onclick="tryOpenLocationSettings()">⚙️ Abrir ajustes</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="closeGpsHelp()">Cerrar</button></div></div>
+<div class="modal-bg" id="historialModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 id="historialTitle" style="font-size:1rem">Historial de visitas</h3><button class="btn btn-gray btn-sm" onclick="closeHistorial()">✕</button></div><div id="historialList"></div></div></div>
+<div class="modal-bg" id="debugMasterModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔍 Diagnóstico</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('debugMasterModal').classList.remove('open')">✕</button></div><div id="debugMasterContent" style="font-size:.78rem;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow-y:auto;font-family:monospace;line-height:1.4"></div></div></div>
+<div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre"><label>DIRECCIÓN</label><input id="ecDir"><div class="row2"><div><label>CÉDULA / RIF (opcional)</label><input id="ecCedula"></div><div><label>TELÉFONO (opcional)</label><input id="ecTelefono"></div></div><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
+<div class="lightbox" id="lightbox"><button class="lb-close" onclick="closeLightbox()">✕</button><button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button><button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button><img id="lightboxImg" src=""><div class="lb-caption"><b id="lightboxTitle">—</b><small id="lightboxSubtitle">—</small></div></div>
+<div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><label>CLIENTE ORIGEN</label><select id="rpOrigen"></select><label>CLIENTE DESTINO</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
+<div class="modal-bg" id="compartirModal">
+  <div class="modal" style="max-width:560px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:1rem">📤 Compartir visita</h3>
+      <button class="btn btn-gray btn-sm" onclick="cerrarCompartir()">✕</button>
+    </div>
+    <div id="compartirPreview" style="max-height:55vh;overflow-y:auto;margin-bottom:12px;background:#0b1220;border-radius:10px;padding:10px">
+      <div style="color:var(--muted);padding:40px;text-align:center">Preparando fotos…</div>
+    </div>
+    <div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;text-align:center" id="compartirInfo"></div>
+    <div class="row2" style="margin-bottom:8px">
+      <button class="btn btn-gray" style="flex:1" onclick="copiarTextoVisita()">📋 Copiar texto</button>
+      <button class="btn btn-primary" style="flex:1" onclick="descargarZipVisita()">📦 Descargar ZIP</button>
+    </div>
+    <button class="btn btn-green btn-block" onclick="abrirWhatsAppVisita()" id="btnCompartirWhats" disabled style="opacity:.6">⏳ Preparando…</button>
+  </div>
+</div>
+<div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5pRjb-Pu-O3DeTUh07TfiaXG5VPdxS64RyNyioRRXhjK4HWkQoDDtEoysBqRX8NsGXQ/exec';
+const TOKEN_SECRETO   = 'noc-zonawifi-2026-a8f3k9x2';
+const CLIENTES = [{"codigo":"2881","nombre":"PLAZA LOS ROBLES","direccion":"Los Robles"},{"codigo":"2025","nombre":"Unidad Integral De Salud Unisa C.A","direccion":"Av. El Carvario. Edif. Unisa, Piso PB"},{"codigo":"002881","nombre":"Sunshine Club C.A | Club Dynamo","direccion":"Av Principal de los Robles"},{"codigo":"9959","nombre":"Centro Medico Quirurgico La Fe, C.A.","direccion":"Av. Jovito Villalba"},{"codigo":"5229","nombre":"Makay Beach Club, C.A","direccion":"Boulevard Playa Guacuco"},{"codigo":"012578","nombre":"La Casona Colonial C.A","direccion":"Av. Aldonza Manrique"},{"codigo":"968","nombre":"Downtown Margarita Tibisay Beach, C.A.","direccion":"Av. Aldonza Manrique"},{"codigo":"014184","nombre":"Makay Beach Club, C.A","direccion":"Venetur"},{"codigo":"5281","nombre":"La Tribu 0295, C.A.","direccion":"Hotel Tibisay Beach Resort"},{"codigo":"002920","nombre":"GOA 007, C.A.","direccion":"Marina del Concorde"},{"codigo":"10757","nombre":"Grupo Menta 212, C.A","direccion":"CC Margarita City Place"},{"codigo":"674","nombre":"Guuao, C.A. | Sambil Margarita","direccion":"CC Sambil Margarita"},{"codigo":"8378","nombre":"Guuao C.A | CC La Vela, Local 2","direccion":"CC La Vela, Etapa II"},{"codigo":"4978","nombre":"Guuao C.A | CC La Vela","direccion":"CC La Vela, Etapa II"},{"codigo":"4868","nombre":"Guuao C.A | NOVA El Espinal","direccion":"Carretera principal vía San Juan Bautista"},{"codigo":"2851","nombre":"Emprendimientos Greccia Parra | La Pepitería","direccion":"CC Margarita City Place"},{"codigo":"15513","nombre":"Cocina 2026 C.A","direccion":"Av. Francisco Esteban Gómez"},{"codigo":"15549","nombre":"PASEO DEL MAR","direccion":"PASEO DEL MAR"},{"codigo":"4274","nombre":"Centro Venezolano Americano de Margarita (CEVAMAR) AC","direccion":"Jorge Coll"},{"codigo":"15812","nombre":"DGB Group C.A | Foodkart","direccion":"Foodkart Pampatar"},{"codigo":"2011","nombre":"Granja Kids, C.A. | Restaurante Maroush","direccion":"Playa El Angel"},{"codigo":"12317","nombre":"Alimentos Premium, C.A | AR GRILL","direccion":"Los Robles"},{"codigo":"1860","nombre":"Oscar Eduardo Mirabal Muñoz | Euphoria Bistro Bar","direccion":"Costa Azul"},{"codigo":"6594","nombre":"Emprendimiento Jhonattan Hernández | AM PM","direccion":"Porlamar"}];
+const DIAS = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MES_GENERAL = '__GENERAL__';
+const COMP_OPTS = { baja:{max:960,q:0.55}, media:{max:1280,q:0.72}, alta:{max:1600,q:0.82} };
+let DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
+let syncInProgress = false, syncTimer = null;
+let evidCurrentFolder = null, lightboxItems = [], lightboxIndex = 0, bannerDismissed = false;
+let downloadState = { active:false, total:0, done:0, failed:0, currentFile:'', errors:[] };
+let editingVisitId = {};
+let driveStateReady = false;
+let lastKnownRemoteTs = null;
+let activeUsersCache = [];
+let compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null, loteActual: 0 };
+let formsAbiertos = new Set();
+let loadingFromCloud = false;
+let filtroDesde = '';
+let filtroHasta = '';
+let mesResumenFiltro = MES_GENERAL;
+
+function isOnline(){ return navigator.onLine !== false; }
+function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
+function getMesAnioActual(){ const d = new Date(); return MESES_ES[d.getMonth()] + ' ' + d.getFullYear(); }
+
+function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 3600000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
+function getDeletionsList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}')); } catch(e){ return []; } }
+function clearDeletionsList(){ try { localStorage.removeItem('nocDeletedVisits'); } catch(e){} }
+function markPhotoDeleted(codigo, filename){ if (!codigo || !filename) return; try { const key = String(codigo).trim() + '|' + filename; const deleted = JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}'); deleted[key] = Date.now(); localStorage.setItem('nocDeletedPhotos', JSON.stringify(deleted)); } catch(e){} }
+function getDeletedPhotosList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}')); } catch(e){ return []; } }
+function clearDeletedPhotosList(){ try { localStorage.removeItem('nocDeletedPhotos'); } catch(e){} }
+function getDeviceId(){ let id = localStorage.getItem('nocDeviceId'); if (!id){ id = 'dev_' + Math.random().toString(36).slice(2, 8); localStorage.setItem('nocDeviceId', id); } return id; }
+function getDeviceName(){ let n = localStorage.getItem('nocDeviceName'); if (!n){ const ua = navigator.userAgent; let tipo = 'PC'; if (/Android/i.test(ua)) tipo = 'Android'; else if (/iPhone|iPad/i.test(ua)) tipo = 'iPhone'; else if (/Windows/i.test(ua)) tipo = 'Win'; else if (/Mac/i.test(ua)) tipo = 'Mac'; n = tipo + '-' + Math.random().toString(36).slice(2,5).toUpperCase(); localStorage.setItem('nocDeviceName', n); } return n; }
+
+function sanitizeDB(){
+  if (!DB || typeof DB !== 'object') DB = {};
+  if (!DB.visits || typeof DB.visits !== 'object') DB.visits = {};
+  if (!DB.photos || typeof DB.photos !== 'object') DB.photos = {};
+  if (!DB.evid || typeof DB.evid !== 'object') DB.evid = {};
+  if (!Array.isArray(DB.customClients)) DB.customClients = [];
+  if (!Array.isArray(DB.hiddenClients)) DB.hiddenClients = [];
+  if (!DB.comp) DB.comp = 'media';
+  if (!DB.autoSync) DB.autoSync = 'on';
+  if (typeof DB.month !== 'string' || !DB.month) DB.month = getMesAnioActual();
+  if (typeof DB.resp !== 'string') DB.resp = '';
+  for (const cod in DB.photos){
+    if (!Array.isArray(DB.photos[cod])) { DB.photos[cod] = []; continue; }
+    DB.photos[cod] = DB.photos[cod].filter(p => p && typeof p === 'object' && p.filename);
+    DB.photos[cod].forEach(p => {
+      if (typeof p.fecha !== 'string') p.fecha = '';
+      if (typeof p.fechaVisita !== 'string') p.fechaVisita = '';
+      if (p.fileId === undefined) p.fileId = null;
+      if (p.synced === undefined) p.synced = !!(p.fileId || p.data);
+      if (p.visitId === undefined) p.visitId = null;
+    });
+  }
+  for (const cod in DB.visits){
+    if (!Array.isArray(DB.visits[cod])){ const v = DB.visits[cod]; if (v && typeof v === 'object'){ DB.visits[cod] = [v]; } else { DB.visits[cod] = []; continue; } }
+    DB.visits[cod] = DB.visits[cod].filter(v => v && typeof v === 'object');
+    DB.visits[cod].forEach(v => {
+      if (!v.id) v.id = 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+      if (typeof v.fecha !== 'string') v.fecha = '';
+      if (typeof v.hora !== 'string') v.hora = '';
+      if (!v.estado) v.estado = 'Pendiente';
+      if (typeof v.obs !== 'string') v.obs = '';
+      if (!Array.isArray(v.days)) v.days = [];
+      if (v.firma && (typeof v.firma !== 'object' || !v.firma.filename)) delete v.firma;
+    });
+  }
+  DB.customClients = DB.customClients.filter(c => c && typeof c === 'object' && c.codigo);
+  for (const key in DB.evid){
+    const e = DB.evid[key];
+    if (e === null || e === undefined){ delete DB.evid[key]; continue; }
+    if (typeof e === 'string'){ DB.evid[key] = { data: e, filename: 'firma_supervisor.png', synced: false }; }
+    else if (typeof e === 'object' && !e.filename){ DB.evid[key].filename = 'firma_supervisor.png'; }
+  }
+}
+function markDirty(){ try{ localStorage.setItem('nocDirty','1'); localStorage.setItem('nocLastLocalActivity', String(Date.now())); }catch(e){} }
+function clearDirty(){ try{ localStorage.removeItem('nocDirty'); }catch(e){} }
+function isDirty(){ try{ return localStorage.getItem('nocDirty') === '1'; }catch(e){ return false; } }
+
+async function saveLocal(){
+  try {
+    if (typeof localForage !== 'undefined'){
+      await localForage.ready();
+      await localForage.setItem('nocVisitasDB', DB);
+    }
+  } catch(e){ console.warn('Error guardando localForage:', e); }
+  try {
+    const metaCritica = { visits: {}, customClients: DB.customClients, hiddenClients: DB.hiddenClients, month: DB.month, resp: DB.resp, comp: DB.comp, autoSync: DB.autoSync };
+    for (const cod in DB.visits) {
+      metaCritica.visits[cod] = DB.visits[cod].map(v => {
+        const vCopy = Object.assign({}, v);
+        if (vCopy.firma && vCopy.firma.data) {
+          vCopy.firma = { filename: vCopy.firma.filename, fileId: vCopy.firma.fileId, fechaVisita: vCopy.firma.fechaVisita, synced: true };
+        }
+        return vCopy;
+      });
+    }
+    localStorage.setItem('nocVisitasMeta', JSON.stringify(metaCritica));
+  } catch(e){ console.warn('LocalStorage lleno o error:', e); }
+}
+
+async function loadLocal(){
+  let db = null;
+  try{
+    if (typeof localForage !== 'undefined'){
+      await localForage.ready();
+      db = await localForage.getItem('nocVisitasDB');
+    }
+  }catch(e){}
+  try {
+    const metaRaw = localStorage.getItem('nocVisitasMeta');
+    if (metaRaw) {
+      const meta = JSON.parse(metaRaw);
+      if (!db) db = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
+      if (!db.visits || Object.keys(db.visits).length === 0) {
+        if (meta.visits) db.visits = meta.visits;
+      }
+      if (meta.customClients) db.customClients = meta.customClients;
+      if (meta.hiddenClients) db.hiddenClients = meta.hiddenClients;
+      if (meta.month) db.month = meta.month;
+      if (meta.resp !== undefined) db.resp = meta.resp;
+      if (meta.comp) db.comp = meta.comp;
+      if (meta.autoSync) db.autoSync = meta.autoSync;
+    }
+  } catch(e){}
+  return db;
+}
+
+async function save(){ sanitizeDB(); await saveLocal(); markDirty(); scheduleSync(); updateSyncStatusBox(); }
+function scheduleSync(){ if (DB.autoSync === 'off') return; if (syncTimer) clearTimeout(syncTimer); setSyncBadge('⏳ Pendiente…','warn'); syncTimer = setTimeout(()=>{ syncToCloud(true); }, 8000); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',3500); }
+function showTab(id, el){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); ['agenda','evid','res'].forEach(x=>document.getElementById('tab-'+x).style.display='none'); document.getElementById('tab-'+id).style.display='block'; }
+function setTabEvid(){ evidCurrentFolder = null; renderEvid(); }
+function setTabRes(){ renderResumen(); initSig('sigSuper'); }
+function setSyncBadge(msg, type){ const b = document.getElementById('syncBadge'); if (!b) return; b.style.display = 'inline'; b.textContent = msg; b.style.background = type === 'ok' ? 'rgba(34,197,94,.4)' : type === 'warn' ? 'rgba(245,158,11,.4)' : type === 'err' ? 'rgba(239,68,68,.4)' : 'rgba(255,255,255,.2)'; }
+function setDriveStatus(msg, color){ const el = document.getElementById('driveStatus'); if (el){ el.textContent = msg; el.style.color = color || 'var(--muted)'; } }
+function updateSyncStatusBox(){
+  const el = document.getElementById('syncQueueInfo'); if (!el) return;
+  let pendientes = 0;
+  for (const cod in DB.photos){ const arr = safeArray(DB.photos[cod]); for (const p of arr) if (p.data && !p.synced) pendientes++; }
+  for (const cod in DB.visits){ const arr = Array.isArray(DB.visits[cod]) ? DB.visits[cod] : []; for (const v of arr) if (v && v.firma && v.firma.data && !v.firma.synced) pendientes++; }
+  const sup = DB.evid['super_sig']; if (sup && sup.data && !sup.synced) pendientes++;
+  el.textContent = 'Pendientes de subir: ' + pendientes + ' archivo(s)';
+  const sbBtn = document.getElementById('syncBarBtn'); if (sbBtn) sbBtn.textContent = pendientes > 0 ? ('☁️ ' + pendientes) : '☁️ Sync';
+  const last = localStorage.getItem('nocLastSync');
+  const lastEl = document.getElementById('syncLastInfo');
+  if (lastEl) lastEl.textContent = 'Última sincronización: ' + (last ? new Date(last).toLocaleString('es-VE') : '—');
+  const readyEl = document.getElementById('driveReadyInfo');
+  if (readyEl) readyEl.innerHTML = 'Estado de Drive: ' + (driveStateReady ? '<b style="color:#4ade80">listo ✓</b>' : '<b style="color:#fbbf24">cargando…</b>');
+}
+function driveThumbUrl(fileId, size){ if (!fileId) return ''; return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w' + (size || 1280); }
+function renderActiveTab(){
+  const agenda = document.getElementById('tab-agenda');
+  const evid   = document.getElementById('tab-evid');
+  const res    = document.getElementById('tab-res');
+  if (agenda && agenda.style.display !== 'none') { renderAgenda(); return; }
+  if (evid   && evid.style.display   !== 'none') { renderEvid();   return; }
+  if (res    && res.style.display    !== 'none') { renderResumen(); return; }
+  renderAgenda();
+}
+function migrateVisits(){
+  for (const cod in DB.visits){
+    const v = DB.visits[cod];
+    if (v && !Array.isArray(v)){
+      const sig = DB.evid[cod + '_sig'];
+      const newVisit = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: v.fecha || '', hora: v.hora || '', estado: v.estado || 'Pendiente', obs: v.obs || '', gps: v.gps || null, days: Array.isArray(v.days) ? v.days : [], updatedAt: new Date().toISOString() };
+      if (sig){ newVisit.firma = typeof sig === 'object' ? sig : { data: sig, filename: 'firma_cliente.png', synced: false }; delete DB.evid[cod + '_sig']; }
+      DB.visits[cod] = (v.fecha || v.estado || v.obs) ? [newVisit] : [];
+    } else if (!v){ DB.visits[cod] = []; }
+  }
+}
+function getVisits(cod){ const v = DB.visits[cod]; if (!v) return []; if (!Array.isArray(v)) return [v]; return v.filter(x => x && typeof x === 'object'); }
+function ensureVisitsArr(cod){ if (!DB.visits[cod]) DB.visits[cod] = []; if (!Array.isArray(DB.visits[cod])) DB.visits[cod] = [DB.visits[cod]]; DB.visits[cod] = DB.visits[cod].filter(v => v && typeof v === 'object'); return DB.visits[cod]; }
+function getCurrentVisit(cod){ const arr = getVisits(cod); if (!arr.length) return null; const id = editingVisitId[cod]; if (id){ const v = arr.find(x => x.id === id); if (v) return v; } editingVisitId[cod] = arr[arr.length - 1].id; return arr[arr.length - 1]; }
+function getLatestVisit(cod){ const arr = getVisits(cod); return arr.length ? arr[arr.length - 1] : null; }
+
+function verificarFechaDuplicada(cod, fecha, idActual){
+  if (!fecha) return false;
+  const arr = getVisits(cod);
+  for (const v of arr){
+    if (v.id !== idActual && v.fecha === fecha) return true;
+  }
+  return false;
+}
+
+function fechaADiaIndex(fechaYMD){ if (!fechaYMD) return -1; const partes = String(fechaYMD).split('-'); if (partes.length !== 3) return -1; const d = new Date(parseInt(partes[0],10), parseInt(partes[1],10)-1, parseInt(partes[2],10)); if (isNaN(d.getTime())) return -1; return (d.getDay() + 6) % 7; }
+function mesAnioAMesNum(mesAnio){ const p = String(mesAnio || '').split(' '); if (p.length !== 2) return null; const mi = MESES_ES.indexOf(p[0]); if (mi < 0) return null; return { year: parseInt(p[1],10), month: mi + 1 }; }
+function visitaEnMesAnio(v, mesAnio){ if (!mesAnio) return true; const info = mesAnioAMesNum(mesAnio); if (!info) return true; if (!v || !v.fecha) return false; const p = v.fecha.split('-'); if (p.length !== 3) return false; return parseInt(p[0],10) === info.year && parseInt(p[1],10) === info.month; }
+function getListaMesesDisponibles(){
+  const set = new Set();
+  set.add(getMesAnioActual());
+  for (const cod in DB.visits){
+    const arr = getVisits(cod);
+    for (const v of arr){
+      if (v && v.fecha){
+        const p = v.fecha.split('-');
+        if (p.length === 3){
+          const mi = parseInt(p[1],10) - 1;
+          if (mi >= 0 && mi < 12) set.add(MESES_ES[mi] + ' ' + p[0]);
+        }
+      }
+    }
+  }
+  return Array.from(set).sort((a,b) => {
+    const [ma,ya] = a.split(' ');
+    const [mb,yb] = b.split(' ');
+    const diff = parseInt(yb,10) - parseInt(ya,10);
+    if (diff !== 0) return diff;
+    return MESES_ES.indexOf(mb) - MESES_ES.indexOf(ma);
+  });
+}
+function cambiarMesResumen(mesAnio){ mesResumenFiltro = mesAnio; renderResumen(); }
+
+function onFechaChange(cod){
+  const fEl = document.getElementById('f-' + cod);
+  const nuevaFecha = fEl ? fEl.value : '';
+  const v = getCurrentVisit(cod);
+  if (v && nuevaFecha && verificarFechaDuplicada(cod, nuevaFecha, v.id)){
+    toast('⚠ Ya existe una visita guardada con esta misma fecha');
+    if (fEl) fEl.value = v.fecha || '';
+    return;
+  }
+  saveVisit(cod);
+  if (!v || !v.fecha) return;
+  const di = fechaADiaIndex(v.fecha);
+  if (di < 0) return;
+  v.days = v.days || [];
+  if (!v.days.includes(di)){
+    v.days.push(di);
+    v.updatedAt = new Date().toISOString();
+    saveLocal();
+    markDirty();
+  }
+  const form = document.getElementById('form-' + cod);
+  if (form){
+    const cardPadre = form.closest('.card');
+    if (cardPadre){
+      const dayBtns = cardPadre.querySelectorAll('.days .day');
+      if (dayBtns[di]) dayBtns[di].classList.add('sel');
+    }
+  }
+  toast('📅 Día marcado: ' + DIAS[di]);
+}
+
+function newVisit(cod){
+  const arr = ensureVisitsArr(cod);
+  const last = arr.length ? arr[arr.length - 1] : null;
+  const nv = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: '', hora: '', estado: 'Pendiente', obs: '', gps: null, days: last ? (last.days || []).slice() : [], updatedAt: new Date().toISOString() };
+  arr.push(nv);
+  editingVisitId[cod] = nv.id;
+  formsAbiertos.add(cod);
+  const scrollY = window.scrollY;
+  save();
+  renderAgenda();
+  requestAnimationFrame(() => window.scrollTo(0, scrollY));
+  const form = document.getElementById('form-' + cod);
+  if (form) form.classList.add('open');
+  requestAnimationFrame(() => { setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); });
+  toast('✓ Visita nueva — completa los datos');
+}
+
+function deleteVisit(cod, visitId){
+  if (!confirm('¿Eliminar esta VISITA del índice?\n\n• Solo se elimina del listado\n• Las FOTOS y FIRMAS NO se borran de Drive\n\n¿Continuar?')) return;
+  if (!DB.visits[cod] || !Array.isArray(DB.visits[cod])){ toast('⚠ No se pudo encontrar la lista de visitas'); return; }
+  const arr = DB.visits[cod];
+  const i = arr.findIndex(v => v && v.id === visitId);
+  if (i < 0){ toast('⚠ Visita no encontrada'); return; }
+  arr.splice(i, 1);
+  if (editingVisitId[cod] === visitId) editingVisitId[cod] = arr.length ? arr[arr.length - 1].id : null;
+  markVisitDeleted(visitId);
+  const scrollY = window.scrollY;
+  save();
+  renderAgenda();
+  requestAnimationFrame(() => window.scrollTo(0, scrollY));
+  closeHistorial();
+  toast('🗑️ Visita eliminada');
+}
+
+function switchVisit(cod, visitId){
+  editingVisitId[cod] = visitId;
+  formsAbiertos.add(cod);
+  const scrollY = window.scrollY;
+  renderAgenda();
+  requestAnimationFrame(() => window.scrollTo(0, scrollY));
+  const form = document.getElementById('form-' + cod);
+  if (form) form.classList.add('open');
+  requestAnimationFrame(() => { setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); });
+}
+function showVisitsHistory(cod){
+  const visits = getVisits(cod);
+  const cliente = getClientByCode(cod);
+  document.getElementById('historialTitle').textContent = 'Visitas de ' + (cliente ? cliente.nombre.slice(0,30) : cod);
+  const cont = document.getElementById('historialList');
+  cont.innerHTML = '';
+  if (!visits.length){ cont.innerHTML = '<div class="empty">Sin visitas registradas</div>'; document.getElementById('historialModal').classList.add('open'); return; }
+  const ordenadas = visits.slice().sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+  ordenadas.forEach(v => {
+    const nFotos = safeArray(DB.photos[cod]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha)).length;
+    const tieneFirma = v.firma && (v.firma.data || v.firma.fileId);
+    const estadoColor = v.estado === 'Realizada' ? 'r' : v.estado === 'Pendiente' ? 'p' : v.estado === 'No Realizada' ? 'n' : 's';
+    const row = document.createElement('div');
+    row.className = 'card'; row.style.padding = '10px'; row.style.marginBottom = '8px';
+    row.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-size:.9rem;font-weight:700">📅 ${v.fecha || 'Sin fecha'}</div><div style="font-size:.72rem;color:var(--muted);margin-top:2px">⏰ ${v.hora || '--:--'} · 📷 ${nFotos} · ✍️ ${tieneFirma ? 'Sí' : 'No'}</div></div><span class="badge ${estadoColor}">${(v.estado||'Pendiente').toUpperCase()}</span></div><div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-primary btn-sm" style="flex:1" onclick="switchVisit('${cod}','${v.id}');closeHistorial()">✏️ Editar</button><button class="btn btn-red btn-sm" onclick="deleteVisit('${cod}','${v.id}')">🗑️ Eliminar</button></div>`;
+    cont.appendChild(row);
+  });
+  document.getElementById('historialModal').classList.add('open');
+}
+function closeHistorial(){ document.getElementById('historialModal').classList.remove('open'); }
+function showDownloadBanner(force){ if (bannerDismissed && !force) return; const b = document.getElementById('downloadBanner'); if (b) b.classList.add('visible'); document.body.classList.add('banner-visible'); updateDownloadBanner(); }
+function hideDownloadBanner(){ const b = document.getElementById('downloadBanner'); if (b) b.classList.remove('visible'); document.body.classList.remove('banner-visible'); }
+function dismissBanner(){ bannerDismissed = true; hideDownloadBanner(); }
+function updateDownloadBanner(){ const textEl = document.getElementById('downloadBannerText'); const progEl = document.getElementById('downloadBannerProgress'); const t = downloadState.total, d = downloadState.done, f = downloadState.failed, p = d + f; if (textEl){ textEl.textContent = '📥 ' + p + '/' + t; } if (progEl) progEl.style.width = (t > 0 ? Math.round(p / t * 100) : 0) + '%'; }
+function jsonpRequest(url, timeoutMs){ return new Promise((resolve, reject) => { const cbName = 'nocJsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); const script = document.createElement('script'); let done = false; const cleanup = () => { try { delete window[cbName]; } catch(e){ window[cbName] = undefined; } if (script.parentNode) script.parentNode.removeChild(script); }; const timer = setTimeout(() => { if (done) return; done = true; cleanup(); reject(new Error('Timeout JSONP')); }, timeoutMs || 25000); window[cbName] = (data) => { if (done) return; done = true; clearTimeout(timer); cleanup(); resolve(data); }; script.onerror = () => { if (done) return; done = true; clearTimeout(timer); cleanup(); reject(new Error('Error de red (JSONP)')); }; const sep = url.indexOf('?') >= 0 ? '&' : '?'; script.src = url + sep + 'callback=' + cbName; document.head.appendChild(script); }); }
+async function callBackendRead(payload, timeoutMs){
+  timeoutMs = timeoutMs || 25000;
+  const params = new URLSearchParams();
+  params.append('token', TOKEN_SECRETO);
+  for (const k in payload){ const v = payload[k]; if (v !== undefined && v !== null) params.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)); }
+  const baseUrl = APPS_SCRIPT_URL + '?' + params.toString();
+  let result = null;
+  for (let intento = 0; intento < 2; intento++){
+    try { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 25000); const res = await fetch(baseUrl, { method: 'GET', signal: controller.signal }); clearTimeout(timer); if (res.ok){ const text = await res.text(); try { result = JSON.parse(text); break; } catch(e){} } } catch(e){}
+    if (intento === 0){ setSyncBadge('⏳ Conectando…', 'warn'); await new Promise(r => setTimeout(r, 2000)); }
+  }
+  if (!result){ result = await jsonpRequest(baseUrl, timeoutMs); }
+  const badge = document.getElementById('syncBadge');
+  if (badge && badge.textContent.includes('Conectando')){ setSyncBadge('✓ Listo', 'ok'); setTimeout(() => { if (badge.textContent === '✓ Listo'){ badge.style.display = 'none'; } }, 2500); }
+  return result;
+}
+async function callBackendWrite(payload){ try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, ...payload }) }); } catch(e){ throw new Error('No se pudo enviar: ' + e.message); } return { ok: true }; }
+async function callBackendWriteAndRead(payload){ await callBackendWrite(payload); await new Promise(r => setTimeout(r, 3000)); const res = await callBackendRead({ action:'getIndex' }, 40000); if (res && res.ok && res.content){ return { ok: true, merged: res.content }; } return { ok: false }; }
+async function testBackend(){ toast('🔬 Probando…'); try { const r = await callBackendRead({ action: 'ping' }, 15000); if (r.ok){ setDriveStatus('✓ Backend OK', '#4ade80'); toast('✓ OK'); } else { toast('⚠ ' + r.error); } } catch(e){ toast('⚠ ' + e.message); } }
+function buildPhotoFilename(fecha){ const d = fecha ? new Date(fecha) : new Date(); const pad = n => String(n).padStart(2, '0'); const stamp = d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()); const rand = Math.random().toString(36).slice(2, 6); return 'foto_' + stamp + '_' + rand + '.jpg'; }
+function arrayBufferToBase64(buffer){ let binary = ''; const bytes = new Uint8Array(buffer); const chunk = 0x8000; for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk)); return btoa(binary); }
+function hoyYMD(){ const d = new Date(); const pad = n => String(n).padStart(2,'0'); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+async function sendHeartbeat(){ if (!isOnline()) return; try { const res = await callBackendRead({ action: 'heartbeat', deviceId: getDeviceId(), deviceName: getDeviceName(), userName: DB.resp || '' }, 10000); if (res && res.ok){ activeUsersCache = res.devices || []; updateActiveUsersBadge(res.active); } } catch(e){} }
+function updateActiveUsersBadge(count){ const el = document.getElementById('activeUsersBadge'); if (!el) return; if (!count || count <= 0){ el.style.display = 'none'; return; } if (count === 1){ el.textContent = '👤 Solo tú'; } else { el.textContent = '👥 ' + count + ' técnicos'; } el.style.display = 'inline-block'; }
+function showActiveUsersModal(){ const modal = document.getElementById('historialModal'); const title = document.getElementById('historialTitle'); const list = document.getElementById('historialList'); title.textContent = '👥 Técnicos conectados (' + activeUsersCache.length + ')'; list.innerHTML = ''; if (!activeUsersCache.length){ list.innerHTML = '<div class="empty">Nadie más</div>'; } else { activeUsersCache.forEach(u => { const row = document.createElement('div'); row.className = 'card'; row.style.padding = '10px'; row.style.marginBottom = '8px'; row.innerHTML = '<b>📱 ' + (u.name || 'Dispositivo') + '</b>' + (u.user ? '<br><small style="color:var(--muted)">👤 ' + u.user + '</small>' : ''); list.appendChild(row); }); } modal.classList.add('open'); }
+
+async function syncMasterNow(){
+  if (!driveStateReady){ toast('⏳ Esperando Drive…'); return; }
+  if (syncInProgress){ toast('⏳ Sincronización en curso'); return; }
+  syncInProgress = true;
+  toast('📤 Enviando al Master…');
+  setSyncBadge('📤 Master…','info');
+  const updates = collectMasterUpdates();
+  if (updates.length === 0){ toast('⚠ No hay visitas para sincronizar'); setSyncBadge('','info'); syncInProgress = false; return; }
+  const startTs = Date.now();
+  try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, action: 'updateMasterSheet', updates, mesAnio: DB.month }) }); } catch(e){}
+  toast('⏳ Procesando…');
+  setSyncBadge('⏳ Procesando…','info');
+  const MAX_ESPERA = 3 * 60 * 1000;
+  let resultado = null;
+  while (Date.now() - startTs < MAX_ESPERA){
+    await new Promise(r => setTimeout(r, 5000));
+    const elapsed = Math.round((Date.now() - startTs) / 1000);
+    setSyncBadge('⏳ ' + elapsed + 's…','info');
+    try { const res = await callBackendRead({ action: 'getLastUpdateDebug' }, 15000); if (res && res.ok && res.last){ const tsResult = new Date(res.last.ts).getTime(); if (tsResult >= startTs - 5000 && res.last.status === 'done'){ resultado = res.last.result; break; } } } catch(e){}
+  }
+  syncInProgress = false;
+  if (!resultado){ toast('⚠ Timeout'); setSyncBadge('⚠ Timeout','warn'); return; }
+  if (resultado && resultado.ok){
+    const n = resultado.updated || 0;
+    if (n === 0){ toast('⚠ 0 filas actualizadas'); setSyncBadge('⚠ 0 filas','warn'); }
+    else { toast('✓ Master actualizado (' + n + ' filas)'); setSyncBadge('✓ Master OK','ok'); localStorage.setItem('nocLastMasterSync', new Date().toISOString()); renderMasterInfo(); }
+    if (resultado.debug){ localStorage.setItem('nocLastMasterDebug', JSON.stringify(resultado.debug)); }
+  } else {
+    const errRaw = (resultado && resultado.error) || 'Error';
+    let errAmigable = errRaw;
+    if (errRaw.indexOf('No se encuentra') !== -1 || errRaw.indexOf('documento') !== -1 || errRaw.indexOf('not found') !== -1){ errAmigable = 'Hoja Master no accesible. Verifica el archivo en Drive.'; }
+    else if (errRaw.length > 80){ errAmigable = errRaw.slice(0, 80) + '…'; }
+    toast('⚠ ' + errAmigable); setSyncBadge('⚠ Master','warn');
+    if (resultado && resultado.debug){ localStorage.setItem('nocLastMasterDebug', JSON.stringify(resultado.debug)); }
+  }
+}
+function showLastMasterDebug(){ const raw = localStorage.getItem('nocLastMasterDebug'); const cont = document.getElementById('debugMasterContent'); if (!raw){ cont.textContent = 'Sin diagnóstico previo.'; } else { try { cont.textContent = JSON.stringify(JSON.parse(raw), null, 2); } catch(e){ cont.textContent = raw; } } document.getElementById('debugMasterModal').classList.add('open'); }
+function collectMasterUpdates(){
+  const updates = [];
+  allClients().forEach(c => {
+    const arr = getVisits(c.codigo);
+    const latest = arr.length ? arr[arr.length - 1] : null;
+    if (!latest || !latest.fecha) return;
+    const fechasIndividuales = arr.filter(v => v && v.fecha).map(v => v.fecha.split('-').reverse().join('/'));
+    const todasFechas = fechasIndividuales.join(' / ');
+    let estadoHoja = 'Pendiente';
+    if (latest.estado === 'Realizada') estadoHoja = 'Completado';
+    else if (latest.estado === 'Pospuesta') estadoHoja = 'Reprogramado';
+    else if (latest.estado === 'No Realizada') estadoHoja = 'No Realizada';
+    updates.push({ codigo: String(c.codigo).trim(), nombre: c.nombre, direccion: c.direccion || '', fechaVisita: todasFechas, fechasIndividuales, estado: estadoHoja, observaciones: latest.obs || '', tipo: latest.estado || 'Pendiente' });
+  });
+  return updates;
+}
+function renderMasterInfo(){ const el = document.getElementById('masterInfo'); if (!el) return; const lastSync = localStorage.getItem('nocLastMasterSync'); if (!lastSync){ el.innerHTML = '<span style="color:var(--warn)">⚠ Sin sincronizar</span>'; } else { el.innerHTML = '✓ Sincronizado · ' + new Date(lastSync).toLocaleString('es-VE'); } }
+
+async function syncToCloud(silent){
+  if (syncInProgress) return;
+  if (!isOnline()){ setSyncBadge('📴 Sin conexión','warn'); return; }
+  if (!driveStateReady){ if (!silent) toast('⏳ Esperando Drive…'); setTimeout(() => { if (driveStateReady && !syncInProgress) syncToCloud(silent); }, 8000); return; }
+  syncInProgress = true;
+  if (!silent) setSyncBadge('☁️ Sincronizando…','info');
+  let done = 0, failed = 0;
+  try {
+    sanitizeDB();
+    const pending = collectPendingUploads();
+    setSyncProgress(0);
+    for (const item of pending){
+      try {
+        await callBackendWrite({ action:'uploadPhoto', codigo:item.codigo, nombre:item.nombre, fecha:item.fechaVisita, filename:item.filename, mime:item.mime, base64:item.base64 });
+        if (item.ref) item.ref.synced = true;
+        try { const fid = await callBackendRead({ action:'getFileId', codigo:item.codigo, filename:item.filename, fecha:item.fechaVisita }, 15000); if (fid && fid.ok && fid.fileId && item.ref) item.ref.fileId = fid.fileId; if (item.ref && item.ref.synced && item.ref.fileId) delete item.ref.data; } catch(e){}
+        done++;
+        setSyncProgress(Math.round(done/Math.max(pending.length,1)*100));
+        setSyncBadge('⬆ ' + done + '/' + pending.length,'info');
+        await saveLocal();
+      } catch(err){ failed++; }
+    }
+    setSyncBadge('☁️ Índice + Excel…','info');
+    const indexData = buildIndex();
+    const deletions = getDeletionsList();
+    const deletedPhotos = getDeletedPhotosList();
+    const wb = buildStyledWorkbook();
+    const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
+    const excelBase64 = arrayBufferToBase64(excelBuffer);
+    const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId(), excelBase64 });
+    if (resp && resp.ok && resp.merged){ try { const merged = JSON.parse(resp.merged); lastKnownRemoteTs = merged.updatedAt || null; localStorage.setItem('nocLastLoadOk', String(Date.now())); liberarEspacio(); await saveLocal(); } catch(e){} }
+    setSyncProgress(100); setTimeout(()=>setSyncProgress(0), 800);
+    clearDeletionsList(); clearDeletedPhotosList();
+    if (failed === 0){
+      clearDirty();
+      localStorage.setItem('nocLastSync', new Date().toISOString());
+      setSyncBadge('✓ Sincronizado','ok');
+      if (!silent) toast('✓ Sincronizado');
+    } else {
+      const restantes = pending.length - done;
+      setSyncBadge('⚠ ' + restantes + ' pendiente(s)','warn');
+      const msg = document.getElementById('partialSyncMsg');
+      if (msg){ msg.innerHTML = 'Se cargaron <b style="color:#4ade80">' + done + ' de ' + pending.length + '</b> imágenes.<br><br>Las <b style="color:#fbbf24">' + restantes + '</b> restantes se subirán al reconectar.'; document.getElementById('partialSyncModal').classList.add('open'); }
+    }
+    updateSyncStatusBox();
+  } catch(err){ setSyncBadge('⚠ Error','err'); }
+  finally { syncInProgress = false; }
+}
+function applyRemoteIndex(remote){
+  if (!remote || typeof remote !== 'object') return;
+  const remoteVisits = remote.visits || {};
+  const remotePhotos = remote.photosMeta || {};
+  const allCodes = new Set([...Object.keys(remoteVisits), ...Object.keys(DB.visits || {})]);
+  for (const cod of allCodes){
+    const rArr = Array.isArray(remoteVisits[cod]) ? remoteVisits[cod] : [];
+    const lArr = Array.isArray(DB.visits[cod]) ? DB.visits[cod] : [];
+    const byId = {};
+    for (const v of lArr){ if (v && v.id) byId[v.id] = v; }
+    for (const v of rArr){ if (!v || !v.id) continue; const ex = byId[v.id]; if (!ex) { byId[v.id] = v; continue; } const rTs = v.updatedAt || ''; const lTs = ex.updatedAt || ''; if (rTs >= lTs) byId[v.id] = Object.assign({}, ex, v); }
+    DB.visits[cod] = Object.values(byId);
+  }
+  const deletedPhotosSet = new Set(getDeletedPhotosList());
+  const allPC = new Set([...Object.keys(remotePhotos), ...Object.keys(DB.photos || {})]);
+  for (const cod of allPC){
+    const map = {};
+    for (const p of (DB.photos[cod] || [])) if (p && p.filename) map[p.filename] = p;
+    for (const p of (remotePhotos[cod] || [])){
+      if (!p || !p.filename) continue;
+      if (deletedPhotosSet.has(cod + '|' + p.filename)) continue;
+      const ex = map[p.filename];
+      if (!ex) map[p.filename] = p;
+      else { const merged = Object.assign({}, ex, p); if (!p.visitId && ex.visitId) merged.visitId = ex.visitId; map[p.filename] = merged; }
+    }
+    DB.photos[cod] = Object.values(map);
+  }
+  const ccMap = {}; for (const c of (DB.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = c; for (const c of (remote.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = c; DB.customClients = Object.values(ccMap);
+  if (Array.isArray(remote.hiddenClients)){ const hs = new Set([...(DB.hiddenClients || []), ...remote.hiddenClients]); DB.hiddenClients = Array.from(hs); }
+  DB.evidMeta = Object.assign({}, DB.evidMeta || {}, remote.evidMeta || {});
+  if (remote.month) DB.month = remote.month;
+  if (remote.resp) DB.resp = remote.resp;
+  if (remote.comp) DB.comp = remote.comp;
+  sanitizeDB(); renderActiveTab();
+}
+async function pollForUpdates(){
+  if (!isOnline() || syncInProgress || loadingFromCloud || !driveStateReady) return;
+  if (document.hidden) return;
+  if (formsAbiertos.size > 0) return;
+  const lastLocal = parseInt(localStorage.getItem('nocLastLocalActivity') || '0', 10);
+  if (Date.now() - lastLocal < 30000) return;
+  try {
+    const meta = await callBackendRead({ action:'getIndexMeta' }, 15000);
+    if (!meta || !meta.ok || !meta.exists) return;
+    if (lastKnownRemoteTs === null){ lastKnownRemoteTs = meta.updatedAt; return; }
+    if (meta.updatedAt !== lastKnownRemoteTs){
+      lastKnownRemoteTs = meta.updatedAt;
+      if (meta.lastWriter === getDeviceId()) return;
+      await loadFromCloud();
+    }
+  } catch(e){}
+}
+setInterval(pollForUpdates, 90000);
+function collectPendingUploads(){
+  const items = [];
+  for (const codigo in DB.photos){ const cliente = getClientByCode(codigo); const nombreCliente = cliente ? cliente.nombre : ('Cliente ' + codigo); const arr = safeArray(DB.photos[codigo]); for (const p of arr) if (p.data && !p.synced && p.filename) items.push({ codigo: String(codigo).trim(), nombre: nombreCliente, fechaVisita: p.fechaVisita || hoyYMD(), filename: p.filename, mime:'image/jpeg', base64: p.data.split(',')[1], ref: p }); }
+  for (const codigo in DB.visits){ const visits = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; const cliente = getClientByCode(codigo); const nombreCliente = cliente ? cliente.nombre : ('Cliente ' + codigo); for (const v of visits) if (v && v.firma && v.firma.data && !v.firma.synced && v.firma.filename) items.push({ codigo: String(codigo).trim(), nombre: nombreCliente, fechaVisita: v.fecha || hoyYMD(), filename: v.firma.filename, mime:'image/png', base64: v.firma.data.split(',')[1], ref: v.firma }); }
+  const sup = DB.evid['super_sig']; if (sup && typeof sup === 'object' && sup.data && !sup.synced && sup.filename) items.push({ codigo:'_supervisor', nombre:'Supervisor NOC', fechaVisita: hoyYMD(), filename: sup.filename, mime:'image/png', base64: sup.data.split(',')[1], ref: sup });
+  return items;
+}
+function buildIndex(){
+  const photosMeta = {};
+  for (const codigo in DB.photos) photosMeta[codigo] = safeArray(DB.photos[codigo]).map(p => ({ filename: p.filename, fecha: p.fecha || '', fechaVisita: p.fechaVisita || '', visitId: p.visitId || null, fileId: p.fileId || null }));
+  const visitsSerializable = {};
+  for (const codigo in DB.visits){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; visitsSerializable[codigo] = arr.filter(v => v && typeof v === 'object').map(v => { const vOut = { id: v.id, fecha: v.fecha||'', hora: v.hora||'', estado: v.estado||'Pendiente', obs: v.obs||'', gps: v.gps||null, days: v.days||[], updatedAt: v.updatedAt || '' }; if (v.firma && v.firma.filename) vOut.firma = { filename: v.firma.filename, fileId: v.firma.fileId || null, fechaVisita: v.firma.fechaVisita || v.fecha || '', synced: true }; return vOut; }); }
+  const evidMeta = {};
+  const sup = DB.evid['super_sig'];
+  if (sup && typeof sup === 'object' && sup.filename) evidMeta.super_sig = { filename: sup.filename, fileId: sup.fileId || null };
+  return { version: 10, month: DB.month, resp: DB.resp, comp: DB.comp, autoSync: DB.autoSync, visits: visitsSerializable, customClients: DB.customClients, hiddenClients: DB.hiddenClients, photosMeta, evidMeta, updatedAt: new Date().toISOString() };
+}
+function setSyncProgress(pct){ const el = document.getElementById('syncProgress'); if (el) el.style.width = pct + '%'; }
+async function loadFromCloud(){
+  if (loadingFromCloud) return false;
+  const lastLoad = parseInt(localStorage.getItem('nocLastLoadOk') || '0', 10);
+  const MIN = 3 * 60 * 1000;
+  if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN)){ setSyncBadge('✓ Drive reciente','ok'); updateSyncStatusBox(); return true; }
+  loadingFromCloud = true;
+  try {
+    if (!isOnline()){ driveStateReady = true; setSyncBadge('📴 Sin conexión','warn'); updateSyncStatusBox(); return false; }
+    setSyncBadge('📥 Cargando Drive…','info');
+    updateSyncStatusBox();
+    const timeoutGlobal = setTimeout(() => { if (!driveStateReady){ driveStateReady = true; setSyncBadge('⚠ Drive lento','warn'); updateSyncStatusBox(); } }, 90000);
+    let res = null;
+    try { res = await callBackendRead({ action:'getIndex' }, 80000); } catch(err){ clearTimeout(timeoutGlobal); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
+    clearTimeout(timeoutGlobal);
+    if (!res || !res.ok){
+      if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); updateSyncStatusBox(); return false; }
+      setSyncBadge('⚠ ' + (res && res.error ? String(res.error).slice(0,25) : 'sin respuesta'),'err');
+      driveStateReady = true; updateSyncStatusBox(); return false;
+    }
+    let remote;
+    try { remote = JSON.parse(res.content); } catch(e){ driveStateReady = true; setSyncBadge('⚠ Error JSON','err'); updateSyncStatusBox(); return false; }
+    if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('⚠ Formato inválido','warn'); updateSyncStatusBox(); return false; }
+    const remoteHasData = (remote.visits && Object.keys(remote.visits).length > 0) || (remote.photosMeta && Object.keys(remote.photosMeta).length > 0);
+    const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
+    if (!remoteHasData && localHasData){ driveStateReady = true; setSyncBadge('⚠ Drive vacío','warn'); updateSyncStatusBox(); return false; }
+    try {
+      applyRemoteIndex(remote);
+      lastKnownRemoteTs = remote.updatedAt || new Date().toISOString();
+      migrateVisits();
+      sanitizeDB();
+      await saveLocal();
+      localStorage.setItem('nocLastSync', new Date().toISOString());
+      localStorage.setItem('nocLastLoadOk', String(Date.now()));
+      if (formsAbiertos.size === 0) renderActiveTab();
+      driveStateReady = true;
+      setSyncBadge('✓ Drive cargado','ok');
+      updateSyncStatusBox();
+      return true;
+    } catch (criticalError){
+      driveStateReady = true;
+      const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
+      setSyncBadge('⚠ Error','err');
+      updateSyncStatusBox();
+      try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, ts: new Date().toISOString() })); } catch(e){}
+      return false;
+    }
+  } finally { loadingFromCloud = false; }
+}
+async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
+async function forceSyncNow(){ if (!driveStateReady){ if (!confirm('⚠ Drive NO se ha cargado. ¿Continuar?')) return; driveStateReady = true; } markDirty(); await syncToCloud(false); }
+async function reorganizeDrive(){ if (!confirm('¿Reorganizar carpetas y fechas en Drive?')) return; const clientesMap = {}; allClients().forEach(c => { clientesMap[String(c.codigo).trim()] = c.nombre; }); clientesMap['_supervisor'] = 'Supervisor NOC'; toast('🗂️ Reorganizando…'); try { await callBackendWrite({ action:'reorganizeAll', clientesMap }); await new Promise(r => setTimeout(r, 3000)); await callBackendWrite({ action:'fixDates', index: JSON.stringify(buildIndex()) }); await new Promise(r => setTimeout(r, 3000)); localStorage.removeItem('nocLastLoadOk'); await loadFromCloud(); toast('✓ Reorganización completa'); } catch(err){ toast('⚠ ' + err.message); } }
+async function rescanDriveNow(){ if (!confirm('¿Escanear Drive y agregar fotos nuevas?')) return; toast('🔍 Escaneando…'); try { await callBackendWrite({ action: 'rescanDrivePhotos' }); await new Promise(r => setTimeout(r, 5000)); if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; await loadFromCloud(); toast('✓ Índice reconstruido'); } catch(err){ toast('⚠ ' + err.message); } }
+async function cleanOrphanPhotos(){ if (!confirm('¿Limpiar fotos huérfanas?')) return; try { await callBackendWrite({ action:'cleanOrphans' }); await new Promise(r => setTimeout(r, 3000)); localStorage.removeItem('nocLastLoadOk'); await loadFromCloud(); toast('✓ Limpiado'); } catch(err){ toast('⚠ ' + err.message); } }
+async function fetchFileId(codigo, filename, itemRef){ if (!itemRef) throw new Error('Ref inválida'); const fecha = itemRef.fechaVisita || ''; const res = await callBackendRead({ action:'getFileId', codigo, filename, fecha }, 20000); if (!res) throw new Error('Sin respuesta'); if (!res.ok) throw new Error(res.error || 'Error'); if (!res.fileId) throw new Error('Sin fileId'); itemRef.fileId = res.fileId; if (itemRef.synced) delete itemRef.data; return res.fileId; }
+async function downloadAllPending(silent){
+  if (downloadState.active){ if (!silent) toast('Ya procesando'); return; }
+  const pending = [];
+  for (const codigo in DB.photos){ const arr = safeArray(DB.photos[codigo], true); for (const p of arr) if (!p.fileId && p.filename) pending.push({ codigo, filename: p.filename, itemRef: p }); }
+  for (const codigo in DB.visits){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; for (const v of arr) if (v && v.firma && typeof v.firma === 'object' && !v.firma.fileId && v.firma.filename) pending.push({ codigo, filename: v.firma.filename, itemRef: v.firma }); }
+  const sup = DB.evid['super_sig']; if (sup && typeof sup === 'object' && !sup.fileId && sup.filename) pending.push({ codigo:'_supervisor', filename: sup.filename, itemRef: sup });
+  if (!pending.length){ if (!silent) toast('✓ Todo listo'); return; }
+  downloadState.active = true; downloadState.total = pending.length; downloadState.done = 0; downloadState.failed = 0; downloadState.errors = [];
+  bannerDismissed = false; showDownloadBanner(true);
+  for (let i = 0; i < pending.length; i++){ const item = pending[i]; let exito = false, intentos = 0; while (!exito && intentos < 3){ intentos++; try { await fetchFileId(item.codigo, item.filename, item.itemRef); exito = true; downloadState.done++; } catch(err){ if (intentos < 3) await new Promise(r => setTimeout(r, 800 * intentos)); else { downloadState.failed++; } } updateDownloadBanner(); } if ((downloadState.done + downloadState.failed) % 10 === 0){ await saveLocal(); } }
+  await saveLocal();
+  if (evidCurrentFolder) renderEvidFolderContent(evidCurrentFolder);
+  renderAgenda(); renderEvid();
+  downloadState.active = false; updateDownloadBanner();
+  setTimeout(() => { hideDownloadBanner(); if (downloadState.failed === 0) toast('✓ ' + downloadState.done + ' imágenes listas'); else toast('⚠ ' + downloadState.done + ' OK · ' + downloadState.failed + ' error'); }, 1200);
+}
+async function downloadAllPhotos(){ await downloadAllPending(false); }
+async function downloadOne(codigo, filename, ev){ if (ev) ev.stopPropagation(); let itemRef = null; if (codigo === '_supervisor') itemRef = DB.evid['super_sig']; else { const lista = safeArray(DB.photos[codigo], true); itemRef = lista.find(p => p && p.filename === filename); if (!itemRef){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; for (const v of arr){ if (v && v.firma && typeof v.firma === 'object' && v.firma.filename === filename){ itemRef = v.firma; break; } } } } if (!itemRef){ toast('⚠ No encontrado'); return; } try { await fetchFileId(codigo, filename, itemRef); await saveLocal(); toast('✓ Lista'); if (evidCurrentFolder) renderEvidFolderContent(evidCurrentFolder); renderEvid(); } catch(err){ toast('⚠ ' + err.message); } }
+function allClients(){ const hidden = new Set(DB.hiddenClients || []); return CLIENTES.filter(c => !hidden.has(c.codigo)).concat(DB.customClients || []); }
+function statusClass(e){ return e === 'Realizada' ? 'r' : e === 'Pendiente' ? 'p' : e === 'No Realizada' ? 'n' : 's'; }
+function getClientByCode(cod){ const c = (DB.customClients || []).find(x => String(x.codigo).trim() === String(cod).trim()); if (c) return c; return CLIENTES.find(x => String(x.codigo).trim() === String(cod).trim()) || null; }
+function detectarFechaBusqueda(q){
+  if (!q) return null;
+  const s = String(q).trim();
+  let m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (m){ const y = m[1], mo = String(m[2]).padStart(2,'0'), d = String(m[3]).padStart(2,'0'); if (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) return y + '-' + mo + '-' + d; }
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?$/);
+  if (m){ const d = String(m[1]).padStart(2,'0'); const mo = String(m[2]).padStart(2,'0'); let y = m[3] || String(new Date().getFullYear()); if (y.length === 2) y = '20' + y; if (+mo >= 1 && +mo <= 12 && +d >= 1 && +d <= 31) return y + '-' + mo + '-' + d; }
+  return null;
+}
+function clientesConVisitaEnFecha(fechaISO){
+  const set = new Set();
+  if (!fechaISO) return set;
+  const parts = fechaISO.split('-');
+  const sufijo = '-' + parts[1] + '-' + parts[2];
+  for (const cod in DB.visits){ const arr = getVisits(cod); for (const v of arr){ if (!v || !v.fecha) continue; if (v.fecha === fechaISO || v.fecha.endsWith(sufijo)){ set.add(String(cod).trim()); break; } } }
+  return set;
+}
+function toggleFiltroFechas(force){
+  const m = document.getElementById('filtroFechasModal');
+  const btn = document.getElementById('btnFiltro');
+  const open = force !== undefined ? force : !m.classList.contains('open');
+  m.classList.toggle('open', open);
+  if (btn) btn.classList.toggle('active', open);
+  if (open){ document.getElementById('filtroDesdeInput').value = filtroDesde; document.getElementById('filtroHastaInput').value = filtroHasta; }
+}
+function aplicarFiltroFechas(){
+  const d = document.getElementById('filtroDesdeInput').value;
+  const h = document.getElementById('filtroHastaInput').value;
+  if (!d && !h){ toast('⚠ Selecciona al menos una fecha'); return; }
+  if (d && h && d > h){ toast('⚠ La fecha DESDE no puede ser mayor que HASTA'); return; }
+  filtroDesde = d; filtroHasta = h;
+  toggleFiltroFechas(false);
+  renderAgenda();
+  toast('✓ Filtro aplicado');
+}
+function limpiarFiltroFechas(){
+  filtroDesde = ''; filtroHasta = '';
+  document.getElementById('filtroDesdeInput').value = '';
+  document.getElementById('filtroHastaInput').value = '';
+  toggleFiltroFechas(false);
+  renderAgenda();
+  toast('✓ Filtro limpiado');
+}
+function clienteTieneVisitaEnRango(cod){
+  if (!filtroDesde && !filtroHasta) return true;
+  const arr = getVisits(cod);
+  for (const v of arr){
+    if (!v || !v.fecha) continue;
+    if (filtroDesde && v.fecha < filtroDesde) continue;
+    if (filtroHasta && v.fecha > filtroHasta) continue;
+    return true;
+  }
+  return false;
+}
+
+function buildDataResumenMes(mesAnio){
+  const data = [];
+  allClients().forEach(c => {
+    const arr = getVisits(c.codigo);
+    const visitasMes = mesAnio ? arr.filter(v => v && visitaEnMesAnio(v, mesAnio)) : arr.slice();
+    if (visitasMes.length > 0){ data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', visitas: visitasMes }); }
+  });
+  return data;
+}
+function buildDataFiltroFechas(){
+  const data = [];
+  allClients().forEach(c => {
+    const arr = getVisits(c.codigo);
+    const visitasRango = arr.filter(v => {
+      if (!v || !v.fecha) return false;
+      if (filtroDesde && v.fecha < filtroDesde) return false;
+      if (filtroHasta && v.fecha > filtroHasta) return false;
+      return true;
+    });
+    if (visitasRango.length > 0){ data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', visitas: visitasRango }); }
+  });
+  return data;
+}
+function calcularStatsData(clienteData){
+  let tot=0, r=0, p=0, n=0, s=0;
+  clienteData.forEach(c => c.visitas.forEach(v => {
+    tot++;
+    const e = v.estado || 'Pendiente';
+    if (e === 'Realizada') r++;
+    else if (e === 'Pendiente') p++;
+    else if (e === 'No Realizada') n++;
+    else s++;
+  }));
+  return { total: tot, realizadas: r, pendientes: p, noRealizadas: n, pospuestas: s, clientes: clienteData.length };
+}
+function buildTextoResumen(clienteData, titulo){
+  const st = calcularStatsData(clienteData);
+  let txt = '📊 ' + titulo + '\n';
+  txt += '━━━━━━━━━━━━━━━━━━━━\n\n';
+  txt += '👥 Clientes: ' + st.clientes + '\n';
+  txt += '📋 Visitas: ' + st.total + '\n';
+  txt += '✅ Realizadas: ' + st.realizadas + '\n';
+  txt += '⏳ Pendientes: ' + st.pendientes + '\n';
+  txt += '❌ No realizadas: ' + st.noRealizadas + '\n';
+  txt += '⏸️ Pospuestas: ' + st.pospuestas + '\n\n';
+  txt += '━━━ DETALLE ━━━\n\n';
+  clienteData.forEach(c => {
+    txt += '▸ #' + c.codigo + ' ' + c.nombre + '\n';
+    c.visitas.forEach(v => {
+      const fecha = v.fecha ? v.fecha.split('-').reverse().join('/') : 'Sin fecha';
+      txt += '   📅 ' + fecha + (v.hora ? ' ' + v.hora : '') + ' · ' + (v.estado || 'Pendiente') + '\n';
+      if (v.obs) txt += '   📝 ' + v.obs + '\n';
+    });
+    txt += '\n';
+  });
+  return txt;
+}
+function buildExcelResumen(clienteData, titulo, nombreHoja){
+  const st = calcularStatsData(clienteData);
+  const A = [];
+  A.push([titulo]);
+  A.push(['Generado: ' + new Date().toLocaleString('es-VE')]);
+  A.push(['']);
+  A.push(['RESUMEN']);
+  A.push(['Clientes', st.clientes, '', 'Total visitas', st.total]);
+  A.push(['Realizadas', st.realizadas, '', 'Pendientes', st.pendientes]);
+  A.push(['No realizadas', st.noRealizadas, '', 'Pospuestas', st.pospuestas]);
+  A.push(['']);
+  A.push(['Código','Cliente','Dirección','Fecha','Hora','Estado','Observaciones']);
+  clienteData.forEach(c => {
+    c.visitas.forEach(v => {
+      A.push([c.codigo, c.nombre, c.direccion, v.fecha || '', v.hora || '', v.estado || 'Pendiente', v.obs || '']);
+    });
+  });
+  const ws = XLSX.utils.aoa_to_sheet(A);
+  ws['!cols'] = [{wch:12},{wch:38},{wch:45},{wch:13},{wch:8},{wch:14},{wch:60}];
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}},{s:{r:3,c:0},e:{r:3,c:6}}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, nombreHoja || 'Resumen');
+  return wb;
+}
+function dibujarGraficaEnCanvas(canvas, stats, titulo){
+  const dpr = window.devicePixelRatio || 1;
+  const W = 640, H = 340;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
+  const data = [
+    ['Realizadas', stats.realizadas || 0, '#22c55e'],
+    ['Pendientes', stats.pendientes || 0, '#f59e0b'],
+    ['No realizadas', stats.noRealizadas || 0, '#ef4444'],
+    ['Pospuestas', stats.pospuestas || 0, '#94a3b8']
+  ];
+  const max = Math.max(1, ...data.map(d => d[1]));
+  const padL = 40, padR = 20, padT = 80, padB = 50;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
+  ctx.strokeStyle = '#1e293b'; ctx.fillStyle = '#64748b'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++){
+    const v = Math.round(max * i / 4);
+    const y = padT + plotH - (plotH * i / 4);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+    ctx.fillText(String(v), padL - 6, y + 3);
+  }
+  ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillText(titulo, padL, 26);
+  ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI';
+  ctx.fillText('Total: ' + (stats.total || 0) + ' visitas', padL, 48);
+  const bw = Math.min(80, plotW / data.length * 0.55);
+  data.forEach((d, i) => {
+    const cx = padL + plotW * (i + 0.5) / data.length;
+    const bh = Math.max(plotH * d[1] / max, d[1] > 0 ? 6 : 2);
+    const x = cx - bw / 2, y = padT + plotH - bh;
+    ctx.fillStyle = d[2];
+    ctx.beginPath();
+    if (ctx.roundRect){ ctx.roundRect(x, y, bw, bh, 6); } else { ctx.rect(x, y, bw, bh); }
+    ctx.fill();
+    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 15px Segoe UI'; ctx.textAlign = 'center';
+    const yValor = Math.max(y - 12, padT + 20);
+    ctx.fillText(String(d[1]), cx, yValor);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '11px Segoe UI';
+    ctx.fillText(d[0], cx, padT + plotH + 22);
+  });
+}
+function generarGraficaBlob(stats, titulo){
+  return new Promise((resolve) => {
+    const c = document.createElement('canvas');
+    dibujarGraficaEnCanvas(c, stats, titulo);
+    c.toBlob((blob) => resolve(blob), 'image/png');
+  });
+}
+
+async function compartirTextoWhatsApp(txt, imagenBlob){
+  if (navigator.share){
+    try {
+      if (imagenBlob){
+        const file = new File([imagenBlob], 'grafica.png', { type: 'image/png' });
+        if (!navigator.canShare || navigator.canShare({ files: [file] })){
+          await navigator.share({ text: txt, files: [file] });
+          return;
+        }
+      }
+      await navigator.share({ text: txt });
+      return;
+    } catch(e){ if (e && e.name === 'AbortError') return; }
+  }
+  const enc = encodeURIComponent(txt);
+  const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.rel = 'noopener noreferrer';
+  a.href = esMovil ? ('https://wa.me/?text=' + enc) : ('https://web.whatsapp.com/send?text=' + enc);
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 1000);
+}
+
+async function exportarZipConGrafica(clienteData, titulo, nombreBase, stats){
+  const wb = buildExcelResumen(clienteData, titulo, 'Resumen');
+  const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
+  const pngBlob = await generarGraficaBlob(stats, titulo);
+  const zip = new JSZip();
+  zip.file(nombreBase + '.xlsx', excelBuffer);
+  zip.file(nombreBase + '_grafica.png', pngBlob);
+  const blob = await zip.generateAsync({ type:'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nombreBase + '.zip';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+async function descargarResumenMes(){
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesAnio = esGeneral ? null : mesResumenFiltro;
+  const clienteData = buildDataResumenMes(mesAnio);
+  if (!clienteData.length){ toast('⚠ No hay visitas'); return; }
+  const stats = calcularStatsData(clienteData);
+  const titulo = esGeneral ? 'RESUMEN GENERAL' : ('RESUMEN ' + mesAnio.toUpperCase());
+  const sufijo = esGeneral ? 'General' : mesAnio.replace(/\s+/g,'_');
+  toast('📦 Generando ZIP…');
+  await exportarZipConGrafica(clienteData, titulo, 'Resumen_' + sufijo, stats);
+  toast('✓ ZIP descargado (Excel + gráfica)');
+}
+async function compartirResumenMes(){
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesAnio = esGeneral ? null : mesResumenFiltro;
+  const clienteData = buildDataResumenMes(mesAnio);
+  if (!clienteData.length){ toast('⚠ No hay visitas'); return; }
+  const stats = calcularStatsData(clienteData);
+  const titulo = esGeneral ? 'RESUMEN GENERAL' : ('RESUMEN ' + mesAnio.toUpperCase());
+  const pngBlob = await generarGraficaBlob(stats, titulo);
+  await compartirTextoWhatsApp(buildTextoResumen(clienteData, titulo), pngBlob);
+}
+async function descargarFiltroFechas(){
+  const clienteData = buildDataFiltroFechas();
+  if (!clienteData.length){ toast('⚠ Sin visitas en el rango'); return; }
+  const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
+  const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
+  const stats = calcularStatsData(clienteData);
+  toast('📦 Generando ZIP…');
+  await exportarZipConGrafica(clienteData, 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt, 'Filtro_' + desdeTxt.replace(/\//g,'-') + '_a_' + hastaTxt.replace(/\//g,'-'), stats);
+  toast('✓ ZIP descargado (Excel + gráfica)');
+}
+async function compartirFiltroFechas(){
+  const clienteData = buildDataFiltroFechas();
+  if (!clienteData.length){ toast('⚠ Sin visitas en el rango'); return; }
+  const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
+  const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
+  const stats = calcularStatsData(clienteData);
+  const titulo = 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt;
+  const pngBlob = await generarGraficaBlob(stats, titulo);
+  await compartirTextoWhatsApp(buildTextoResumen(clienteData, titulo), pngBlob);
+}
+
+function renderPreviewMes(mesFiltro){
+  const cont = document.getElementById('previewMesBox');
+  if (!cont) return;
+  if (!mesFiltro){ cont.innerHTML = ''; cont.style.display = 'none'; return; }
+  const clienteData = buildDataResumenMes(mesFiltro);
+  if (!clienteData.length){ cont.innerHTML = '<div class="card" style="text-align:center;color:var(--muted);font-size:.8rem">Sin visitas en ' + mesFiltro + '</div>'; cont.style.display = 'block'; return; }
+  const st = calcularStatsData(clienteData);
+  let html = '<div class="card" style="border-left:4px solid var(--accent);background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(34,197,94,.05))">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:var(--accent);font-size:.95rem">📅 Vista previa: ' + mesFiltro + '</b><span style="font-size:.72rem;color:var(--muted)">' + st.clientes + ' cliente(s)</span></div>';
+  html += '<canvas id="previewCanvasUnico" style="width:100%;background:#0b1220;border-radius:10px;display:block;border:1px solid #334155"></canvas>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;text-align:center;font-size:.7rem;margin:10px 0">';
+  html += '<div style="background:rgba(34,197,94,.15);padding:6px;border-radius:8px"><div style="color:#4ade80;font-weight:800;font-size:1rem">' + st.realizadas + '</div>Realizadas</div>';
+  html += '<div style="background:rgba(245,158,11,.15);padding:6px;border-radius:8px"><div style="color:#fbbf24;font-weight:800;font-size:1rem">' + st.pendientes + '</div>Pendientes</div>';
+  html += '<div style="background:rgba(239,68,68,.15);padding:6px;border-radius:8px"><div style="color:#f87171;font-weight:800;font-size:1rem">' + st.noRealizadas + '</div>No realiz.</div>';
+  html += '<div style="background:rgba(148,163,184,.15);padding:6px;border-radius:8px"><div style="color:#cbd5e1;font-weight:800;font-size:1rem">' + st.pospuestas + '</div>Pospuestas</div>';
+  html += '</div>';
+  html += '<details style="font-size:.75rem;margin-top:6px"><summary style="cursor:pointer;color:var(--muted);padding:4px 0">Ver detalle (' + st.total + ' visitas)</summary><div style="max-height:220px;overflow-y:auto;margin-top:8px;padding-right:4px">';
+  clienteData.forEach(c => {
+    html += '<div style="padding:6px 0;border-bottom:1px solid rgba(148,163,184,.15)"><b style="color:var(--text)">#' + c.codigo + '</b> <span style="color:var(--muted)">' + c.nombre.slice(0,30) + '</span>';
+    c.visitas.forEach(v => {
+      const f = v.fecha ? v.fecha.split('-').reverse().join('/') : '—';
+      const icono = v.estado === 'Realizada' ? '✅' : v.estado === 'Pendiente' ? '⏳' : v.estado === 'No Realizada' ? '❌' : '⏸️';
+      html += '<div style="margin-left:10px;color:var(--muted);font-size:.72rem">' + icono + ' ' + f + (v.hora ? ' ' + v.hora : '') + '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div></details>';
+  html += '<div class="row2" style="margin-top:10px"><button class="btn btn-green btn-sm" style="flex:1" onclick="descargarResumenMes()">📥 Excel+Gráfica (ZIP)</button><button class="btn btn-primary btn-sm" style="flex:1" onclick="compartirResumenMes()">💬 WhatsApp</button></div>';
+  html += '</div>';
+  cont.innerHTML = html;
+  cont.style.display = 'block';
+  requestAnimationFrame(() => {
+    const canvas = document.getElementById('previewCanvasUnico');
+    if (!canvas) return;
+    dibujarGraficaEnCanvas(canvas, st, 'Visitas — ' + mesFiltro);
+    const ancho = canvas.clientWidth || 320;
+    canvas.style.height = Math.round(ancho * 340 / 640) + 'px';
+  });
+}
+
+function renderAgenda(){
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const list = document.getElementById('clientList');
+  const scrollY = window.scrollY;
+  const focusedId = document.activeElement ? document.activeElement.id : '';
+  let focusedVal = null, focusedSelStart = null, focusedSelEnd = null;
+  if (focusedId){ const elF = document.getElementById(focusedId); if (elF && ('value' in elF)){ focusedVal = elF.value; if ('selectionStart' in elF){ focusedSelStart = elF.selectionStart; focusedSelEnd = elF.selectionEnd; } } }
+  list.innerHTML = '';
+  const chipFiltroId = 'chipFiltroFechas';
+  let chipFiltro = document.getElementById(chipFiltroId);
+  if (filtroDesde || filtroHasta){
+    if (!chipFiltro){ chipFiltro = document.createElement('div'); chipFiltro.id = chipFiltroId; list.parentNode.insertBefore(chipFiltro, list); }
+    const desdeTxt = filtroDesde ? filtroDesde.split('-').reverse().join('/') : '—';
+    const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
+    const clienteDataFiltro = buildDataFiltroFechas();
+    const stF = calcularStatsData(clienteDataFiltro);
+    let htmlChip = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="color:var(--warn);font-size:.9rem">📅 ' + desdeTxt + ' → ' + hastaTxt + '</b><button onclick="limpiarFiltroFechas()" style="background:transparent;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:1.1rem">✕</button></div>';
+    htmlChip += '<canvas id="previewCanvasFiltro" style="width:100%;background:#0b1220;border-radius:10px;display:block;border:1px solid #334155"></canvas>';
+    htmlChip += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;text-align:center;font-size:.65rem;margin:10px 0">';
+    htmlChip += '<div style="background:rgba(34,197,94,.15);padding:5px;border-radius:6px"><div style="color:#4ade80;font-weight:800">' + stF.realizadas + '</div>Realiz.</div>';
+    htmlChip += '<div style="background:rgba(245,158,11,.15);padding:5px;border-radius:6px"><div style="color:#fbbf24;font-weight:800">' + stF.pendientes + '</div>Pend.</div>';
+    htmlChip += '<div style="background:rgba(239,68,68,.15);padding:5px;border-radius:6px"><div style="color:#f87171;font-weight:800">' + stF.noRealizadas + '</div>No real.</div>';
+    htmlChip += '<div style="background:rgba(148,163,184,.15);padding:5px;border-radius:6px"><div style="color:#cbd5e1;font-weight:800">' + stF.pospuestas + '</div>Posp.</div>';
+    htmlChip += '</div>';
+    htmlChip += '<details style="font-size:.72rem;margin-bottom:8px"><summary style="cursor:pointer;color:var(--warn);padding:3px 0">Ver detalle (' + stF.total + ' visitas, ' + clienteDataFiltro.length + ' clientes)</summary><div style="max-height:180px;overflow-y:auto;margin-top:6px;padding-right:4px">';
+    clienteDataFiltro.forEach(c => {
+      htmlChip += '<div style="padding:4px 0;border-bottom:1px solid rgba(245,158,11,.15)"><b style="color:var(--warn)">#' + c.codigo + '</b> <span style="color:var(--muted)">' + c.nombre.slice(0,26) + '</span>';
+      c.visitas.forEach(v => {
+        const f = v.fecha ? v.fecha.split('-').reverse().join('/') : '—';
+        const icono = v.estado === 'Realizada' ? '✅' : v.estado === 'Pendiente' ? '⏳' : v.estado === 'No Realizada' ? '❌' : '⏸️';
+        htmlChip += '<div style="margin-left:8px;color:var(--muted);font-size:.68rem">' + icono + ' ' + f + (v.hora ? ' ' + v.hora : '') + '</div>';
+      });
+      htmlChip += '</div>';
+    });
+    htmlChip += '</div></details>';
+    htmlChip += '<div class="row2"><button class="btn btn-warn btn-sm" style="flex:1;background:var(--warn);color:#422006" onclick="descargarFiltroFechas()">📥 Excel+Gráfica (ZIP)</button><button class="btn btn-warn btn-sm" style="flex:1;background:var(--warn);color:#422006" onclick="compartirFiltroFechas()">💬 WhatsApp</button></div>';
+    chipFiltro.innerHTML = htmlChip;
+    chipFiltro.style.cssText = 'background:rgba(245,158,11,.1);border:1px solid var(--warn);border-radius:12px;padding:12px;margin-bottom:12px';
+    chipFiltro.style.display = 'block';
+    requestAnimationFrame(() => {
+      const canvas = document.getElementById('previewCanvasFiltro');
+      if (!canvas) return;
+      dibujarGraficaEnCanvas(canvas, stF, 'Filtro: ' + desdeTxt + ' → ' + hastaTxt);
+      const ancho = canvas.clientWidth || 320;
+      canvas.style.height = Math.round(ancho * 340 / 640) + 'px';
+    });
+  } else if (chipFiltro){ chipFiltro.style.display = 'none'; }
+
+  const fechaFiltro = q ? detectarFechaBusqueda(q) : null;
+  const setConVisitaFecha = fechaFiltro ? clientesConVisitaEnFecha(fechaFiltro) : null;
+  const chipId = 'filtroFechaChip';
+  let chip = document.getElementById(chipId);
+  if (fechaFiltro){
+    if (!chip){ chip = document.createElement('div'); chip.id = chipId; chip.style.cssText = 'background:rgba(56,189,248,.15);border:1px solid var(--accent);color:var(--accent);padding:8px 12px;border-radius:10px;font-size:.78rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;justify-content:space-between'; list.parentNode.insertBefore(chip, list); }
+    const n = setConVisitaFecha.size;
+    chip.innerHTML = '<span>🗓️ Filtrando por fecha: <b>' + fechaFiltro.split('-').reverse().join('/') + '</b> · ' + n + ' cliente(s)</span><button onclick="document.getElementById(\'search\').value=\'\';onSearchInput();" style="background:transparent;border:none;color:var(--accent);font-weight:800;cursor:pointer;font-size:1rem">✕</button>';
+    chip.style.display = 'flex';
+  } else if (chip){ chip.style.display = 'none'; }
+
+  allClients().filter(c => {
+    if (filtroDesde || filtroHasta){ if (!clienteTieneVisitaEnRango(c.codigo)) return false; }
+    if (!q) return true;
+    if (setConVisitaFecha !== null) return setConVisitaFecha.has(String(c.codigo).trim());
+    return c.nombre.toLowerCase().includes(q) || c.codigo.includes(q);
+  }).forEach((c) => {
+    const visits = getVisits(c.codigo);
+    const latest = getLatestVisit(c.codigo);
+    const current = getCurrentVisit(c.codigo) || latest;
+    if (current && current.fecha && (!current.days || current.days.length === 0)){
+      const diAuto = fechaADiaIndex(current.fecha);
+      if (diAuto >= 0){ current.days = [diAuto]; current.updatedAt = new Date().toISOString(); }
+    }
+    const estado = latest ? (latest.estado || 'Pendiente') : 'Pendiente';
+    const nFotos = safeArray(DB.photos[c.codigo]).length;
+    const card = document.createElement('div');
+    card.className = 'card ' + (estado === 'Realizada' ? 'done' : estado === 'Pendiente' ? 'pending-visit' : '');
+    const nombreSafe = c.nombre.replace(/'/g, "\\'");
+    const currentDays = current ? (current.days || []) : [];
+    const nVisitas = visits.length;
+    const idxActual = current ? (visits.indexOf(current) + 1) : 0;
+    const fechaActual = current && current.fecha ? current.fecha.split('-').reverse().join('/') : 'Sin fecha';
+    const formAbierto = formsAbiertos.has(c.codigo);
+    const strCed = c.cedula ? `<div class="dir">🆔 C.I./RIF: ${c.cedula}</div>` : '';
+    const strTel = c.telefono ? `<div class="dir">📞 Tel: ${c.telefono}</div>` : '';
+
+    card.innerHTML = `
+      <div class="top"><div><span class="code">#${c.codigo}</span><h3>${c.nombre}</h3></div><span class="badge ${statusClass(estado)}">${estado.toUpperCase()}</span></div>
+      <div class="dir">📍 ${c.direccion}</div>
+      ${strCed}
+      ${strTel}
+      ${nVisitas > 0 ? `<div class="visit-bar"><button class="nav" ${idxActual <= 1 ? 'disabled' : ''} onclick="switchVisit('${c.codigo}','${visits[idxActual-2] ? visits[idxActual-2].id : ''}')">◀</button><span class="lbl">Visita</span><span class="num">${idxActual}/${nVisitas}</span><span class="fecha">· ${fechaActual}</span><button class="nav" ${idxActual >= nVisitas ? 'disabled' : ''} onclick="switchVisit('${c.codigo}','${visits[idxActual] ? visits[idxActual].id : ''}')">▶</button></div>` : `<div class="visit-bar"><span class="lbl">Sin visitas registradas</span></div>`}
+      <div class="days">${DIAS.map((d,di)=>`<div class="day ${currentDays.includes(di)?'sel':''}" onclick="toggleDay('${c.codigo}',${di})">${d}</div>`).join('')}</div>
+      <div class="visit-actions">
+        <button class="btn btn-primary" onclick="toggleForm('${c.codigo}')">✏️ Editar</button>
+        <button class="btn btn-green" onclick="newVisit('${c.codigo}')">➕ Nueva</button>
+        <button class="btn btn-gray" onclick="showVisitsHistory('${c.codigo}')">📋 ${nVisitas}</button>
+        <button class="btn btn-gray" style="max-width:44px" onclick="editClient('${c.codigo}')" title="Editar cliente">🔧</button>
+      </div>
+      ${current && current.fecha ? `<button class="btn btn-warn btn-block btn-sm" style="margin-top:8px" onclick="abrirCompartir('${c.codigo}')">📤 Compartir visita</button>` : ''}
+      ${nFotos?`<span style="font-size:.75rem;color:var(--accent);margin-left:8px">📷 ${nFotos}</span>`:''}
+      <div class="form ${formAbierto ? 'open' : ''}" id="form-${c.codigo}">
+        ${current ? `
+        <div class="row2"><div><label>FECHA DE VISITA 📅</label><input type="date" id="f-${c.codigo}" value="${current.fecha||''}" onchange="onFechaChange('${c.codigo}')"></div><div><label>HORA</label><input type="time" id="h-${c.codigo}" value="${current.hora||''}" onchange="saveVisit('${c.codigo}')"></div></div>
+        <label>ESTADO</label><select id="e-${c.codigo}" onchange="saveVisit('${c.codigo}')">${['Pendiente','Realizada','No Realizada','Pospuesta'].map(o=>`<option ${o===current.estado?'selected':''}>${o}</option>`).join('')}</select>
+        <label>OBSERVACIONES</label><textarea id="o-${c.codigo}" placeholder="..." oninput="onObsInput('${c.codigo}', this.value)">${current.obs||''}</textarea>
+        <label>FIRMA DEL CLIENTE</label><canvas class="sig" id="sig-${c.codigo}"></canvas>
+        <button class="btn btn-gray" style="margin:6px 0" onclick="clearSig('sig-${c.codigo}')">Limpiar firma</button>
+        <div style="font-size:.75rem;color:#4ade80">${current.firma && current.firma.filename ? '✓ Firma guardada' : ''}</div>
+        <label>UBICACIÓN GPS</label><button class="btn btn-gray" id="gpsBtn-${c.codigo}" onclick="captureGPS('${c.codigo}')">📍 Capturar mi ubicación</button>
+        <div id="gpsInfo-${c.codigo}" style="font-size:.78rem;margin-top:6px;color:var(--muted)">${current.gps?`✓ ${current.gps.lat.toFixed(6)}, ${current.gps.lng.toFixed(6)}`:''}</div>
+        <label>FOTOS DE LA VISITA <span id="photoReq-${c.codigo}" style="color:var(--danger);display:none">* obligatoria</span></label>
+        <div class="photos" id="ph-${c.codigo}"></div>
+        <div class="row2" style="margin-top:8px"><label class="btn-photo" style="flex:1">📷 <span>Tomar foto</span><input type="file" accept="image/*" capture="environment" onchange="addPhotos('${c.codigo}',this)"></label><label class="btn-photo" style="flex:1">🖼️ <span>Galería</span><input type="file" accept="image/*" multiple onchange="addPhotos('${c.codigo}',this)"></label></div>
+        <div class="row2" style="margin-top:12px"><button class="btn btn-green" style="flex:2" onclick="guardarVisita('${c.codigo}','${nombreSafe}')">💾 GUARDAR</button><button class="btn btn-red" style="flex:1" onclick="deleteVisit('${c.codigo}','${current.id}')">🗑️ Borrar</button></div>
+        ` : `<div class="empty">Crea una visita con <b>➕ Nueva</b>.</div>`}
+      </div>`;
+    list.appendChild(card);
+    if (current){ renderPhotos(c.codigo); updatePhotoReq(c.codigo); }
+  });
+  document.getElementById('mesAnio').value = DB.month || getMesAnioActual();
+  document.getElementById('responsable').value = DB.resp || '';
+  const as = document.getElementById('autoSyncSelect'); if (as) as.value = DB.autoSync || 'on';
+  updateSyncStatusBox();
+  document.querySelectorAll('.form.open').forEach(f => { const cid = f.id.replace('form-', ''); requestAnimationFrame(() => setTimeout(() => initSig('sig-' + cid), 80)); });
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollY);
+    if (focusedId){ const el2 = document.getElementById(focusedId); if (el2 && ('value' in el2)){ if (focusedVal !== null) el2.value = focusedVal; if (focusedSelStart !== null && 'setSelectionRange' in el2){ try { el2.setSelectionRange(focusedSelStart, focusedSelEnd); } catch(e){} } el2.focus({ preventScroll: true }); } }
+  });
+}
+let obsTimer = {};
+function onObsInput(cod, value){
+  const v = getCurrentVisit(cod);
+  if (!v) return;
+  v.obs = value;
+  v.updatedAt = new Date().toISOString();
+  if (obsTimer[cod]) clearTimeout(obsTimer[cod]);
+  obsTimer[cod] = setTimeout(() => { saveLocal(); markDirty(); }, 800);
+  formsAbiertos.add(cod);
+}
+function toggleDay(cod, di){ const v = getCurrentVisit(cod) || getLatestVisit(cod); if (!v){ toast('⚠ Crea una visita primero'); return; } v.days = v.days || []; const i = v.days.indexOf(di); if (i >= 0) v.days.splice(i, 1); else v.days.push(di); v.updatedAt = new Date().toISOString(); const scrollY = window.scrollY; save(); renderAgenda(); requestAnimationFrame(() => window.scrollTo(0, scrollY)); }
+function toggleForm(cod){ const f = document.getElementById('form-' + cod); const vaAbrir = !f.classList.contains('open'); const scrollY = window.scrollY; f.classList.toggle('open'); if (vaAbrir) formsAbiertos.add(cod); else formsAbiertos.delete(cod); if (vaAbrir){ requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); }); } }
+function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; const fEl = document.getElementById('f-' + cod); if (fEl) v.fecha = fEl.value; const hEl = document.getElementById('h-' + cod); if (hEl) v.hora = hEl.value; const eEl = document.getElementById('e-' + cod); if (eEl) v.estado = eEl.value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
+
+function addClient(){
+  const cod = document.getElementById('ncCodigo').value.trim();
+  const nom = document.getElementById('ncNombre').value.trim();
+  const dir = document.getElementById('ncDir').value.trim();
+  const ced = document.getElementById('ncCedula').value.trim();
+  const tel = document.getElementById('ncTelefono').value.trim();
+  if (!cod || !nom){ toast('⚠ Código y nombre obligatorios'); return; }
+  if (allClients().some(c => c.codigo === cod)){ toast('⚠ Ya existe'); return; }
+  DB.customClients.push({ codigo: cod, nombre: nom, direccion: dir || '—', cedula: ced, telefono: tel, custom: true });
+  DB.visits[cod] = [];
+  save();
+  document.getElementById('ncCodigo').value = '';
+  document.getElementById('ncNombre').value = '';
+  document.getElementById('ncDir').value = '';
+  document.getElementById('ncCedula').value = '';
+  document.getElementById('ncTelefono').value = '';
+  document.getElementById('addClientForm').style.display = 'none';
+  document.getElementById('addClientBtn').style.display = 'block';
+  renderAgenda();
+  toast('✓ Cliente agregado');
+}
+
+function editClient(cod){
+  const c = getClientByCode(cod);
+  if (!c){ toast('⚠ Cliente no encontrado'); return; }
+  document.getElementById('ecCodigoOld').value = c.codigo;
+  document.getElementById('ecCodigo').value = c.codigo;
+  document.getElementById('ecNombre').value = c.nombre;
+  document.getElementById('ecDir').value = c.direccion || '';
+  document.getElementById('ecCedula').value = c.cedula || '';
+  document.getElementById('ecTelefono').value = c.telefono || '';
+  document.getElementById('editClientModal').classList.add('open');
+}
+async function saveClientEdit(){
+  const oldCod = document.getElementById('ecCodigoOld').value.trim();
+  const newCod = document.getElementById('ecCodigo').value.trim();
+  const newNom = document.getElementById('ecNombre').value.trim();
+  const newDir = document.getElementById('ecDir').value.trim();
+  const newCed = document.getElementById('ecCedula').value.trim();
+  const newTel = document.getElementById('ecTelefono').value.trim();
+  if (!newCod || !newNom){ toast('⚠ Código y nombre son obligatorios'); return; }
+  const cambioCodigo = (newCod !== oldCod);
+  if (cambioCodigo){
+    const clienteExistente = allClients().find(x => String(x.codigo).trim() === newCod && String(x.codigo).trim() !== oldCod);
+    if (clienteExistente){ alert('⛔ CAMBIO BLOQUEADO\n\nEl código "' + newCod + '" ya está asignado a:\n  → "' + clienteExistente.nombre + '"\n\nUsa un código NUEVO.'); return; }
+  }
+  if (cambioCodigo){
+    const oldVisits = DB.visits[oldCod] || [];
+    if (!DB.visits[newCod]) DB.visits[newCod] = [];
+    DB.visits[newCod] = DB.visits[newCod].concat(oldVisits);
+    delete DB.visits[oldCod];
+    const oldPhotos = DB.photos[oldCod] || [];
+    if (!DB.photos[newCod]) DB.photos[newCod] = [];
+    DB.photos[newCod] = DB.photos[newCod].concat(oldPhotos);
+    delete DB.photos[oldCod];
+  }
+  const isCustom = (DB.customClients || []).find(c => String(c.codigo).trim() === oldCod);
+  if (isCustom){ isCustom.codigo = newCod; isCustom.nombre = newNom; isCustom.direccion = newDir || '—'; isCustom.cedula = newCed; isCustom.telefono = newTel; }
+  else { if (!DB.hiddenClients.includes(oldCod)) DB.hiddenClients.push(oldCod); const dup = (DB.customClients || []).find(c => String(c.codigo).trim() === newCod); if (dup){ dup.nombre = newNom; dup.direccion = newDir || '—'; dup.cedula = newCed; dup.telefono = newTel; } else DB.customClients.push({ codigo: newCod, nombre: newNom, direccion: newDir || '—', cedula: newCed, telefono: newTel, custom: true }); }
+  await save();
+  renderAgenda();
+  document.getElementById('editClientModal').classList.remove('open');
+  toast('✓ Cliente actualizado');
+}
+function diagnosticarIds(){
+  const lineas = ['=== DIAGNÓSTICO DE IDs ==='];
+  const codigos = new Set([...Object.keys(DB.visits||{}), ...Object.keys(DB.photos||{})]);
+  codigos.forEach(c => {
+    const vis = (DB.visits[c] || []).length;
+    const fot = (DB.photos[c] || []).length;
+    if (vis > 0 || fot > 0){ const cli = getClientByCode(c); lineas.push(`#${c} "${cli ? cli.nombre : '(no encontrado)'}" | ${vis} visitas | ${fot} fotos`); }
+  });
+  document.getElementById('debugMasterContent').textContent = lineas.join('\n');
+  document.getElementById('debugMasterModal').classList.add('open');
+}
+function openRepairModal(){
+  const opts = allClients().map(c => `<option value="${c.codigo}">#${c.codigo} — ${c.nombre}</option>`).join('');
+  document.getElementById('rpOrigen').innerHTML = opts;
+  document.getElementById('rpDestino').innerHTML = '<option value="__new">➕ Nuevo código…</option>' + opts;
+  onRepairDestChange();
+  document.getElementById('repairModal').classList.add('open');
+}
+function closeRepairModal(){ document.getElementById('repairModal').classList.remove('open'); }
+function onRepairDestChange(){ const v = document.getElementById('rpDestino').value; document.getElementById('rpNewCodeWrap').style.display = (v === '__new') ? 'block' : 'none'; }
+async function ejecutarRepararID(){
+  const origen = document.getElementById('rpOrigen').value;
+  let destino = document.getElementById('rpDestino').value;
+  if (destino === '__new'){ destino = document.getElementById('rpNewCode').value.trim(); if (!destino){ toast('⚠ Escribe el código nuevo'); return; } }
+  if (!origen){ toast('⚠ Elige el cliente origen'); return; }
+  if (String(origen).trim() === String(destino).trim()){ toast('⚠ Origen y destino deben ser distintos'); return; }
+  if (!confirm('🛠️ REPARAR ID\n\nSe moverán las visitas y fotos de #' + origen + ' a #' + destino + '\n\n¿Continuar?')) return;
+  const visitas = (DB.visits[origen] || []).slice();
+  const fotos = (DB.photos[origen] || []).slice();
+  if (!DB.visits[destino]) DB.visits[destino] = [];
+  if (!Array.isArray(DB.visits[destino])) DB.visits[destino] = [DB.visits[destino]];
+  const byId = {};
+  DB.visits[destino].forEach(v => { if (v && v.id) byId[v.id] = v; });
+  visitas.forEach(v => { if (v && v.id) byId[v.id] = v; });
+  DB.visits[destino] = Object.values(byId);
+  if (!DB.photos[destino]) DB.photos[destino] = [];
+  const byFN = {};
+  DB.photos[destino].forEach(p => { if (p && p.filename) byFN[p.filename] = p; });
+  fotos.forEach(p => { if (p && p.filename) byFN[p.filename] = p; });
+  DB.photos[destino] = Object.values(byFN);
+  fotos.forEach(p => { if (p && p.filename) markPhotoDeleted(origen, p.filename); });
+  delete DB.visits[origen];
+  delete DB.photos[origen];
+  const clienteOrigen = getClientByCode(origen);
+  const clienteDestino = getClientByCode(destino);
+  if (!clienteDestino){
+    const base = CLIENTES.find(x => String(x.codigo).trim() === String(destino).trim());
+    const nombre = base ? base.nombre : (clienteOrigen ? clienteOrigen.nombre : ('Cliente ' + destino));
+    const direccion = base ? base.direccion : (clienteOrigen ? clienteOrigen.direccion : '—');
+    DB.customClients = (DB.customClients || []).filter(c => String(c.codigo).trim() !== String(destino).trim());
+    DB.customClients.push({ codigo: String(destino), nombre, direccion, custom: true });
+  }
+  const esCustomOrigen = (DB.customClients || []).find(c => String(c.codigo).trim() === String(origen).trim());
+  if (esCustomOrigen){ DB.customClients = DB.customClients.filter(c => String(c.codigo).trim() !== String(origen).trim()); }
+  else if (!DB.hiddenClients.includes(origen)) DB.hiddenClients.push(origen);
+  await save();
+  renderAgenda(); renderEvid(); renderResumen();
+  closeRepairModal();
+  toast('✓ Reparado: #' + origen + ' → #' + destino);
+}
+const sigData = {};
+function initSig(id){
+  const c = document.getElementById(id);
+  if (!c) return;
+  const w = c.offsetWidth;
+  if (w === 0){ requestAnimationFrame(() => initSig(id)); return; }
+  const newW = w * 2;
+  if (c.width !== newW || c.height !== 300){ c.width = newW; c.height = 300; }
+  if (c.dataset.listeners === '1'){
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a';
+    let firmaData = sigData[id] || null;
+    if (!firmaData){ if (id === 'sigSuper'){ firmaData = DB.evid['super_sig'] && DB.evid['super_sig'].data; } else if (id.startsWith('sig-')){ const cod = id.replace('sig-',''); const v = getCurrentVisit(cod); firmaData = v && v.firma && v.firma.data; } }
+    if (firmaData){ const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, c.width, c.height); img.src = firmaData; }
+    return;
+  }
+  c.dataset.listeners = '1';
+  const ctx = c.getContext('2d');
+  ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a';
+  let draw = false, last = null;
+  const pos = e => { const r = c.getBoundingClientRect(); const t = e.touches ? e.touches[0] : e; return { x: (t.clientX - r.left) * (c.width / r.width), y: (t.clientY - r.top) * (c.height / r.height) }; };
+  const start = e => { e.preventDefault(); e.stopPropagation(); draw = true; last = pos(e); };
+  const move = e => { if (!draw) return; e.preventDefault(); e.stopPropagation(); const p = pos(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; };
+  const end = e => { if (draw){ try { sigData[id] = c.toDataURL('image/png'); } catch(err){} } draw = false; };
+  c.addEventListener('mousedown', start);
+  c.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  c.addEventListener('touchstart', start, {passive:false});
+  c.addEventListener('touchmove', move, {passive:false});
+  c.addEventListener('touchend', end);
+  c.addEventListener('touchcancel', end);
+  if (window.PointerEvent){ c.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; start(e); }); c.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') return; move(e); }); c.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') return; end(e); }); c.addEventListener('pointercancel', e => { if (e.pointerType === 'mouse') return; end(e); }); }
+  let firmaData = sigData[id] || null;
+  if (!firmaData){ if (id === 'sigSuper'){ firmaData = DB.evid['super_sig'] && DB.evid['super_sig'].data; } else if (id.startsWith('sig-')){ const cod = id.replace('sig-',''); const v = getCurrentVisit(cod); firmaData = v && v.firma && v.firma.data; } }
+  if (firmaData){ const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, c.width, c.height); img.src = firmaData; }
+}
+function clearSig(id){ const c = document.getElementById(id); if (c){ c.getContext('2d').clearRect(0, 0, c.width, c.height); delete sigData[id]; } if (id === 'sigSuper'){ delete DB.evid['super_sig']; save(); } else if (id.startsWith('sig-')){ const cod = id.replace('sig-',''); const v = getCurrentVisit(cod); if (v) delete v.firma; save(); renderAgenda(); } }
+function addPhotos(cod, input){
+  const v = getCurrentVisit(cod);
+  const fechaVisita = v && v.fecha ? v.fecha : hoyYMD();
+  const visitId = v ? v.id : null;
+  formsAbiertos.add(cod);
+  [...input.files].forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const opt = COMP_OPTS[DB.comp || 'media'];
+        const sc = Math.min(1, opt.max / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        const dataUrl = cv.toDataURL('image/jpeg', opt.q);
+        const ahora = new Date();
+        DB.photos[cod] = DB.photos[cod] || [];
+        DB.photos[cod].push({ data: dataUrl, fecha: ahora.toLocaleString('es-VE'), fechaVisita: fechaVisita, visitId: visitId, filename: buildPhotoFilename(ahora), synced: false, fileId: null });
+        save(); renderPhotos(cod);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+function renderPhotos(cod){
+  const box = document.getElementById('ph-' + cod); if (!box) return;
+  const v = getCurrentVisit(cod);
+  const visitId = v ? v.id : null;
+  const fechaVisita = v && v.fecha ? v.fecha : null;
+  const todas = DB.photos[cod] || [];
+  const indicesReales = [];
+  const filtradas = [];
+  todas.forEach((p, i) => {
+    if (!p || !p.filename) return;
+    const esDeEstaVisita = (p.visitId && visitId && p.visitId === visitId) || (!p.visitId && fechaVisita && p.fechaVisita === fechaVisita);
+    if (esDeEstaVisita){ filtradas.push(p); indicesReales.push(i); }
+  });
+  box.innerHTML = filtradas.map((p, j) => {
+    const i = indicesReales[j];
+    if (!p || !p.filename) return `<div class="photo-box"><div class="placeholder">⚠</div><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
+    let src = null;
+    if (p.fileId) src = driveThumbUrl(p.fileId, 200);
+    else if (p.data) src = p.data;
+    if (src) return `<div class="photo-box"><img src="${src}"><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
+    return `<div class="photo-box"><div class="placeholder">⏳</div><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
+  }).join('');
+}
+function delPhoto(cod, i){
+  const arr = DB.photos[cod];
+  if (!Array.isArray(arr) || !arr[i]){ toast('⚠ No encontrado'); return; }
+  const p = arr[i];
+  if (!confirm('¿Eliminar esta FOTO?')) return;
+  if (p.filename) markPhotoDeleted(cod, p.filename);
+  if (p.filename && p.synced) callBackendWrite({ action:'deletePhoto', codigo:cod, filename:p.filename, fecha: p.fechaVisita || '' }).catch(()=>{});
+  arr.splice(i, 1);
+  save(); renderPhotos(cod); renderAgenda();
+  toast('🗑️ Foto eliminada');
+}
+
+function guardarVisita(cod, nombre){
+  const v = getCurrentVisit(cod);
+  if (!v){ toast('⚠ No hay visita activa'); return; }
+  const fEl = document.getElementById('f-' + cod);
+  if (fEl) v.fecha = fEl.value;
+  if (v.fecha && verificarFechaDuplicada(cod, v.fecha, v.id)){
+    toast('⚠ Ya existe una visita guardada con esta misma fecha');
+    return;
+  }
+  saveVisit(cod);
+  const estado = v.estado;
+  if (estado === 'Realizada'){
+    const fotosDeVisita = safeArray(DB.photos[cod]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha));
+    if (fotosDeVisita.length === 0){ toast('⚠ Visita REALIZADA requiere foto'); return; }
+  }
+  if (sigData['sig-' + cod]){
+    const fecha = v.fecha || hoyYMD();
+    v.firma = { data: sigData['sig-' + cod], filename: 'firma_cliente_' + fecha.replace(/-/g,'') + '.png', fechaVisita: fecha, synced: false };
+    delete sigData['sig-' + cod];
+  }
+  if (v.fecha){
+    const diAuto = fechaADiaIndex(v.fecha);
+    if (diAuto >= 0){ v.days = v.days || []; if (!v.days.includes(diAuto)) v.days.push(diAuto); }
+  }
+  v.updatedAt = new Date().toISOString();
+  const scrollY = window.scrollY;
+  save();
+  toast('✓ Visita guardada');
+  renderAgenda();
+  requestAnimationFrame(() => window.scrollTo(0, scrollY));
+}
+function updatePhotoReq(cod){ const el = document.getElementById('photoReq-' + cod); if (el){ const v = getCurrentVisit(cod); el.style.display = (v && v.estado === 'Realizada') ? 'inline' : 'none'; } }
+function renderEvid(){
+  const foldersView = document.getElementById('evidFoldersView');
+  const folderView = document.getElementById('evidFolderView');
+  if (evidCurrentFolder){ foldersView.style.display = 'none'; folderView.style.display = 'block'; renderEvidFolderContent(evidCurrentFolder); return; }
+  foldersView.style.display = 'block'; folderView.style.display = 'none';
+  const list = document.getElementById('evidFoldersList');
+  list.innerHTML = '';
+  const folders = [];
+  allClients().forEach(c => {
+    const fotos = safeArray(DB.photos[c.codigo]).length;
+    const visits = getVisits(c.codigo);
+    const firmas = visits.filter(v => v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)).length;
+    const total = fotos + firmas;
+    if (total > 0) folders.push({ codigo: c.codigo, nombre: c.nombre, fotos, firmas, total });
+  });
+  const sup = DB.evid['super_sig'];
+  if (sup && typeof sup === 'object' && (sup.fileId || sup.data)) folders.push({ codigo: '_supervisor', nombre: 'Supervisor NOC', fotos: 0, firmas: 1, total: 1 });
+  document.getElementById('evidEmpty').style.display = folders.length ? 'none' : 'block';
+  folders.sort((a, b) => b.total - a.total);
+  folders.forEach(f => {
+    let thumbHTML = '<div class="folder-emoji">📁</div>';
+    const firstPhoto = safeArray(DB.photos[f.codigo]).find(p => p.fileId || p.data);
+    if (firstPhoto){ const u = firstPhoto.fileId ? driveThumbUrl(firstPhoto.fileId, 400) : firstPhoto.data; thumbHTML = `<img src="${u}" loading="lazy">`; }
+    else {
+      const visits = getVisits(f.codigo);
+      const withSig = visits.find(v => v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data));
+      if (withSig){ const fr = withSig.firma; const u = fr.fileId ? driveThumbUrl(fr.fileId, 400) : fr.data; thumbHTML = `<img src="${u}" loading="lazy">`; }
+      else if (sup && f.codigo === '_supervisor' && (sup.fileId || sup.data)){ const u = sup.fileId ? driveThumbUrl(sup.fileId, 400) : sup.data; thumbHTML = `<img src="${u}" loading="lazy">`; }
+    }
+    const pendientes = safeArray(DB.photos[f.codigo]).filter(p => !p.fileId && !p.data).length;
+    const card = document.createElement('div');
+    card.className = 'folder-card';
+    card.onclick = () => openEvidFolder(f.codigo);
+    card.innerHTML = `<div class="thumb">${thumbHTML}<div class="count-badge">${f.total}</div></div><div class="meta"><b>${f.nombre}</b><small>#${f.codigo}${f.firmas ? ' · ' + f.firmas + ' firma(s)' : ''}${pendientes ? ' · ' + pendientes + ' por cargar' : ''}</small></div>`;
+    list.appendChild(card);
+  });
+}
+function openEvidFolder(codigo){ evidCurrentFolder = codigo; renderEvid(); window.scrollTo({ top:0, behavior:'smooth' }); }
+function closeEvidFolder(){ evidCurrentFolder = null; renderEvid(); }
+function renderEvidFolderContent(codigo){
+  const client = getClientByCode(codigo);
+  const nombre = client ? client.nombre : (codigo === '_supervisor' ? 'Supervisor NOC' : codigo);
+  document.getElementById('evidFolderName').textContent = nombre;
+  const todasFotos = (codigo === '_supervisor') ? [] : safeArray(DB.photos[codigo]);
+  const visits = (codigo === '_supervisor') ? [] : getVisits(codigo);
+  const grupos = {};
+  const fechasValidas = new Set(visits.map(v => v.fecha).filter(f => f));
+  const idsValidos = new Set(visits.map(v => v.id));
+  todasFotos.forEach((p, i) => {
+    const perteneceAVisitaActual = (p.visitId && idsValidos.has(p.visitId)) || (!p.visitId && fechasValidas.has(p.fechaVisita));
+    if (!perteneceAVisitaActual) return;
+    const fecha = p.fechaVisita || 'sin-fecha';
+    if (!grupos[fecha]) grupos[fecha] = [];
+    grupos[fecha].push({ type:'foto', item: p, idx: i });
+  });
+  visits.forEach(v => {
+    if (v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)){
+      const fecha = v.fecha || v.firma.fechaVisita || 'sin-fecha';
+      if (!grupos[fecha]) grupos[fecha] = [];
+      grupos[fecha].push({ type:'firma', item: v.firma, visitInfo: v });
+    }
+  });
+  const totalArchivosFiltrados = Object.values(grupos).reduce((acc, curr) => acc + curr.length, 0);
+  const pendientesFolder = Object.values(grupos).flat().filter(it => it.type === 'foto' && !it.item.fileId && !it.item.data).length + visits.filter(v => v && v.firma && typeof v.firma === 'object' && !v.firma.fileId && !v.firma.data).length;
+  document.getElementById('evidFolderMeta').textContent = `${totalArchivosFiltrados} archivo(s) · ${Object.keys(grupos).length} fecha(s)`;
+  const dlAllBtn = document.getElementById('dlAllBtn');
+  if (dlAllBtn){ if (pendientesFolder > 0){ dlAllBtn.style.display = 'inline-block'; dlAllBtn.textContent = '⬇ Preparar ' + pendientesFolder; } else dlAllBtn.style.display = 'none'; }
+  const cont = document.getElementById('evidPhotosList');
+  cont.innerHTML = ''; lightboxItems = [];
+  const fechasOrdenadas = Object.keys(grupos).sort().reverse();
+  fechasOrdenadas.forEach(fecha => {
+    const items = grupos[fecha];
+    const section = document.createElement('div'); section.className = 'date-section';
+    const header = document.createElement('div'); header.className = 'date-header';
+    const fechaBonita = fecha === 'sin-fecha' ? '📅 Sin fecha' : '📅 ' + fecha;
+    header.innerHTML = `<span>${fechaBonita}</span><span class="count">${items.length} archivo(s)</span>`;
+    section.appendChild(header);
+    const grid = document.createElement('div'); grid.className = 'photo-grid';
+    items.forEach(it => {
+      const p = it.item;
+      let src = null;
+      if (p.fileId) src = driveThumbUrl(p.fileId, 800); else if (p.data) src = p.data;
+      const item = { src, fileId: p.fileId, title: nombre, subtitle: it.type === 'firma' ? ('Firma · ' + fecha) : `Foto · ${fecha} · ${p.fecha || ''}` };
+      lightboxItems.push(item);
+      const thisIdx = lightboxItems.length - 1;
+      const tile = document.createElement('div'); tile.className = 'photo-tile';
+      if (src){
+        tile.innerHTML = `<img src="${src}" loading="lazy">${it.type === 'firma' ? '<div class="badge-firma">FIRMA</div>' : ''}`;
+        tile.onclick = () => openLightbox(thisIdx);
+      }
+      else {
+        const fname = p.filename || 'archivo';
+        const icono = it.type === 'firma' ? '✍️' : '📷';
+        tile.innerHTML = `<div class="placeholder"><div style="font-size:1.4rem">${icono}</div><div style="font-size:.58rem">${fname.slice(0,18)}</div><button class="dl-btn" onclick="downloadOne('${codigo}','${fname}',event)">⬇ Cargar</button></div>`;
+      }
+      grid.appendChild(tile);
+    });
+    section.appendChild(grid);
+    cont.appendChild(section);
+  });
+  document.getElementById('evidFolderEmpty').style.display = totalArchivosFiltrados ? 'none' : 'block';
+}
+function openLightbox(index){
+  if (!lightboxItems.length) return;
+  lightboxIndex = Math.max(0, Math.min(index, lightboxItems.length - 1));
+  const item = lightboxItems[lightboxIndex];
+  if (!item) return;
+  let bigSrc = null;
+  if (item.fileId) bigSrc = driveThumbUrl(item.fileId, 2400); else if (item.src) bigSrc = item.src;
+  if (!bigSrc){ toast('⚠ No lista'); return; }
+  document.getElementById('lightboxImg').src = bigSrc;
+  document.getElementById('lightboxTitle').textContent = item.title || '';
+  document.getElementById('lightboxSubtitle').textContent = item.subtitle || '';
+  document.getElementById('lightbox').classList.add('open');
+  const showNav = lightboxItems.length > 1;
+  document.querySelector('.lb-prev').style.display = showNav ? 'flex' : 'none';
+  document.querySelector('.lb-next').style.display = showNav ? 'flex' : 'none';
+}
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+function lightboxNav(dir){
+  if (!lightboxItems.length) return;
+  let next = lightboxIndex + dir;
+  if (next < 0) next = lightboxItems.length - 1; if (next >= lightboxItems.length) next = 0;
+  let tries = 0;
+  while ((!lightboxItems[next] || (!lightboxItems[next].src && !lightboxItems[next].fileId)) && tries < lightboxItems.length){ next += dir; if (next < 0) next = lightboxItems.length - 1; if (next >= lightboxItems.length) next = 0; tries++; }
+  openLightbox(next);
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') lightboxNav(-1); if (e.key === 'ArrowRight') lightboxNav(1); });
+document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
+
+function renderResumen(){
+  const sel = document.getElementById('mesAnio2');
+  if (sel){
+    const lista = getListaMesesDisponibles();
+    const actual = mesResumenFiltro || MES_GENERAL;
+    let opts = '<option value="' + MES_GENERAL + '"' + (actual === MES_GENERAL ? ' selected' : '') + '>📊 Resumen General (todo)</option>';
+    opts += lista.map(m => '<option value="' + m + '"' + (m === actual ? ' selected' : '') + '>' + m + '</option>').join('');
+    sel.innerHTML = opts;
+    mesResumenFiltro = actual;
+    sel.value = mesResumenFiltro;
+  }
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesFiltro = esGeneral ? null : mesResumenFiltro;
+  let r=0,p=0,n=0,s=0,ev=0; const dayCount=[0,0,0,0,0,0,0];
+  let totalVisitas = 0;
+  allClients().forEach(c => {
+    const arr = getVisits(c.codigo);
+    arr.forEach(v => {
+      if (!v) return;
+      if (mesFiltro && !visitaEnMesAnio(v, mesFiltro)) return;
+      totalVisitas++;
+      const e = v.estado || 'Pendiente';
+      if (e === 'Realizada') r++;
+      else if (e === 'Pendiente') p++;
+      else if (e === 'No Realizada') n++;
+      else s++;
+      if (Array.isArray(v.days)) v.days.forEach(d => dayCount[d]++);
+      if (v.firma && v.firma.filename) ev++;
+    });
+    safeArray(DB.photos[c.codigo]).forEach(ph => {
+      if (!ph.fechaVisita) return;
+      if (mesFiltro && !visitaEnMesAnio({fecha: ph.fechaVisita}, mesFiltro)) return;
+      ev++;
+    });
+  });
+  document.getElementById('stTotal').textContent = totalVisitas;
+  document.getElementById('stR').textContent = r; document.getElementById('stP').textContent = p;
+  document.getElementById('stN').textContent = n; document.getElementById('stS').textContent = s;
+  document.getElementById('stE').textContent = ev;
+  lastStats = { r, p, n, s, total: totalVisitas };
+  drawChart();
+  const pct = totalVisitas ? Math.round(r / totalVisitas * 100) : 0;
+  document.getElementById('pct').textContent = pct + '%';
+  const cs = document.getElementById('compSelect'); if (cs) cs.value = DB.comp || 'media';
+  const as = document.getElementById('autoSyncSelect'); if (as) as.value = DB.autoSync || 'on';
+  updateStorageInfo();
+  document.getElementById('daysSummary').innerHTML = DIAS.map((d, i) => `<div style="flex:1;text-align:center"><div style="font-size:.62rem;color:var(--muted)">${d}</div><div style="font-size:1.2rem;font-weight:800;color:var(--accent)">${dayCount[i]}</div></div>`).join('');
+  initSig('sigSuper');
+  updateSyncStatusBox();
+  renderMasterInfo();
+  renderMasterStats();
+  renderPreviewMes(mesFiltro);
+}
+function updateStorageInfo(){ let bytes = 0; try{ bytes = (JSON.stringify(DB) || '').length; }catch(e){} const el = document.getElementById('storageInfo'); if (el) el.innerHTML = '📦 Local: <b style="color:var(--accent)">' + (bytes/1048576).toFixed(1) + ' MB</b>'; }
+
+function buildEvidenciasRows(){
+  const rows = []; let n = 0;
+  allClients().forEach(c => {
+    const arr = getVisits(c.codigo);
+    const nombreCorto = (c.nombre||'').replace(/[^\w\sáéíóúñ]/gi,'').slice(0,20).trim();
+    safeArray(DB.photos[c.codigo]).forEach((p, i) => { n++; const fechaCarpeta = p.fechaVisita || ''; rows.push([n, p.fecha || fechaCarpeta, c.codigo, c.nombre, 'Foto de visita', `Foto ${i+1} — ${fechaCarpeta || 'sin fecha'}`, `📷 fotos/${c.codigo}_${nombreCorto}/${fechaCarpeta}/${p.filename}`]); });
+    arr.forEach(v => { if (v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)){ n++; const fechaCarpeta = v.fecha || v.firma.fechaVisita || ''; rows.push([n, fechaCarpeta, c.codigo, c.nombre, 'Firma del cliente', `Firma ${fechaCarpeta}`, `✍️ fotos/${c.codigo}_${nombreCorto}/${fechaCarpeta}/${v.firma.filename}`]); } });
+  });
+  const sup = DB.evid['super_sig'];
+  if (sup && typeof sup === 'object' && (sup.fileId || sup.data)){ n++; rows.push([n, '', '—', 'Supervisor NOC', 'Firma supervisor', DB.resp || 'Responsable', '✍️ fotos/_supervisor/firma_supervisor.png']); }
+  return rows;
+}
+function buildStyledWorkbook(){
+  const clients = allClients(); const allRows = [];
+  clients.forEach(c => { const arr = getVisits(c.codigo); if (arr.length === 0){ allRows.push({ cliente: c, visit: null }); } else { arr.forEach(v => allRows.push({ cliente: c, visit: v })); } });
+  const N = allRows.length; const lastRow = 4 + N;
+  const col = {titleBg:'1F4E79',titleFg:'FFFFFF',zonaBg:'00B050',zonaFg:'FFFFFF',instrBg:'FFF2CC',instrFg:'1F4E79',secClienteBg:'2E75B6',secDiaBg:'BF8F00',secRegistroBg:'548235',headBg:'2E75B6',headFg:'FFFFFF',dayBg:'FFE699',dayFg:'7F6000',border:'808080',realBg:'C6EFCE',realFg:'006100',pendBg:'FFEB9C',pendFg:'9C6500',nreBg:'FFC7CE',nreFg:'9C0006',posBg:'D9D9D9',posFg:'333333',altBg:'F2F7FB',codeBg:'DDEBF7',zonaRowBg:'E2EFDA'};
+  const bd = () => ({top:{style:'thin',color:{rgb:col.border}},bottom:{style:'thin',color:{rgb:col.border}},left:{style:'thin',color:{rgb:col.border}},right:{style:'thin',color:{rgb:col.border}}});
+  const fill  = rgb => ({ patternType:'solid', fgColor:{rgb} });
+  const center= { horizontal:'center', vertical:'center', wrapText:true };
+  const left  = { horizontal:'left',   vertical:'center', wrapText:true };
+  const wb = XLSX.utils.book_new();
+  const A = [];
+  const r1 = new Array(18).fill(''); r1[0]='AGENDA DE VISITAS — NOC NIVEL 2'; r1[4]='ZONA WIFI'; A.push(r1);
+  const r2 = new Array(18).fill(''); r2[0]='INSTRUCCIONES: Marca con "X" el día programado.'; A.push(r2);
+  const r3 = new Array(18).fill(''); r3[0]='DATOS DEL CLIENTE'; r3[5]='DÍA PROGRAMADO DE VISITA'; r3[12]='REGISTRO DE VISITA REALIZADA'; A.push(r3);
+  A.push(['Nº','CÓDIGO','CLIENTE / RAZÓN SOCIAL','DIRECCIÓN','ZONA','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO','DOMINGO','FECHA DE VISITA','HORA','ESTADO','OBSERVACIONES DE LA VISITA','FIRMA DEL CLIENTE','Nº EVIDENCIAS']);
+  allRows.forEach((r, i) => {
+    const c = r.cliente; const v = r.visit;
+    const days = v ? (v.days || []) : [];
+    const nEv = safeArray(DB.photos[c.codigo]).filter(p => !v || p.fechaVisita === v.fecha).length + (v && v.firma ? 1 : 0);
+    const row = [i+1, c.codigo, c.nombre, c.direccion, 'ZONA WIFI'];
+    DIAS.forEach((_, di) => row.push(days.includes(di) ? 'X' : ''));
+    row.push(v ? (v.fecha || '') : '', v ? (v.hora || '') : '', v ? (v.estado || 'Pendiente') : 'Pendiente', v ? (v.obs || '') : '', (v && v.firma && (v.firma.fileId || v.firma.data)) ? 'Sí' : '', nEv);
+    A.push(row);
+  });
+  const wsA = XLSX.utils.aoa_to_sheet(A);
+  wsA['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:0,c:4},e:{r:0,c:17}},{s:{r:1,c:0},e:{r:1,c:17}},{s:{r:2,c:0},e:{r:2,c:4}},{s:{r:2,c:5},e:{r:2,c:11}},{s:{r:2,c:12},e:{r:2,c:17}}];
+  wsA['!cols'] = [{wch:4},{wch:10},{wch:36},{wch:45},{wch:11},{wch:7},{wch:7},{wch:10},{wch:7},{wch:7},{wch:7},{wch:8},{wch:13},{wch:8},{wch:13},{wch:38},{wch:14},{wch:11}];
+  wsA['!rows'] = [{hpt:30},{hpt:42},{hpt:22},{hpt:32}];
+  for (let R = 0; R < lastRow; R++){
+    for (let Cc = 0; Cc < 18; Cc++){
+      const addr = XLSX.utils.encode_cell({r:R,c:Cc});
+      if (!wsA[addr]) wsA[addr] = {t:'s', v:''};
+      const cell = wsA[addr]; cell.s = cell.s || {};
+      if (R === 0){ if (Cc < 4){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:col.titleFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; } else { cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'right', vertical:'center'}; } cell.s.border = bd(); }
+      else if (R === 1){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center', wrapText:true}; cell.s.border = bd(); }
+      else if (R === 2){ if (Cc <= 4){ cell.s.fill = fill(col.secClienteBg); } else if (Cc <= 11){ cell.s.fill = fill(col.secDiaBg); } else { cell.s.fill = fill(col.secRegistroBg); } cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = center; cell.s.border = bd(); }
+      else if (R === 3){ if (Cc >= 5 && Cc <= 11){ cell.s.fill = fill(col.dayBg); cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:col.dayFg}}; } else { cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.headFg}}; } cell.s.alignment = center; cell.s.border = bd(); }
+      else { cell.s.font = {name:'Calibri', sz:10}; cell.s.border = bd();
+        if (Cc === 0 || Cc === 1){ cell.s.fill = fill(col.codeBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; cell.s.alignment = center; }
+        else if (Cc === 2 || Cc === 3){ cell.s.alignment = left; }
+        else if (Cc === 4){ cell.s.fill = fill(col.zonaRowBg); cell.s.alignment = center; cell.s.font = {name:'Calibri', sz:9, bold:true, color:{rgb:'375623'}}; }
+        else if (Cc >= 5 && Cc <= 11){ cell.s.alignment = center; if (cell.v === 'X'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:col.realFg}}; } else { cell.s.fill = fill(col.dayBg); } }
+        else if (Cc === 12 || Cc === 13){ cell.s.alignment = center; }
+        else if (Cc === 14){ cell.s.alignment = center; const estado = String(cell.v || '');
+          if (estado === 'Realizada'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.realFg}}; }
+          else if (estado === 'Pendiente'){ cell.s.fill = fill(col.pendBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.pendFg}}; }
+          else if (estado === 'No Realizada'){ cell.s.fill = fill(col.nreBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.nreFg}}; }
+          else if (estado === 'Pospuesta'){ cell.s.fill = fill(col.posBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.posFg}}; }
+        }
+        else if (Cc === 15){ cell.s.alignment = left; }
+        else if (Cc === 16){ cell.s.alignment = center; if (cell.v === 'Sí'){ cell.s.fill = fill(col.realBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:col.realFg}}; } }
+        else if (Cc === 17){ cell.s.alignment = center; cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; }
+        if (Cc === 15 && !cell.v && R % 2 === 0){ cell.s.fill = fill(col.altBg); }
+      }
+    }
+  }
+  XLSX.utils.book_append_sheet(wb, wsA, 'Agenda de Visitas');
+  const E = [['EVIDENCIAS DE VISITAS — FOTOS Y FIRMAS','','','','','',''],['','','','','','',''],['Nº','FECHA','CÓDIGO CLIENTE','CLIENTE','TIPO DE EVIDENCIA','DESCRIPCIÓN / OBSERVACIÓN','RUTA EN DRIVE']];
+  const evidRows = buildEvidenciasRows();
+  const totalFilas = Math.max(60, evidRows.length);
+  for (let i=0; i<totalFilas; i++){ if (i < evidRows.length) E.push(evidRows[i]); else E.push([i+1,'','','','','','']); }
+  const wsE = XLSX.utils.aoa_to_sheet(E);
+  wsE['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
+  wsE['!cols'] = [{wch:5},{wch:22},{wch:16},{wch:38},{wch:20},{wch:48},{wch:55}];
+  wsE['!rows'] = [{hpt:28},{hpt:22},{hpt:26}];
+  for (let R = 0; R < E.length; R++){ for (let Cc = 0; Cc < 7; Cc++){ const addr = XLSX.utils.encode_cell({r:R,c:Cc}); if (!wsE[addr]) wsE[addr] = {t:'s', v:''}; const cell = wsE[addr]; cell.s = cell.s || {};
+    if (R === 0){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'center', vertical:'center'}; cell.s.border = bd(); }
+    else if (R === 1){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.border = bd(); }
+    else if (R === 2){ cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = center; cell.s.border = bd(); }
+    else { cell.s.font = {name:'Calibri', sz:9}; cell.s.border = bd(); cell.s.alignment = (Cc === 5) ? left : center; if (R % 2 === 0) cell.s.fill = fill(col.altBg); }
+  } }
+  XLSX.utils.book_append_sheet(wb, wsE, 'Evidencias');
+  const R3 = [
+    ['RESUMEN Y CIERRE DE MES — CONTROL DE VISITAS','','','','','',''],
+    ['MES / AÑO:', DB.month || '','','','','',''],
+    ['Este panel se recalcula desde la hoja "Agenda de Visitas".','','','','','',''],
+    ['','','','','','',''],
+    ['INDICADOR','','','','LEYENDA DE ESTADOS','',''],
+    ['Visitas totales','','','','Realizada','',''],
+    ['Visitas REALIZADAS','','','','Pendiente','',''],
+    ['Visitas PENDIENTES','','','','No Realizada','',''],
+    ['Visitas NO REALIZADAS','','','','Pospuesta','',''],
+    ['Visitas POSPUESTAS','','','','','',''],
+    ['Evidencias registradas (fotos/firmas)','','','','','',''],
+    ['% DE CUMPLIMIENTO DEL MES','','','','','',''],
+    ['','','','','','',''],
+    ['','','','','','',''],
+    ['VISITAS PROGRAMADAS POR DÍA DE LA SEMANA','','','','','',''],
+    ['LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO','DOMINGO'],
+    ['','','','','','',''],['','','','','','',''],['','','','','','',''],
+    ['Responsable NOC N2:','','','','','SELLO / FIRMA DEL SUPERVISOR',''],
+    ['','','','','','',''],
+    ['Firma: ______________________________','','','','','',''],
+    ['Fecha de cierre: ____ / ____ / ________','','','','','','']
+  ];
+  const wsR = XLSX.utils.aoa_to_sheet(R3);
+  wsR['B6']  = {t:'n', f:`COUNTA('Agenda de Visitas'!C5:C${lastRow})`};
+  wsR['B7']  = {t:'n', f:`COUNTIF('Agenda de Visitas'!O5:O${lastRow},"Realizada")`};
+  wsR['B8']  = {t:'n', f:`COUNTIF('Agenda de Visitas'!O5:O${lastRow},"Pendiente")`};
+  wsR['B9']  = {t:'n', f:`COUNTIF('Agenda de Visitas'!O5:O${lastRow},"No Realizada")`};
+  wsR['B10'] = {t:'n', f:`COUNTIF('Agenda de Visitas'!O5:O${lastRow},"Pospuesta")`};
+  wsR['B11'] = {t:'n', f:`COUNTA(Evidencias!C4:C500)`};
+  wsR['B12'] = {t:'n', f:`IF(COUNTA('Agenda de Visitas'!C5:C${lastRow})=0,0,COUNTIF('Agenda de Visitas'!O5:O${lastRow},"Realizada")/COUNTA('Agenda de Visitas'!C5:C${lastRow}))`, z:'0%'};
+  ['F','G','H','I','J','K','L'].forEach((colL, idx) => { const addr = XLSX.utils.encode_cell({r:16, c:idx}); wsR[addr] = {t:'n', f:`COUNTIF('Agenda de Visitas'!${colL}5:${colL}${lastRow},"X")+COUNTIF('Agenda de Visitas'!${colL}5:${colL}${lastRow},"x")`}; });
+  wsR['!cols']  = [{wch:38},{wch:18},{wch:6},{wch:6},{wch:22},{wch:14},{wch:14}];
+  wsR['!merges']= [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:2,c:0},e:{r:2,c:6}},{s:{r:4,c:0},e:{r:4,c:3}},{s:{r:4,c:4},e:{r:4,c:6}},{s:{r:14,c:0},e:{r:14,c:6}},{s:{r:19,c:5},e:{r:19,c:6}}];
+  wsR['!rows'] = [{hpt:30},{hpt:24},{hpt:20}];
+  for (let R = 0; R < R3.length; R++){ for (let Cc = 0; Cc < 7; Cc++){ const addr = XLSX.utils.encode_cell({r:R,c:Cc}); if (!wsR[addr]) wsR[addr] = {t:'s', v:''}; const cell = wsR[addr]; cell.s = cell.s || {}; cell.s.border = bd(); cell.s.font = {name:'Calibri', sz:10}; cell.s.alignment = center;
+    if (R === 0){ cell.s.fill = fill(col.titleBg); cell.s.font = {name:'Calibri', sz:14, bold:true, color:{rgb:'FFFFFF'}}; }
+    else if (R === 1){ cell.s.fill = fill(col.zonaBg); cell.s.font = {name:'Calibri', sz:12, bold:true, color:{rgb:'FFFFFF'}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+    else if (R === 2){ cell.s.fill = fill(col.instrBg); cell.s.font = {name:'Calibri', sz:9, italic:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+    else if (R === 4){ cell.s.fill = fill(col.headBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; }
+    else if (R >= 5 && R <= 11){ if (Cc === 0){ cell.s.fill = fill(col.codeBg); cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.titleBg}}; } else if (Cc === 1){ cell.s.font = {name:'Calibri', sz:13, bold:true, color:{rgb:col.zonaBg}}; } else if (Cc === 4){ const leyendas = ['Realizada','Pendiente','No Realizada','Pospuesta']; const leyenda = leyendas[R-6]; if (leyenda){ cell.s.font = {name:'Calibri', sz:10, bold:true}; if (leyenda === 'Realizada'){ cell.s.fill = fill(col.realBg); cell.s.font.color = {rgb:col.realFg}; } else if (leyenda === 'Pendiente'){ cell.s.fill = fill(col.pendBg); cell.s.font.color = {rgb:col.pendFg}; } else if (leyenda === 'No Realizada'){ cell.s.fill = fill(col.nreBg); cell.s.font.color = {rgb:col.nreFg}; } else if (leyenda === 'Pospuesta'){ cell.s.fill = fill(col.posBg); cell.s.font.color = {rgb:col.posFg}; } } } }
+    else if (R === 14){ cell.s.fill = fill(col.secDiaBg); cell.s.font = {name:'Calibri', sz:11, bold:true, color:{rgb:'FFFFFF'}}; }
+    else if (R === 15){ cell.s.fill = fill(col.dayBg); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.dayFg}}; }
+    else if (R === 16){ cell.s.font = {name:'Calibri', sz:16, bold:true, color:{rgb:col.zonaBg}}; cell.s.fill = fill('E2EFDA'); }
+    else if (R === 19){ cell.s.fill = fill('FFF2CC'); cell.s.font = {name:'Calibri', sz:10, bold:true, color:{rgb:col.instrFg}}; cell.s.alignment = {horizontal:'left', vertical:'center'}; }
+    else if (R === 21 || R === 22){ cell.s.alignment = {horizontal:'left', vertical:'center'}; cell.s.font = {name:'Calibri', sz:10, italic:true}; }
+  } }
+  XLSX.utils.book_append_sheet(wb, wsR, 'Resumen Mensual');
+  return wb;
+}
+function exportExcel(){ const wb = buildStyledWorkbook(); const mes = (DB.month || 'Mes').replace(/\s+/g, '_'); XLSX.writeFile(wb, `Agenda_Visitas_NOC_${mes}.xlsx`, { cellStyles: true }); toast('✓ Excel descargado'); }
+async function exportPhotos(){ const zip = new JSZip(); let any = false; allClients().forEach(c => { safeArray(DB.photos[c.codigo]).forEach(p => { if (p.data){ const fecha = p.fechaVisita || 'sin-fecha'; zip.file(`${c.codigo}_${c.nombre.replace(/[^\w\sáéíóúñ]/gi,'').slice(0,25)}/${fecha}/${p.filename}`, p.data.split(',')[1], { base64: true }); any = true; } }); const arr = getVisits(c.codigo); arr.forEach(v => { if (v && v.firma && typeof v.firma === 'object' && v.firma.data){ const fecha = v.fecha || 'sin-fecha'; zip.file(`${c.codigo}_${c.nombre.replace(/[^\w\sáéíóúñ]/gi,'').slice(0,25)}/${fecha}/${v.firma.filename}`, v.firma.data.split(',')[1], { base64: true }); any = true; } }); }); const sup = DB.evid['super_sig']; if (sup && sup.data){ zip.file('firma_supervisor.png', sup.data.split(',')[1], { base64: true }); any = true; } if (!any){ toast('Sin fotos locales'); return; } const blob = await zip.generateAsync({ type:'blob' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Evidencias_Visitas.zip'; a.click(); toast('✓ ZIP descargado'); }
+async function importarDatos(input){
+  const file = input.files[0]; if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  toast('Procesando ' + ext + '…');
+  if (ext === 'json'){ const r = new FileReader(); r.onload = async e => { try{ const data = JSON.parse(e.target.result); if (data.visits || data.evid || data.customClients || data.photos){ DB = Object.assign(DB, data); migrateVisits(); sanitizeDB(); await save(); renderAgenda(); renderEvid(); renderResumen(); toast('✓ Respaldo cargado'); } else toast('⚠ Formato'); } catch(err){ toast('⚠ Error'); } }; r.readAsText(file); }
+  else if (ext === 'zip'){ const r = new FileReader(); r.onload = async e => { try{ const zip = await JSZip.loadAsync(e.target.result); let n=0; for (const [path, entry] of Object.entries(zip.files)){ if (entry.dir || path.includes('__MACOSX')) continue; if (!path.match(/\.(jpg|jpeg|png)$/i)) continue; const b64 = await entry.async('base64'); const mime = path.match(/\.png$/i) ? 'image/png' : 'image/jpeg'; const dataUrl = 'data:' + mime + ';base64,' + b64; const m = path.match(/(?:^|\/)([0-9a-zA-Z]+)_/); if (m && m[1] && m[1] !== 'foto' && m[1] !== 'firma'){ const codigo = m[1]; const fm = path.match(/(\d{4}-\d{2}-\d{2})/); const fechaVisita = fm ? fm[1] : hoyYMD(); const fname = path.split('/').pop(); if (path.includes('firma_cliente')){ const arr = ensureVisitsArr(codigo); let visit = arr.find(v => v.fecha === fechaVisita); if (!visit){ visit = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: fechaVisita, hora: '', estado: 'Pendiente', obs: '', gps: null, days: [], updatedAt: new Date().toISOString() }; arr.push(visit); } visit.firma = { data: dataUrl, filename: fname, fechaVisita, synced: false }; n++; } else { DB.photos[codigo] = DB.photos[codigo] || []; if (!DB.photos[codigo].some(p => p && p.filename === fname)){ DB.photos[codigo].push({ data: dataUrl, fecha:'Importado ZIP', filename: fname, synced:false, fechaVisita }); n++; } } } } await save(); renderAgenda(); renderEvid(); toast('✓ ZIP: ' + n + ' archivos'); } catch(err){ toast('⚠ Error ZIP'); } }; r.readAsArrayBuffer(file); }
+  else if (ext === 'xlsx' || ext === 'xls'){ const r = new FileReader(); r.onload = async e => { try{ const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, { type:'array' }); const ws = wb.Sheets[wb.SheetNames[0]]; const json = XLSX.utils.sheet_to_json(ws, { header:1 }); const baseCodes = new Set(CLIENTES.map(c => String(c.codigo).trim())); let updated = 0, addedClients = 0; for (let i = 4; i < json.length; i++){ const row = json[i]; if (!row || row[1] === undefined || row[1] === null || row[1] === '') continue; const codStr = String(row[1]).trim(); const nombre = row[2] ? String(row[2]).trim() : ''; const direccion = row[3] ? String(row[3]).trim() : ''; const fecha = row[12] || ''; const hora = row[13] || ''; const estado = row[14] || 'Pendiente'; const obs = row[15] || ''; if (!codStr) continue; if (nombre && !baseCodes.has(codStr)){ const ya = (DB.customClients || []).some(c => String(c.codigo).trim() === codStr); if (!ya){ DB.customClients.push({ codigo:codStr, nombre, direccion: direccion || '—', custom:true }); addedClients++; } } const fechaISO = typeof fecha === 'number' ? new Date(Math.round((fecha - 25569) * 86400 * 1000)).toISOString().split('T')[0] : String(fecha); const arr = ensureVisitsArr(codStr); let v = arr.find(x => x && x.fecha === fechaISO); if (!v){ v = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: fechaISO, hora: '', estado: 'Pendiente', obs: '', gps: null, days: [], updatedAt: new Date().toISOString() }; arr.push(v); } v.hora = String(hora); v.estado = estado; v.obs = obs; v.updatedAt = new Date().toISOString(); const dias = []; for (let d = 0; d < 7; d++){ const cell = row[5 + d]; if (cell && String(cell).trim().toUpperCase() === 'X') dias.push(d); } v.days = dias; updated++; } await save(); renderAgenda(); renderEvid(); renderResumen(); let msg = '✓ ' + updated + ' visitas'; if (addedClients > 0) msg += ' · ' + addedClients + ' nuevos'; toast(msg); } catch(err){ toast('⚠ ' + err.message); } }; r.readAsArrayBuffer(file); }
+  else toast('Formato no soportado');
+  input.value = '';
+}
+async function abrirCompartir(cod){
+  const v = getCurrentVisit(cod);
+  if (!v){ toast('⚠ No hay visita activa'); return; }
+  if (!v.fecha){ toast('⚠ La visita no tiene fecha'); return; }
+  const cliente = getClientByCode(cod);
+  const todasFotos = safeArray(DB.photos[cod]).filter(p =>
+    (p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)
+  ).filter(p => p.fileId || p.data);
+  compartirCtx.cod = cod;
+  compartirCtx.visitId = v.id;
+  compartirCtx.fotos = todasFotos;
+  compartirCtx.texto = generarTextoVisita(cliente, v, todasFotos.length, cod);
+  compartirCtx.blobs = [];
+  document.getElementById('compartirModal').classList.add('open');
+  const prev = document.getElementById('compartirPreview');
+  const btn = document.getElementById('btnCompartirWhats');
+  btn.disabled = true; btn.style.opacity = .6; btn.textContent = '⏳ Preparando…';
+  let html = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">';
+  todasFotos.forEach(p => {
+    let src = null;
+    if (p.data) src = p.data;
+    else if (p.fileId) src = driveThumbUrl(p.fileId, 400);
+    html += '<div class="comp-foto-thumb">' + (src ? '<img src="' + src + '" loading="lazy" onerror="this.onerror=null;this.style.background=\'#334155\';this.removeAttribute(\'src\')">' : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:.6rem">⚠</div>') + '</div>';
+  });
+  html += '</div>';
+  html += '<div style="background:#0f172a;border-radius:10px;padding:12px;text-align:left;font-size:.82rem;color:var(--text);white-space:pre-wrap;line-height:1.5">' + escapeHtml(compartirCtx.texto) + '</div>';
+  prev.innerHTML = html;
+  let fallos = 0;
+  for (let i = 0; i < todasFotos.length; i++){
+    const blob = await cargarFotoComoBlob(todasFotos[i]);
+    if (blob) compartirCtx.blobs.push(blob); else fallos++;
+    btn.textContent = '⏳ Preparando ' + (i + 1) + '/' + todasFotos.length + '…';
+  }
+  const nOk = compartirCtx.blobs.length;
+  document.getElementById('compartirInfo').textContent = nOk + ' de ' + todasFotos.length + ' foto(s) listas' + (fallos ? ' · ' + fallos + ' con error' : '');
+  btn.disabled = false; btn.style.opacity = 1;
+  if (nOk > 8){
+    const numCollages = Math.ceil(nOk / 6);
+    btn.textContent = '💬 Compartir texto + ' + numCollages + ' collage' + (numCollages > 1 ? 's' : '');
+  } else {
+    btn.textContent = '💬 Compartir por WhatsApp (' + nOk + ' fotos)';
+  }
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function cerrarCompartir(){ document.getElementById('compartirModal').classList.remove('open'); compartirCtx = { cod: null, visitId: null, fotos: [], texto: '', blobs: [], blobCollage: null, loteActual: 0 }; }
+function generarTextoVisita(cliente, v, nFotos, cod){
+  const fecha = v.fecha ? v.fecha.split('-').reverse().join('/') : '';
+  const hora = v.hora || '--:--';
+  const estado = v.estado || 'Pendiente';
+  const nombre = cliente ? cliente.nombre : 'Cliente ' + (cod || '');
+  const codigo = cliente ? cliente.codigo : cod;
+  const dir = cliente && cliente.direccion ? cliente.direccion : '';
+  const obs = v.obs || '(sin observaciones)';
+  let txt = '📋 VISITA NOC N2\n\n';
+  txt += '👤 Cliente: ' + nombre + '\n';
+  txt += '🔢 Código: #' + codigo + '\n';
+  if (dir) txt += '📍 Dirección: ' + dir + '\n';
+  txt += '📅 Fecha: ' + fecha + '\n';
+  txt += '⏰ Hora: ' + hora + '\n';
+  txt += '✅ Estado: ' + estado + '\n';
+  if (nFotos > 0) txt += '📷 Fotos: ' + nFotos + '\n';
+  txt += '\n📝 Observaciones:\n' + obs + '\n';
+  return txt;
+}
+async function cargarFotoComoBlob(foto){
+  try {
+    const nombre = (foto.filename || '').toLowerCase();
+    const esPng = nombre.endsWith('.png') || (foto.data || '').indexOf('data:image/png') === 0;
+    const tipo = esPng ? 'image/png' : 'image/jpeg';
+    if (foto.data){
+      const partes = foto.data.split(',');
+      const mimeMatch = partes[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : tipo;
+      const bstr = atob(partes[1]);
+      const len = bstr.length;
+      const u8 = new Uint8Array(len);
+      for (let i = 0; i < len; i++) u8[i] = bstr.charCodeAt(i);
+      return new Blob([u8], { type: mime });
+    }
+    if (foto.fileId){
+      const driveUrl = 'https://drive.google.com/thumbnail?id=' + foto.fileId + '&sz=w2000';
+      const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(driveUrl.replace(/^https?:\/\//, '')) + '&w=1600&output=jpg&q=82';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
+      const res = await fetch(proxyUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) return null;
+      const blobOrig = await res.blob();
+      if (!blobOrig || blobOrig.size < 100) return null;
+      return new Blob([blobOrig], { type: tipo });
+    }
+    return null;
+  } catch(e){ return null; }
+}
+async function copiarTextoVisita(){
+  try { await navigator.clipboard.writeText(compartirCtx.texto); toast('✓ Texto copiado'); }
+  catch(e){ const ta = document.createElement('textarea'); ta.value = compartirCtx.texto; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('✓ Texto copiado'); } catch(err){ toast('⚠ No se pudo copiar'); } document.body.removeChild(ta); }
+}
+async function descargarZipVisita(){
+  const cod = compartirCtx.cod;
+  const v = getCurrentVisit(cod);
+  const cliente = getClientByCode(cod);
+  const zip = new JSZip();
+  zip.file('visita.txt', compartirCtx.texto);
+  const fecha = v && v.fecha ? v.fecha : 'sin-fecha';
+  for (let i = 0; i < compartirCtx.blobs.length; i++){ zip.file('foto_' + String(i+1).padStart(2,'0') + '.jpg', compartirCtx.blobs[i]); }
+  const blob = await zip.generateAsync({ type:'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Visita_' + (cliente ? cliente.codigo : cod) + '_' + fecha + '.zip';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  toast('✓ ZIP descargado');
+}
+
+async function cargarBlobComoImagen(blob){
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+async function generarCollage(blobs, inicio, fin, nFotosTotal){
+  const imgs = [];
+  for (let i = inicio; i < fin; i++){
+    const img = await cargarBlobComoImagen(blobs[i]);
+    if (img) imgs.push({ img, index: i });
+  }
+  if (imgs.length === 1){
+    return blobs[inicio];
+  }
+  const W = 1200;
+  const HEADER_H = 50;
+  const COL = 2;
+  const ROW = Math.ceil(imgs.length / COL);
+  const CELL_W = W / COL;
+  const CELL_H = 450;
+  const H = HEADER_H + ROW * CELL_H + 30;
+  const cv = document.createElement('canvas');
+  const dpr = 2;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(14,165,233,.4)';
+  ctx.fillRect(0, 0, W, HEADER_H);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px Segoe UI, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('📷 Fotos ' + (inicio+1) + ' a ' + fin + ' de ' + nFotosTotal, 20, 33);
+  imgs.forEach((item, idx) => {
+    const col = idx % COL;
+    const row = Math.floor(idx / COL);
+    const x = col * CELL_W;
+    const y = HEADER_H + row * CELL_H;
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + 6, y + 6, CELL_W - 12, CELL_H - 12);
+    const img = item.img;
+    const cellW = CELL_W - 24;
+    const cellH = CELL_H - 24;
+    const ratio = Math.min(cellW / img.width, cellH / img.height);
+    const dw = img.width * ratio;
+    const dh = img.height * ratio;
+    const dx = x + 12 + (cellW - dw) / 2;
+    const dy = y + 12 + (cellH - dh) / 2;
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.fillStyle = 'rgba(0,0,0,.75)';
+    ctx.fillRect(x + 14, y + 14, 60, 34);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('#' + (item.index + 1), x + 44, y + 38);
+  });
+  return new Promise(resolve => cv.toBlob(b => resolve(b), 'image/jpeg', 0.85));
+}
+
+async function abrirWhatsAppVisita(){
+  const nFotos = compartirCtx.blobs ? compartirCtx.blobs.length : 0;
+  if (!navigator.share){ toast('⚠ Chrome no soporta compartir'); return; }
+  if (!nFotos){ toast('⚠ No hay fotos'); return; }
+  try {
+    if (nFotos <= 8){
+      const files = [];
+      for (let i = 0; i < nFotos; i++){
+        const b = compartirCtx.blobs[i];
+        files.push(new File([b], 'foto_' + String(i+1).padStart(2,'0') + '.jpg', { type: b.type || 'image/jpeg' }));
+      }
+      if (navigator.canShare && !navigator.canShare({ files })){
+        toast('⚠ Chrome no permite. Descargando ZIP…');
+        await descargarZipVisita();
+        return;
+      }
+      await navigator.share({ text: compartirCtx.texto, files });
+      toast('✓ Enviado');
+      return;
+    }
+    toast('🎨 Generando collages...');
+    const POR_COLLAGE = 6;
+    const totalLotes = Math.ceil(nFotos / POR_COLLAGE);
+    const collageFiles = [];
+    for (let lote = 0; lote < totalLotes; lote++){
+      const inicio = lote * POR_COLLAGE;
+      const fin = Math.min(inicio + POR_COLLAGE, nFotos);
+      const blob = await generarCollage(compartirCtx.blobs, inicio, fin, nFotos);
+      collageFiles.push(new File([blob], 'collage_' + String(lote+1).padStart(2,'0') + '.jpg', { type: 'image/jpeg' }));
+    }
+    if (navigator.canShare && !navigator.canShare({ files: collageFiles })){
+      toast('⚠ Chrome no permite. Descargando ZIP…');
+      await descargarZipVisita();
+      return;
+    }
+    await navigator.share({ text: compartirCtx.texto, files: collageFiles });
+    toast('✓ ' + totalLotes + ' collage(s) + texto enviados');
+  } catch(e){
+    if (e && e.name === 'AbortError') return;
+    console.warn('Error al compartir:', e);
+    toast('⚠ Error. Usa 📦 Descargar ZIP');
+  }
+}
+function resetAll(){ if (!confirm('¿Borrar datos locales? (No borra Drive)')) return; if (typeof localForage !== 'undefined') localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastSync'); localStorage.removeItem('nocLastLoadOk'); localStorage.removeItem('nocDeletedVisits'); localStorage.removeItem('nocDeletedPhotos'); localStorage.removeItem('nocLastMasterSync'); localStorage.removeItem('nocLastMasterDebug'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; formsAbiertos.clear(); renderAgenda(); renderEvid(); renderResumen(); toast('Datos locales borrados'); }
+let searchDebounce = null;
+function toggleSearch(force){ const bar = document.getElementById('searchBar'); const open = (force !== undefined) ? force : !bar.classList.contains('open'); bar.classList.toggle('open', open); if (open){ const inp = document.getElementById('search'); setTimeout(() => { inp.focus(); inp.select(); }, 60); } }
+function onSearchInput(){ if (searchDebounce) clearTimeout(searchDebounce); searchDebounce = setTimeout(renderAgenda, 200); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('searchBar').classList.contains('open')) toggleSearch(false); });
+let lastStats = { r: 0, p: 0, n: 0, s: 0, total: 0 };
+function drawChart(){
+  const cv = document.getElementById('chartCanvas'); if (!cv) return;
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const etiqueta = esGeneral ? 'General (todas las visitas)' : mesResumenFiltro;
+  const stats = {
+    realizadas: lastStats.r || 0,
+    pendientes: lastStats.p || 0,
+    noRealizadas: lastStats.n || 0,
+    pospuestas: lastStats.s || 0,
+    total: lastStats.total || 0
+  };
+  dibujarGraficaEnCanvas(cv, stats, 'Visitas — ' + etiqueta);
+}
+function downloadChart(){
+  const cv = document.getElementById('chartCanvas'); if (!cv) return;
+  const a = document.createElement('a');
+  a.href = cv.toDataURL('image/png');
+  a.download = 'Grafica_Visitas_' + (DB.month || 'Mes').replace(/\s+/g, '_') + '.png';
+  a.click();
+  toast('✓ Gráfica descargada');
+}
+function liberarEspacio(){
+  let freed = 0;
+  const limpiar = p => { if (p && p.data && p.fileId && p.synced){ freed += p.data.length; delete p.data; } };
+  for (const cod in DB.photos) safeArray(DB.photos[cod]).forEach(limpiar);
+  for (const cod in DB.visits){ const arr = Array.isArray(DB.visits[cod]) ? DB.visits[cod] : []; arr.forEach(v => { if (v && v.firma) limpiar(v.firma); }); }
+  limpiar(DB.evid['super_sig']);
+  return freed;
+}
+function liberarEspacioManual(){ const bytes = liberarEspacio(); save(); updateStorageInfo(); renderAgenda(); renderEvid(); toast(bytes > 0 ? ('🧹 Liberados ' + (bytes / 1048576).toFixed(1) + ' MB') : '✓ Nada que liberar'); }
+function retryPendingUploads(){ document.getElementById('partialSyncModal').classList.remove('open'); syncToCloud(false); }
+let pendingGPS = null;
+function openGpsHelp(cod){ pendingGPS = cod; document.getElementById('gpsModal').classList.add('open'); }
+function closeGpsHelp(){ document.getElementById('gpsModal').classList.remove('open'); }
+function tryOpenLocationSettings(){ window.location.href = 'intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end'; }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && pendingGPS){ const cod = pendingGPS; pendingGPS = null; closeGpsHelp(); captureGPS(cod); } });
+function captureGPS(cod){ const info = document.getElementById('gpsInfo-' + cod); const btn = document.getElementById('gpsBtn-' + cod); if (!navigator.geolocation) return; btn.textContent = '⏳...'; btn.disabled = true; const onExito = pos => { const v = getCurrentVisit(cod); if (!v) return; v.gps = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy || 0, time: new Date().toLocaleString('es-VE') }; v.updatedAt = new Date().toISOString(); save(); info.innerHTML = '✓ ' + v.gps.lat.toFixed(6) + ', ' + v.gps.lng.toFixed(6); btn.textContent = '📍 Actualizar'; btn.disabled = false; }; navigator.geolocation.getCurrentPosition(onExito, () => openGpsHelp(cod), { enableHighAccuracy:true, timeout:30000, maximumAge:60000 }); }
+function saveResp(){ DB.resp = document.getElementById('responsable').value; save(); sendHeartbeat(); }
+function saveComp(){ DB.comp = document.getElementById('compSelect').value; save(); toast('🗜️ ' + DB.comp); }
+function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
+
+/* ==========================================================
+   📸 REPORTE FOTOGRÁFICO (EXCEL) — Formato Idéntico a la Plantilla
+   ========================================================== */
+function generarReporteFotografico() {
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesAnio = esGeneral ? null : mesResumenFiltro;
+  const wb = XLSX.utils.book_new();
+  let hasData = false;
+
+  // Estilos base para el formato corporativo
+  const bd = { top: {style: "thin", color: {rgb: "CCCCCC"}}, bottom: {style: "thin", color: {rgb: "CCCCCC"}}, left: {style: "thin", color: {rgb: "CCCCCC"}}, right: {style: "thin", color: {rgb: "CCCCCC"}} };
+  const boldFont = { name: "Arial", sz: 10, bold: true };
+  const normalFont = { name: "Arial", sz: 10 };
+  const linkFont = { name: "Arial", sz: 9, color: { rgb: "0563C1" }, underline: true };
+
+  allClients().forEach(c => {
+    const visitas = getVisits(c.codigo);
+    const visitasMes = mesAnio ? visitas.filter(v => v && visitaEnMesAnio(v, mesAnio)) : visitas;
+    if (visitasMes.length === 0) return;
+
+    let sheetName = c.nombre.replace(/[\\/?*\[\]]/g, '').substring(0, 31) || c.codigo;
+    let suffix = 1;
+    while (wb.SheetNames.includes(sheetName)) { sheetName = sheetName.substring(0, 28) + '_' + suffix; suffix++; }
+
+    const A = [];
+    const merges = [];
+
+    visitasMes.forEach(v => {
+      const fotos = safeArray(DB.photos[c.codigo]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha));
+      const startRow = A.length; // Guardar índice para fusiones
+
+      // --- Construcción de Filas ---
+      A.push(['', '', 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO', '', '', '', '', 'USUARIO: NOC N2']); // 0
+      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']); // 1
+      A.push(['', '', 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2', '', '', '', 'SOPORTE NOC NIVEL 2', '']); // 2
+      A.push(['', '', '', '', '', '', '', '']); // 3
+      
+      // Fila ID y Evidencias
+      const rowId = ['', '', 'ID', c.codigo, 'EVIDENCIAS:', '', '', ''];
+      const rowLinks = ['', '', '', '', '', '', '', ''];
+      for (let i = 0; i < 4; i++) {
+        rowId.push('EVIDENCIAS:', '', '', '');
+        const foto = fotos[i];
+        const link = foto && foto.fileId ? 'https://drive.google.com/file/d/' + foto.fileId + '/view' : '';
+        rowLinks.push(link, '', '', '');
+      }
+      A.push(rowId); // 4
+      A.push(rowLinks); // 5
+      A.push(['', '', '', '', '', '', '', '']); // 6
+      
+      A.push(['', '', 'USUARIO:', c.nombre, '', '', '', '']); // 7
+      A.push(['', '', 'DIRECCIÓN:', c.direccion || '', '', '', '', '']); // 8
+      A.push(['', '', 'UBICACIÓN (COORDENADAS):', v.gps ? (v.gps.lat + ', ' + v.gps.lng) : (c.direccion || ''), '', '', '', '']); // 9
+      A.push(['', '', 'TELÉFONO:', c.telefono || '', '', '', '', '']); // 10
+      A.push(['', '', 'TIPO DE PLAN:', v.tipo || 'ZONA WIFI', '', '', '', '']); // 11
+      A.push(['', '', 'SERIAL DE ONU/ONT:', v.serialOnu || '', '', '', '', '']); // 12
+      A.push(['', '', 'OBSERVACIONES:', v.obs || 'Sin observaciones', '', '', '', '']); // 13
+      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']); // 14
+      A.push(['', '', '', '', '', '', '', '']); // 15
+      A.push(['', '', 'Firma del Responsable NOC N2', '', '', '', '', '']); // 16
+      A.push(['', '', '', '', '', '', '', '']); // 17
+
+      // --- Fusiones (Merges) ---
+      merges.push({ s: { r: startRow, c: 2 }, e: { r: startRow, c: 6 } }); // TIPO
+      merges.push({ s: { r: startRow + 2, c: 2 }, e: { r: startRow + 2, c: 5 } }); // TÍTULO
+      merges.push({ s: { r: startRow + 2, c: 6 }, e: { r: startRow + 2, c: 7 } }); // SOPORTE
+      
+      // EVIDENCIAS
+      merges.push({ s: { r: startRow + 4, c: 4 }, e: { r: startRow + 4, c: 7 } });
+      merges.push({ s: { r: startRow + 4, c: 8 }, e: { r: startRow + 4, c: 11 } });
+      merges.push({ s: { r: startRow + 4, c: 12 }, e: { r: startRow + 4, c: 15 } });
+      merges.push({ s: { r: startRow + 4, c: 16 }, e: { r: startRow + 4, c: 19 } });
+      
+      // Links
+      merges.push({ s: { r: startRow + 5, c: 4 }, e: { r: startRow + 5, c: 7 } });
+      merges.push({ s: { r: startRow + 5, c: 8 }, e: { r: startRow + 5, c: 11 } });
+      merges.push({ s: { r: startRow + 5, c: 12 }, e: { r: startRow + 5, c: 15 } });
+      merges.push({ s: { r: startRow + 5, c: 16 }, e: { r: startRow + 5, c: 19 } });
+
+      // Valores D:H
+      for (let i = 7; i <= 14; i++) {
+        merges.push({ s: { r: startRow + i, c: 3 }, e: { r: startRow + i, c: 7 } });
+      }
+
+      // Firma
+      merges.push({ s: { r: startRow + 16, c: 2 }, e: { r: startRow + 16, c: 7 } });
+
+      hasData = true;
+    });
+
+    if (A.length > 0) {
+      const ws = XLSX.utils.aoa_to_sheet(A);
+      
+      // --- Aplicar Estilos ---
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cell = ws[XLSX.utils.encode_cell({c:C, r:R})];
+          if (!cell) continue;
+          
+          cell.s = { font: normalFont, border: bd, alignment: { vertical: 'center', wrapText: true } };
+          
+          const rowInBlock = R % 18; // Cada bloque tiene 18 filas
+          
+          if (rowInBlock === 0 || rowInBlock === 2) { // Títulos
+             if (C >= 2) cell.s.font = boldFont;
+          } else if (rowInBlock === 4) { // ID y EVIDENCIAS
+             if (C === 2 || C === 4 || C === 8 || C === 12 || C === 16) {
+                cell.s.font = boldFont;
+             }
+             if (C >= 4 && cell.v === 'EVIDENCIAS:') {
+                cell.s.fill = { fgColor: { rgb: 'DDEBF7' } };
+                cell.s.alignment = { horizontal: 'center', vertical: 'center' };
+             }
+          } else if (rowInBlock === 5) { // Links
+             if (C === 4 || C === 8 || C === 12 || C === 16) {
+                cell.s.font = linkFont;
+             }
+          } else if (rowInBlock >= 7 && rowInBlock <= 14) { // Labels
+             if (C === 2) cell.s.font = boldFont;
+          } else if (rowInBlock === 16) { // Firma
+             if (C === 2) cell.s.font = boldFont;
+          }
+        }
+      }
+
+      // Ancho de columnas
+      const cols = [{ wch: 2 }, { wch: 2 }, { wch: 30 }, { wch: 20 }];
+      for (let i = 0; i < 16; i++) cols.push({ wch: 15 });
+      ws['!cols'] = cols;
+
+      ws['!merges'] = merges;
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+  });
+
+  if (!hasData) { toast('⚠ No hay visitas en este período'); return; }
+  const mesStr = esGeneral ? 'General' : mesAnio.replace(/\s+/g, '_');
+  XLSX.writeFile(wb, 'Reporte_Fotografico_NOC_' + mesStr + '.xlsx', { cellStyles: true });
+  toast('✓ Reporte Fotográfico (Excel) descargado');
+}
+
+/* ==========================================================
+   🧠 INFORME IA (WORD) — Gemini + Gráficas + Formato PRO
+   ========================================================== */
+async function generarInformeIA() {
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesAnio = esGeneral ? null : mesResumenFiltro;
+  const btn = document.getElementById('btnIA');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = '🧠 Redactando... (15-30 seg)';
+  let datosVisitas = '';
+  let count = 0, totalR = 0, totalP = 0, totalN = 0, totalS = 0;
+  allClients().forEach(c => {
+    const visitas = getVisits(c.codigo);
+    const visitasMes = mesAnio ? visitas.filter(v => v && visitaEnMesAnio(v, mesAnio)) : visitas;
+    visitasMes.forEach(v => {
+      datosVisitas += '- ' + c.nombre + ' (' + c.codigo + ') | ' + (v.fecha || 's/f') + ' | ' + (v.estado || 'Pendiente') + ' | ' + (v.obs || 'Sin obs.') + '\n';
+      count++;
+      if (v.estado === 'Realizada') totalR++; else if (v.estado === 'Pendiente') totalP++; else if (v.estado === 'No Realizada') totalN++; else totalS++;
+    });
+  });
+  if (count === 0) { toast('⚠ No hay visitas en este período'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; return; }
+  const prompt = 'Eres un Ingeniero de Redes NOC Nivel 2 de Zona WiFi. Redacta un informe de actividades profesional para la gerencia.\n\n'
+    + 'PERÍODO: ' + (mesAnio || 'General') + '\n'
+    + 'RESUMEN:\n- Total visitas: ' + count + '\n- Realizadas: ' + totalR + ' (' + ((totalR/count)*100).toFixed(1) + '%)\n- Pendientes: ' + totalP + '\n- No realizadas: ' + totalN + '\n- Pospuestas: ' + totalS + '\n\n'
+    + 'DATOS:\n' + datosVisitas + '\n'
+    + 'Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin ```json, sin texto extra) con EXACTAMENTE estas 3 propiedades:\n\n'
+    + '{\n  "resumen_ejecutivo": "3-4 párrafos profesionales describiendo el desempeño del período, porcentaje de cumplimiento, tipos de servicio atendidos, calidad operativa",\n  "matriz_incidencias": "5-7 categorías de incidencias recurrentes. Formato: lista con viñetas. Cada una con: categoría, manifestación técnica, acción correctiva, clientes representativos",\n  "conclusiones": "5-7 conclusiones y recomendaciones con viñetas, orientadas a la planificación del próximo período"\n}';
+  try {
+    await callBackendWrite({ action: 'generateAIReport', prompt: prompt });
+    let intentos = 0;
+    const maxIntentos = 30;
+    const verificar = async () => {
+      if (intentos >= maxIntentos) { toast('⚠ La IA tardó demasiado. Intenta de nuevo.'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; return; }
+      intentos++;
+      try {
+        const res = await callBackendRead({ action: 'getLastAIReport' }, 10000);
+        if (res && res.ok && res.texto && res.texto.length > 50) {
+          await construirInformeWord(res.texto, mesAnio || 'General', { total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS });
+          btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)';
+        } else { setTimeout(verificar, 2500); }
+      } catch (e) { setTimeout(verificar, 2500); }
+    };
+    setTimeout(verificar, 3500);
+  } catch (error) { toast('⚠ Error al conectar con la IA'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; }
+}
+
+async function construirInformeWord(textoIA, mes, stats) {
+  let aiData = { resumen_ejecutivo: '', matriz_incidencias: '', conclusiones: '' };
+  try {
+    let clean = String(textoIA).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    const i0 = clean.indexOf('{'); const i1 = clean.lastIndexOf('}');
+    if (i0 >= 0 && i1 > i0) clean = clean.substring(i0, i1 + 1);
+    const parsed = JSON.parse(clean);
+    aiData = Object.assign(aiData, parsed);
+  } catch (e) { aiData.resumen_ejecutivo = String(textoIA); }
+  const seccion2 = generarSeccionDetallePorFecha(mes);
+  const seccion3 = await generarSeccionGraficos(mes, stats);
+  const s1 = markdownToHtml(aiData.resumen_ejecutivo);
+  const s4 = markdownToHtml(aiData.matriz_incidencias);
+  const s5 = markdownToHtml(aiData.conclusiones);
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"><title>Informe NOC</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;padding:30px;font-size:11pt;line-height:1.5;color:#1e293b;}'
+    + 'h1{color:#1e293b;text-align:center;font-size:22pt;margin-bottom:4px;}'
+    + 'h2{color:#0369a1;border-bottom:2px solid #0369a1;padding-bottom:4px;margin-top:28px;}'
+    + 'h3{color:#0f172a;margin-top:18px;}'
+    + 'h4{color:#334155;margin-top:14px;font-size:11pt;}'
+    + 'p{margin:8px 0;text-align:justify;}'
+    + 'ul{margin:8px 0 8px 20px;}'
+    + 'table{border-collapse:collapse;width:100%;margin:10px 0;font-size:10pt;}'
+    + 'th{background:#0369a1;color:#fff;padding:6px;text-align:left;border:1px solid #ccc;}'
+    + 'td{padding:5px;border:1px solid #ccc;}'
+    + '.header-info{text-align:center;color:#64748b;margin-bottom:30px;}'
+    + '.section{margin-bottom:30px;}'
+    + '.chart-container{text-align:center;margin:20px 0;}'
+    + '.chart-container img{max-width:100%;}'
+    + '.footer{margin-top:50px;text-align:center;color:#64748b;font-size:10pt;}'
+    + '</style></head><body>'
+    + '<div class="header-info">'
+    + '<h1>INFORME DE ACTIVIDADES</h1>'
+    + '<h3>SOPORTE TÉCNICO - NOC NIVEL 2 | ZONA WIFI</h3>'
+    + '<p><b>Período:</b> ' + mes + '</p>'
+    + '<p><b>Generado:</b> ' + new Date().toLocaleString('es-VE') + '</p>'
+    + '</div><hr>'
+    + '<div class="section"><h2>1. RESUMEN EJECUTIVO</h2>' + s1 + '</div>'
+    + '<div class="section">' + seccion2 + '</div>'
+    + '<div class="section">' + seccion3 + '</div>'
+    + '<div class="section"><h2>4. MATRIZ DE INCIDENCIAS RECURRENTES</h2>' + s4 + '</div>'
+    + '<div class="section"><h2>5. CONCLUSIONES Y RECOMENDACIONES</h2>' + s5 + '</div>'
+    + '<div class="footer"><p>_________________________________________</p><p>Firma del Responsable NOC N2</p><p>' + (DB.resp || '') + '</p></div>'
+    + '</body></html>';
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Informe_Actividades_NOC_' + mes.replace(/\s+/g, '_') + '.doc';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  toast('✓ Informe Word descargado');
+}
+
+function generarSeccionDetallePorFecha(mes) {
+  const visitasPorFecha = {};
+  allClients().forEach(c => {
+    const visitas = getVisits(c.codigo);
+    const visitasMes = mes && mes !== 'General' ? visitas.filter(v => v && visitaEnMesAnio(v, mes)) : visitas;
+    visitasMes.forEach(v => {
+      if (!v.fecha) return;
+      if (!visitasPorFecha[v.fecha]) visitasPorFecha[v.fecha] = [];
+      visitasPorFecha[v.fecha].push({ cliente: c, visita: v });
+    });
+  });
+  const fechas = Object.keys(visitasPorFecha).sort();
+  if (!fechas.length) return '<h2>2. DETALLE POR FECHA</h2><p>Sin visitas en el período.</p>';
+  let html = '<h2>2. DETALLE DE TRABAJOS Y ACTIVIDADES REALIZADAS POR FECHA Y ABONADO</h2>';
+  let counter = 0;
+  fechas.forEach(fecha => {
+    const items = visitasPorFecha[fecha];
+    const [y, m, d] = fecha.split('-');
+    const fechaLarga = d + ' DE ' + MESES_ES[parseInt(m) - 1].toUpperCase() + ' DE ' + y;
+    html += '<h3>' + fechaLarga + '</h3>';
+    html += '<p><b>Resumen de visitas del día:</b></p>';
+    html += '<table><tr><th>#</th><th>Abonado</th><th>Contrato</th><th>Tipo de servicio</th></tr>';
+    items.forEach(it => { counter++; html += '<tr><td>2.' + counter + '</td><td>' + it.cliente.nombre + '</td><td>' + it.cliente.codigo + '</td><td>' + (it.visita.tipo || 'ZONA WIFI') + '</td></tr>'; });
+    html += '</table>';
+    html += '<h4>Detalle de actividades:</h4>';
+    items.forEach(it => {
+      counter++;
+      const v = it.visita; const c = it.cliente;
+      html += '<p><b>2.' + counter + '. ' + c.nombre + '</b></p>'
+        + '<p><b>Contrato:</b> ' + c.codigo + ' · <b>Tipo:</b> ' + (v.tipo || 'ZONA WIFI') + '</p>'
+        + '<p><b>Dirección:</b> ' + (c.direccion || '—') + '</p>'
+        + '<p><b>Fecha/Hora:</b> ' + (v.fecha || '—') + ' ' + (v.hora || '') + ' · <b>Estatus:</b> ' + (v.estado || 'Pendiente') + '</p>'
+        + '<p><b>Actividades y Hallazgos:</b> ' + (v.obs || 'Sin observaciones registradas.') + '</p>';
+    });
+  });
+  return html;
+}
+
+async function generarSeccionGraficos(mes, stats) {
+  const pieImg = generarPieBase64(stats);
+  const tipoCount = {};
+  allClients().forEach(c => {
+    const visitas = getVisits(c.codigo);
+    const visitasMes = mes && mes !== 'General' ? visitas.filter(v => v && visitaEnMesAnio(v, mes)) : visitas;
+    visitasMes.forEach(v => { const tipo = v.tipo || 'ZONA WIFI'; tipoCount[tipo] = (tipoCount[tipo] || 0) + 1; });
+  });
+  const barImg = generarBarBase64(tipoCount);
+  let html = '<h2>3. RESUMEN GRÁFICO Y ESTADÍSTICO DE VISITAS</h2>';
+  html += '<div class="chart-container"><img src="' + pieImg + '"><p><b>Figura 1.</b> Distribución de visitas por estatus</p></div>';
+  const total = stats.total || 1;
+  html += '<table>'
+    + '<tr><th>Estatus</th><th>Cantidad</th><th>Porcentaje</th></tr>'
+    + '<tr><td>Realizadas</td><td>' + stats.realizadas + '</td><td>' + ((stats.realizadas / total) * 100).toFixed(1) + '%</td></tr>'
+    + '<tr><td>Pendientes</td><td>' + stats.pendientes + '</td><td>' + ((stats.pendientes / total) * 100).toFixed(1) + '%</td></tr>'
+    + '<tr><td>No realizadas</td><td>' + stats.noRealizadas + '</td><td>' + ((stats.noRealizadas / total) * 100).toFixed(1) + '%</td></tr>'
+    + '<tr><td>Pospuestas</td><td>' + stats.pospuestas + '</td><td>' + ((stats.pospuestas / total) * 100).toFixed(1) + '%</td></tr>'
+    + '<tr><td><b>TOTAL</b></td><td><b>' + stats.total + '</b></td><td><b>100%</b></td></tr>'
+    + '</table>';
+  html += '<div class="chart-container"><img src="' + barImg + '"><p><b>Figura 2.</b> Distribución por tipo de servicio</p></div>';
+  return html;
+}
+
+function generarPieBase64(stats) {
+  const W = 500, H = 400;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  const data = [
+    { label: 'Realizadas', value: stats.realizadas || 0, color: '#22c55e' },
+    { label: 'Pendientes', value: stats.pendientes || 0, color: '#f59e0b' },
+    { label: 'No realizadas', value: stats.noRealizadas || 0, color: '#ef4444' },
+    { label: 'Pospuestas', value: stats.pospuestas || 0, color: '#94a3b8' }
+  ].filter(d => d.value > 0);
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Distribución por estatus (Total: ' + (stats.total || 0) + ')', W / 2, 30);
+  if (!data.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial'; ctx.fillText('Sin datos', W / 2, 200); return c.toDataURL('image/png'); }
+  const total = data.reduce((a, d) => a + d.value, 0) || 1;
+  const cx = W / 2, cy = 190, radius = 100;
+  let startAngle = -Math.PI / 2;
+  data.forEach(d => {
+    const angle = (d.value / total) * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, radius, startAngle, startAngle + angle); ctx.closePath();
+    ctx.fillStyle = d.color; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+    startAngle += angle;
+  });
+  ctx.font = '12px Arial'; ctx.textAlign = 'left';
+  data.forEach((d, i) => {
+    const y = 340 + i * 20;
+    ctx.fillStyle = d.color; ctx.fillRect(130, y - 10, 12, 12);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillText(d.label + ': ' + d.value + ' (' + ((d.value / total) * 100).toFixed(1) + '%)', 150, y);
+  });
+  return c.toDataURL('image/png');
+}
+
+function generarBarBase64(counts) {
+  const W = 600, H = 400;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Distribución por tipo de servicio', W / 2, 25);
+  if (!entries.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial'; ctx.fillText('Sin datos', W / 2, 200); return c.toDataURL('image/png'); }
+  const max = Math.max(...entries.map(e => e[1]));
+  const padL = 200, padR = 40, padT = 50, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const barH = Math.min(30, plotH / entries.length - 8);
+  entries.forEach((e, i) => {
+    const y = padT + i * (plotH / entries.length);
+    const bh = (e[1] / max) * plotW;
+    ctx.fillStyle = '#1e293b'; ctx.font = '12px Arial'; ctx.textAlign = 'right';
+    ctx.fillText(e[0], padL - 10, y + barH / 2 + 4);
+    ctx.fillStyle = '#3b82f6'; ctx.fillRect(padL, y, bh, barH);
+    ctx.fillStyle = '#1e293b'; ctx.textAlign = 'left'; ctx.font = 'bold 12px Arial';
+    ctx.fillText(String(e[1]), padL + bh + 6, y + barH / 2 + 4);
+  });
+  return c.toDataURL('image/png');
+}
+
+function markdownToHtml(md) {
+  if (!md) return '';
+  let html = String(md)
+    .replace(/### (.*?)\n/g, '<h3>$1</h3>')
+    .replace(/## (.*?)\n/g, '<h2>$1</h2>')
+    .replace(/# (.*?)\n/g, '<h1>$1</h1>')
+    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+    .replace(/\*(.*?)\*/g, '<i>$1</i>');
+  html = html.replace(/^- (.*?)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+  html = html.split('\n\n').map(p => {
+    if (p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<ol')) return p;
+    return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+  }).join('\n');
+  return html;
+}
+
+async function initApp(){
+  setSyncBadge('⏳ Cargando local…','info');
+  try {
+    const local = await loadLocal();
+    if (local && typeof local === 'object'){
+      DB = Object.assign(DB, local);
+      if (typeof DB.photos !== 'object' || DB.photos === null) DB.photos = {};
+      for (const cod in DB.photos){
+        if (!Array.isArray(DB.photos[cod])) { DB.photos[cod] = []; continue; }
+        DB.photos[cod] = DB.photos[cod].filter(p => p && typeof p === 'object' && p.filename).map(p => {
+          if (typeof p.fecha !== 'string') p.fecha = '';
+          if (typeof p.fechaVisita !== 'string') p.fechaVisita = '';
+          if (p.fileId === undefined) p.fileId = null;
+          if (p.synced === undefined) p.synced = !!(p.fileId || p.data);
+          if (p.visitId === undefined) p.visitId = null;
+          return p;
+        });
+      }
+      if (typeof DB.evid !== 'object' || DB.evid === null) DB.evid = {};
+    }
+  } catch(e){ DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; }
+  if (!DB.month) DB.month = getMesAnioActual();
+  sanitizeDB();
+  try { migrateVisits(); } catch(e){}
+  sanitizeDB();
+  try { renderAgenda(); } catch(e){}
+  try { renderResumen(); } catch(e){}
+  setSyncBadge('✓ Local listo', 'ok');
+  driveStateReady = true;
+  setTimeout(async () => { try { if (liberarEspacio() > 0) await saveLocal(); } catch(e){} }, 2000);
+  setTimeout(() => {
+    if (!isOnline()) { setSyncBadge('📴 Sin conexión','warn'); return; }
+    setSyncBadge('📥 Sync Drive…','info');
+    loadFromCloud().catch(() => { driveStateReady = true; setSyncBadge('✓ Local','ok'); });
+  }, 1500);
+}
+
+initApp();
+setInterval(sendHeartbeat, 60000);
+setTimeout(sendHeartbeat, 5000);
+window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); setTimeout(() => { loadFromCloud().then(() => { if (isDirty()){ syncToCloud(true); } }); sendHeartbeat(); }, 5000); });
+window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','warn'); updateActiveUsersBadge(0); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on' && !syncInProgress) syncToCloud(true); } });
+setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 120000);
+const CATS = [['ZONA WIFI','#3b82f6'],['DEDICADO - ZONA WIFI','#ef4444'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['PYME','#f97316'],['ANTENA','#14b8a6'],['NODO','#60a5fa']];
+async function renderMasterStats(){
+  const box = document.getElementById('masterStatsBox'); if (!box) return;
+  let data = null;
+  try { const r = await callBackendRead({ action:'getMasterStats', mesAnio: DB.month }, 20000); if (r && r.ok && r.stats){ data = r; try{ localStorage.setItem('nocMasterStats', JSON.stringify(r)); }catch(e){} } } catch(e){}
+  if (!data){ try { data = JSON.parse(localStorage.getItem('nocMasterStats') || 'null'); } catch(e){} }
+  const cv = document.getElementById('chartCategorias');
+  if (!data){ box.innerHTML = '<span style="color:var(--muted)">⚠ Master no disponible aún.</span>'; if (cv) cv.style.display = 'none'; return; }
+  if (cv) cv.style.display = 'block';
+  const map = {};
+  (data.stats || []).forEach(s => { map[s.tipo] = s.count; });
+  box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.85rem">' + CATS.map(c => '<tr><td style="padding:6px 8px;color:' + c[1] + ';font-weight:700">' + c[0] + '</td><td style="text-align:right;padding:6px 8px;font-weight:800">' + (map[c[0]] || 0) + '</td></tr>').join('') + '<tr style="border-top:1px solid #334155"><td style="padding:6px 8px;font-weight:800">TOTAL VISITAS</td><td style="text-align:right;padding:6px 8px;font-weight:800;color:var(--accent)">' + (data.total || 0) + '</td></tr></table>';
+  drawChartCategorias(CATS.map(c => [c[0], map[c[0]] || 0, c[1]]));
+}
+function drawChartCategorias(data){
+  const cv = document.getElementById('chartCategorias'); if (!cv) return;
+  const dpr = window.devicePixelRatio || 1; const W = 640, H = 340;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'left';
+  ctx.fillText('Visitas realizadas por categoría (Master)', 16, 22);
+  const max = Math.max(1, ...data.map(d => d[1]));
+  const padL = 36, padR = 16, padT = 44, padB = 80;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH); ctx.stroke();
+  ctx.strokeStyle = '#1e293b'; ctx.fillStyle = '#64748b'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++){ const v = Math.round(max * i / 4); const y = padT + plotH - (plotH * i / 4); ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke(); ctx.fillText(String(v), padL - 6, y + 3); }
+  const slotW = plotW / data.length;
+  const barW = Math.min(56, slotW * 0.6);
+  data.forEach((d, i) => {
+    const cx = padL + slotW * (i + 0.5);
+    const bh = Math.max(plotH * d[1] / max, d[1] > 0 ? 4 : 1);
+    const x = cx - barW / 2, y = padT + plotH - bh;
+    const grad = ctx.createLinearGradient(0, y, 0, y + bh);
+    grad.addColorStop(0, d[2]); grad.addColorStop(1, shadeColorCats(d[2], -35));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    if (ctx.roundRect){ ctx.roundRect(x, y, barW, bh, [6, 6, 0, 0]); } else { ctx.rect(x, y, barW, bh); }
+    ctx.fill();
+    ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 14px Segoe UI'; ctx.textAlign = 'center';
+    ctx.fillText(String(d[1]), cx, y - 6);
+    ctx.save();
+    ctx.translate(cx, padT + plotH + 10);
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'right';
+    ctx.fillText(d[0], 0, 0);
+    ctx.restore();
+  });
+}
+function shadeColorCats(hex, percent){
+  const num = parseInt(hex.replace('#',''), 16);
+  const amt = Math.round(2.55 * percent);
+  let R = (num >> 16) + amt;
+  let G = (num >> 8 & 0x00FF) + amt;
+  let B = (num & 0x0000FF) + amt;
+  R = Math.max(0, Math.min(255, R)); G = Math.max(0, Math.min(255, G)); B = Math.max(0, Math.min(255, B));
+  return '#' + (0x1000000 + R*0x10000 + G*0x100 + B).toString(16).slice(1);
+}
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>

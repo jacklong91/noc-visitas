@@ -232,6 +232,15 @@ body{padding-bottom:170px}
       </div>
     </div>
     <div id="previewMesBox" style="display:none"></div>
+    <!-- ⭐ BLOQUE NUEVO: GENERACIÓN DE INFORMES PROFESIONALES -->
+    <div class="card" style="border-left:4px solid var(--accent2); background:linear-gradient(135deg, rgba(34,197,94,.1), transparent);">
+      <label>📄 GENERACIÓN DE INFORMES PROFESIONALES</label>
+      <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Exporta los datos del mes seleccionado en formatos listos para entregar.</p>
+      <div class="row2">
+        <button class="btn btn-primary" style="flex:1" onclick="generarReporteFotografico()">📸 Reporte Fotográfico (Excel)</button>
+        <button class="btn btn-warn" style="flex:1" onclick="generarInformeIA()" id="btnIA">🧠 Redactar Informe (IA)</button>
+      </div>
+    </div>
     <div class="card">
       <label>📊 GRÁFICA GENERAL — ESTADO DE VISITAS</label>
       <canvas id="chartCanvas" style="width:100%;height:auto;display:block;border-radius:12px;background:#0f172a;border:1px solid #334155;margin-top:8px"></canvas>
@@ -352,7 +361,7 @@ body{padding-bottom:170px}
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
 <div class="toast" id="toast"></div>
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5pRjb-Pu-O3DeTUh07TfiaXG5VPdxS64RyNyioRRXhjK4HWkQoDDtEoysBqRX8NsGXQ/exec';
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5pRjb-Pu-O3DeTUh07TfiaXG5VPdxS64RyNyioRRXhjK4HWkQoDDtEoysBqRX8NsGXQ/exec';
 const TOKEN_SECRETO   = 'noc-zonawifi-2026-a8f3k9x2';
 const CLIENTES = [{"codigo":"2881","nombre":"PLAZA LOS ROBLES","direccion":"Los Robles"},{"codigo":"2025","nombre":"Unidad Integral De Salud Unisa C.A","direccion":"Av. El Carvario. Edif. Unisa, Piso PB"},{"codigo":"002881","nombre":"Sunshine Club C.A | Club Dynamo","direccion":"Av Principal de los Robles"},{"codigo":"9959","nombre":"Centro Medico Quirurgico La Fe, C.A.","direccion":"Av. Jovito Villalba"},{"codigo":"5229","nombre":"Makay Beach Club, C.A","direccion":"Boulevard Playa Guacuco"},{"codigo":"012578","nombre":"La Casona Colonial C.A","direccion":"Av. Aldonza Manrique"},{"codigo":"968","nombre":"Downtown Margarita Tibisay Beach, C.A.","direccion":"Av. Aldonza Manrique"},{"codigo":"014184","nombre":"Makay Beach Club, C.A","direccion":"Venetur"},{"codigo":"5281","nombre":"La Tribu 0295, C.A.","direccion":"Hotel Tibisay Beach Resort"},{"codigo":"002920","nombre":"GOA 007, C.A.","direccion":"Marina del Concorde"},{"codigo":"10757","nombre":"Grupo Menta 212, C.A","direccion":"CC Margarita City Place"},{"codigo":"674","nombre":"Guuao, C.A. | Sambil Margarita","direccion":"CC Sambil Margarita"},{"codigo":"8378","nombre":"Guuao C.A | CC La Vela, Local 2","direccion":"CC La Vela, Etapa II"},{"codigo":"4978","nombre":"Guuao C.A | CC La Vela","direccion":"CC La Vela, Etapa II"},{"codigo":"4868","nombre":"Guuao C.A | NOVA El Espinal","direccion":"Carretera principal vía San Juan Bautista"},{"codigo":"2851","nombre":"Emprendimientos Greccia Parra | La Pepitería","direccion":"CC Margarita City Place"},{"codigo":"15513","nombre":"Cocina 2026 C.A","direccion":"Av. Francisco Esteban Gómez"},{"codigo":"15549","nombre":"PASEO DEL MAR","direccion":"PASEO DEL MAR"},{"codigo":"4274","nombre":"Centro Venezolano Americano de Margarita (CEVAMAR) AC","direccion":"Jorge Coll"},{"codigo":"15812","nombre":"DGB Group C.A | Foodkart","direccion":"Foodkart Pampatar"},{"codigo":"2011","nombre":"Granja Kids, C.A. | Restaurante Maroush","direccion":"Playa El Angel"},{"codigo":"12317","nombre":"Alimentos Premium, C.A | AR GRILL","direccion":"Los Robles"},{"codigo":"1860","nombre":"Oscar Eduardo Mirabal Muñoz | Euphoria Bistro Bar","direccion":"Costa Azul"},{"codigo":"6594","nombre":"Emprendimiento Jhonattan Hernández | AM PM","direccion":"Porlamar"}];
 const DIAS = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
@@ -434,29 +443,15 @@ function markDirty(){ try{ localStorage.setItem('nocDirty','1'); localStorage.se
 function clearDirty(){ try{ localStorage.removeItem('nocDirty'); }catch(e){} }
 function isDirty(){ try{ return localStorage.getItem('nocDirty') === '1'; }catch(e){ return false; } }
 
-// ⚡ OPTIMIZACIÓN CRÍTICA: Guardar en localForage primero para evitar cuota de localStorage
 async function saveLocal(){
-  // 1. Guardar todo (incluyendo fotos) en la base de datos IndexedDB (localForage)
   try {
     if (typeof localForage !== 'undefined'){
       await localForage.ready();
       await localForage.setItem('nocVisitasDB', DB);
     }
   } catch(e){ console.warn('Error guardando localForage:', e); }
-
-  // 2. Guardar respaldo ligero en localStorage (sin fotos base64 para no llenar los 5MB)
   try {
-    const metaCritica = {
-      visits: {},
-      customClients: DB.customClients,
-      hiddenClients: DB.hiddenClients,
-      month: DB.month,
-      resp: DB.resp,
-      comp: DB.comp,
-      autoSync: DB.autoSync
-    };
-    
-    // Copiamos las visitas pero eliminamos la firma base64 pesada
+    const metaCritica = { visits: {}, customClients: DB.customClients, hiddenClients: DB.hiddenClients, month: DB.month, resp: DB.resp, comp: DB.comp, autoSync: DB.autoSync };
     for (const cod in DB.visits) {
       metaCritica.visits[cod] = DB.visits[cod].map(v => {
         const vCopy = Object.assign({}, v);
@@ -470,7 +465,6 @@ async function saveLocal(){
   } catch(e){ console.warn('LocalStorage lleno o error:', e); }
 }
 
-// ⚡ OPTIMIZACIÓN CRÍTICA: Cargar y fusionar datos de forma segura
 async function loadLocal(){
   let db = null;
   try{
@@ -479,14 +473,11 @@ async function loadLocal(){
       db = await localForage.getItem('nocVisitasDB');
     }
   }catch(e){}
-
   try {
     const metaRaw = localStorage.getItem('nocVisitasMeta');
     if (metaRaw) {
       const meta = JSON.parse(metaRaw);
       if (!db) db = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
-      
-      // Si localForage no tiene las visitas (se borró el caché o falló), usamos el respaldo ligero
       if (!db.visits || Object.keys(db.visits).length === 0) {
         if (meta.visits) db.visits = meta.visits;
       }
@@ -590,13 +581,11 @@ function onFechaChange(cod){
   const fEl = document.getElementById('f-' + cod);
   const nuevaFecha = fEl ? fEl.value : '';
   const v = getCurrentVisit(cod);
-  
   if (v && nuevaFecha && verificarFechaDuplicada(cod, nuevaFecha, v.id)){
     toast('⚠ Ya existe una visita guardada con esta misma fecha');
     if (fEl) fEl.value = v.fecha || '';
     return;
   }
-
   saveVisit(cod);
   if (!v || !v.fecha) return;
   const di = fechaADiaIndex(v.fecha);
@@ -1358,7 +1347,6 @@ function renderAgenda(){
     const idxActual = current ? (visits.indexOf(current) + 1) : 0;
     const fechaActual = current && current.fecha ? current.fecha.split('-').reverse().join('/') : 'Sin fecha';
     const formAbierto = formsAbiertos.has(c.codigo);
-    
     const strCed = c.cedula ? `<div class="dir">🆔 C.I./RIF: ${c.cedula}</div>` : '';
     const strTel = c.telefono ? `<div class="dir">📞 Tel: ${c.telefono}</div>` : '';
 
@@ -1426,20 +1414,16 @@ function addClient(){
   const dir = document.getElementById('ncDir').value.trim();
   const ced = document.getElementById('ncCedula').value.trim();
   const tel = document.getElementById('ncTelefono').value.trim();
-  
   if (!cod || !nom){ toast('⚠ Código y nombre obligatorios'); return; }
   if (allClients().some(c => c.codigo === cod)){ toast('⚠ Ya existe'); return; }
-  
   DB.customClients.push({ codigo: cod, nombre: nom, direccion: dir || '—', cedula: ced, telefono: tel, custom: true });
   DB.visits[cod] = [];
   save();
-  
   document.getElementById('ncCodigo').value = '';
   document.getElementById('ncNombre').value = '';
   document.getElementById('ncDir').value = '';
   document.getElementById('ncCedula').value = '';
   document.getElementById('ncTelefono').value = '';
-  
   document.getElementById('addClientForm').style.display = 'none';
   document.getElementById('addClientBtn').style.display = 'block';
   renderAgenda();
@@ -1464,7 +1448,6 @@ async function saveClientEdit(){
   const newDir = document.getElementById('ecDir').value.trim();
   const newCed = document.getElementById('ecCedula').value.trim();
   const newTel = document.getElementById('ecTelefono').value.trim();
-  
   if (!newCod || !newNom){ toast('⚠ Código y nombre son obligatorios'); return; }
   const cambioCodigo = (newCod !== oldCod);
   if (cambioCodigo){
@@ -1652,15 +1635,12 @@ function delPhoto(cod, i){
 function guardarVisita(cod, nombre){
   const v = getCurrentVisit(cod);
   if (!v){ toast('⚠ No hay visita activa'); return; }
-  
   const fEl = document.getElementById('f-' + cod);
   if (fEl) v.fecha = fEl.value;
-  
   if (v.fecha && verificarFechaDuplicada(cod, v.fecha, v.id)){
     toast('⚠ Ya existe una visita guardada con esta misma fecha');
     return;
   }
-
   saveVisit(cod);
   const estado = v.estado;
   if (estado === 'Realizada'){
@@ -1727,52 +1707,33 @@ function renderEvidFolderContent(codigo){
   const client = getClientByCode(codigo);
   const nombre = client ? client.nombre : (codigo === '_supervisor' ? 'Supervisor NOC' : codigo);
   document.getElementById('evidFolderName').textContent = nombre;
-  
   const todasFotos = (codigo === '_supervisor') ? [] : safeArray(DB.photos[codigo]);
   const visits = (codigo === '_supervisor') ? [] : getVisits(codigo);
-  
   const grupos = {};
-  
-  // 1. Crear listas de visitas que sí existen en la agenda
   const fechasValidas = new Set(visits.map(v => v.fecha).filter(f => f));
   const idsValidos = new Set(visits.map(v => v.id));
-  
-  // 2. Filtrar fotos: solo mostrar las que pertenezcan a una visita actual
-  todasFotos.forEach((p, i) => { 
-    // Verificamos si la foto pertenece a una visita que aún existe
+  todasFotos.forEach((p, i) => {
     const perteneceAVisitaActual = (p.visitId && idsValidos.has(p.visitId)) || (!p.visitId && fechasValidas.has(p.fechaVisita));
-    
-    // Si la visita fue borrada de la agenda, ocultamos la foto de esta vista
-    if (!perteneceAVisitaActual) return; 
-
-    const fecha = p.fechaVisita || 'sin-fecha'; 
-    if (!grupos[fecha]) grupos[fecha] = []; 
-    grupos[fecha].push({ type:'foto', item: p, idx: i }); 
+    if (!perteneceAVisitaActual) return;
+    const fecha = p.fechaVisita || 'sin-fecha';
+    if (!grupos[fecha]) grupos[fecha] = [];
+    grupos[fecha].push({ type:'foto', item: p, idx: i });
   });
-  
-  // 3. Agregar las firmas de las visitas actuales
-  visits.forEach(v => { 
-    if (v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)){ 
-      const fecha = v.fecha || v.firma.fechaVisita || 'sin-fecha'; 
-      if (!grupos[fecha]) grupos[fecha] = []; 
-      grupos[fecha].push({ type:'firma', item: v.firma, visitInfo: v }); 
-    } 
+  visits.forEach(v => {
+    if (v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)){
+      const fecha = v.fecha || v.firma.fechaVisita || 'sin-fecha';
+      if (!grupos[fecha]) grupos[fecha] = [];
+      grupos[fecha].push({ type:'firma', item: v.firma, visitInfo: v });
+    }
   });
-
-  // Contadores
   const totalArchivosFiltrados = Object.values(grupos).reduce((acc, curr) => acc + curr.length, 0);
-  const pendientesFolder = Object.values(grupos).flat().filter(it => it.type === 'foto' && !it.item.fileId && !it.item.data).length + 
-                           visits.filter(v => v && v.firma && typeof v.firma === 'object' && !v.firma.fileId && !v.firma.data).length;
-
+  const pendientesFolder = Object.values(grupos).flat().filter(it => it.type === 'foto' && !it.item.fileId && !it.item.data).length + visits.filter(v => v && v.firma && typeof v.firma === 'object' && !v.firma.fileId && !v.firma.data).length;
   document.getElementById('evidFolderMeta').textContent = `${totalArchivosFiltrados} archivo(s) · ${Object.keys(grupos).length} fecha(s)`;
-  
   const dlAllBtn = document.getElementById('dlAllBtn');
   if (dlAllBtn){ if (pendientesFolder > 0){ dlAllBtn.style.display = 'inline-block'; dlAllBtn.textContent = '⬇ Preparar ' + pendientesFolder; } else dlAllBtn.style.display = 'none'; }
-  
   const cont = document.getElementById('evidPhotosList');
   cont.innerHTML = ''; lightboxItems = [];
   const fechasOrdenadas = Object.keys(grupos).sort().reverse();
-  
   fechasOrdenadas.forEach(fecha => {
     const items = grupos[fecha];
     const section = document.createElement('div'); section.className = 'date-section';
@@ -1781,7 +1742,6 @@ function renderEvidFolderContent(codigo){
     header.innerHTML = `<span>${fechaBonita}</span><span class="count">${items.length} archivo(s)</span>`;
     section.appendChild(header);
     const grid = document.createElement('div'); grid.className = 'photo-grid';
-    
     items.forEach(it => {
       const p = it.item;
       let src = null;
@@ -1790,22 +1750,20 @@ function renderEvidFolderContent(codigo){
       lightboxItems.push(item);
       const thisIdx = lightboxItems.length - 1;
       const tile = document.createElement('div'); tile.className = 'photo-tile';
-      
-      if (src){ 
-        tile.innerHTML = `<img src="${src}" loading="lazy">${it.type === 'firma' ? '<div class="badge-firma">FIRMA</div>' : ''}`; 
-        tile.onclick = () => openLightbox(thisIdx); 
+      if (src){
+        tile.innerHTML = `<img src="${src}" loading="lazy">${it.type === 'firma' ? '<div class="badge-firma">FIRMA</div>' : ''}`;
+        tile.onclick = () => openLightbox(thisIdx);
       }
-      else { 
-        const fname = p.filename || 'archivo'; 
-        const icono = it.type === 'firma' ? '✍️' : '📷'; 
-        tile.innerHTML = `<div class="placeholder"><div style="font-size:1.4rem">${icono}</div><div style="font-size:.58rem">${fname.slice(0,18)}</div><button class="dl-btn" onclick="downloadOne('${codigo}','${fname}',event)">⬇ Cargar</button></div>`; 
+      else {
+        const fname = p.filename || 'archivo';
+        const icono = it.type === 'firma' ? '✍️' : '📷';
+        tile.innerHTML = `<div class="placeholder"><div style="font-size:1.4rem">${icono}</div><div style="font-size:.58rem">${fname.slice(0,18)}</div><button class="dl-btn" onclick="downloadOne('${codigo}','${fname}',event)">⬇ Cargar</button></div>`;
       }
       grid.appendChild(tile);
     });
     section.appendChild(grid);
     cont.appendChild(section);
   });
-  
   document.getElementById('evidFolderEmpty').style.display = totalArchivosFiltrados ? 'none' : 'block';
 }
 function openLightbox(index){
@@ -2307,7 +2265,313 @@ function saveResp(){ DB.resp = document.getElementById('responsable').value; sav
 function saveComp(){ DB.comp = document.getElementById('compSelect').value; save(); toast('🗜️ ' + DB.comp); }
 function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
 
-// ⚡ INICIO OPTIMIZADO: Carga rápida desde la memoria del teléfono sin esperar a Drive
+/* ==========================================================
+   📸 REPORTE FOTOGRÁFICO (EXCEL) — 1 hoja por cliente
+   ========================================================== */
+function generarReporteFotografico() {
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesAnio = esGeneral ? null : mesResumenFiltro;
+  const wb = XLSX.utils.book_new();
+  let hasData = false;
+  allClients().forEach(c => {
+    const visitas = getVisits(c.codigo);
+    const visitasMes = mesAnio ? visitas.filter(v => v && visitaEnMesAnio(v, mesAnio)) : visitas;
+    if (visitasMes.length === 0) return;
+    let sheetName = c.nombre.replace(/[\\/?*\[\]]/g, '').substring(0, 31) || c.codigo;
+    let suffix = 1;
+    while (wb.SheetNames.includes(sheetName)) { sheetName = sheetName.substring(0, 28) + '_' + suffix; suffix++; }
+    const A = [];
+    visitasMes.forEach(v => {
+      const fotos = safeArray(DB.photos[c.codigo]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha));
+      A.push(['', '', 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO', '', '', '', '', 'USUARIO: NOC N2']);
+      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']);
+      A.push(['', '', 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2', '', '', '', 'SOPORTE NOC NIVEL 2', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      const numCols = Math.min(12, Math.max(6, fotos.length));
+      const rowId = ['ID', c.codigo, '', ''];
+      const rowLinks = ['', '', '', ''];
+      for (let i = 0; i < numCols; i++) {
+        rowId.push('EVIDENCIAS:', '', '', '');
+        const foto = fotos[i];
+        const link = foto && foto.fileId ? 'https://drive.google.com/file/d/' + foto.fileId + '/view' : '';
+        rowLinks.push(link, '', '', '');
+      }
+      A.push(rowId);
+      A.push(rowLinks);
+      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['USUARIO:', c.nombre, '', '', '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['DIRECCIÓN:', c.direccion || '', '', '', '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['UBICACIÓN (COORDENADAS):', v.gps ? (v.gps.lat + ', ' + v.gps.lng) : (c.direccion || ''), '', '', '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['TELÉFONO:', c.telefono || '', '', '', '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['TIPO DE PLAN:', v.tipo || 'ZONA WIFI', '', '', '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['SERIAL DE ONU/ONT:', v.serialOnu || '', '', '', '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['OBSERVACIONES:', v.obs || 'Sin observaciones', '', '', '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['FECHA:', v.fecha || '', '', '', '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      hasData = true;
+    });
+    if (A.length > 0) {
+      const ws = XLSX.utils.aoa_to_sheet(A);
+      const cols = [{ wch: 24 }, { wch: 34 }, { wch: 24 }, { wch: 34 }];
+      for (let i = 0; i < 12; i++) cols.push({ wch: 22 }, { wch: 4 }, { wch: 4 }, { wch: 4 });
+      ws['!cols'] = cols;
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+  });
+  if (!hasData) { toast('⚠ No hay visitas en este período'); return; }
+  const mesStr = esGeneral ? 'General' : mesAnio.replace(/\s+/g, '_');
+  XLSX.writeFile(wb, 'Reporte_Fotografico_NOC_' + mesStr + '.xlsx');
+  toast('✓ Reporte Fotográfico (Excel) descargado');
+}
+
+/* ==========================================================
+   🧠 INFORME IA (WORD) — Gemini + Gráficas + Formato PRO
+   ========================================================== */
+async function generarInformeIA() {
+  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesAnio = esGeneral ? null : mesResumenFiltro;
+  const btn = document.getElementById('btnIA');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = '🧠 Redactando... (15-30 seg)';
+  let datosVisitas = '';
+  let count = 0, totalR = 0, totalP = 0, totalN = 0, totalS = 0;
+  allClients().forEach(c => {
+    const visitas = getVisits(c.codigo);
+    const visitasMes = mesAnio ? visitas.filter(v => v && visitaEnMesAnio(v, mesAnio)) : visitas;
+    visitasMes.forEach(v => {
+      datosVisitas += '- ' + c.nombre + ' (' + c.codigo + ') | ' + (v.fecha || 's/f') + ' | ' + (v.estado || 'Pendiente') + ' | ' + (v.obs || 'Sin obs.') + '\n';
+      count++;
+      if (v.estado === 'Realizada') totalR++; else if (v.estado === 'Pendiente') totalP++; else if (v.estado === 'No Realizada') totalN++; else totalS++;
+    });
+  });
+  if (count === 0) { toast('⚠ No hay visitas en este período'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; return; }
+  const prompt = 'Eres un Ingeniero de Redes NOC Nivel 2 de Zona WiFi. Redacta un informe de actividades profesional para la gerencia.\n\n'
+    + 'PERÍODO: ' + (mesAnio || 'General') + '\n'
+    + 'RESUMEN:\n- Total visitas: ' + count + '\n- Realizadas: ' + totalR + ' (' + ((totalR/count)*100).toFixed(1) + '%)\n- Pendientes: ' + totalP + '\n- No realizadas: ' + totalN + '\n- Pospuestas: ' + totalS + '\n\n'
+    + 'DATOS:\n' + datosVisitas + '\n'
+    + 'Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin ```json, sin texto extra) con EXACTAMENTE estas 3 propiedades:\n\n'
+    + '{\n  "resumen_ejecutivo": "3-4 párrafos profesionales describiendo el desempeño del período, porcentaje de cumplimiento, tipos de servicio atendidos, calidad operativa",\n  "matriz_incidencias": "5-7 categorías de incidencias recurrentes. Formato: lista con viñetas. Cada una con: categoría, manifestación técnica, acción correctiva, clientes representativos",\n  "conclusiones": "5-7 conclusiones y recomendaciones con viñetas, orientadas a la planificación del próximo período"\n}';
+  try {
+    await callBackendWrite({ action: 'generateAIReport', prompt: prompt });
+    let intentos = 0;
+    const maxIntentos = 30;
+    const verificar = async () => {
+      if (intentos >= maxIntentos) { toast('⚠ La IA tardó demasiado. Intenta de nuevo.'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; return; }
+      intentos++;
+      try {
+        const res = await callBackendRead({ action: 'getLastAIReport' }, 10000);
+        if (res && res.ok && res.texto && res.texto.length > 50) {
+          await construirInformeWord(res.texto, mesAnio || 'General', { total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS });
+          btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)';
+        } else { setTimeout(verificar, 2500); }
+      } catch (e) { setTimeout(verificar, 2500); }
+    };
+    setTimeout(verificar, 3500);
+  } catch (error) { toast('⚠ Error al conectar con la IA'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; }
+}
+
+async function construirInformeWord(textoIA, mes, stats) {
+  let aiData = { resumen_ejecutivo: '', matriz_incidencias: '', conclusiones: '' };
+  try {
+    let clean = String(textoIA).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    const i0 = clean.indexOf('{'); const i1 = clean.lastIndexOf('}');
+    if (i0 >= 0 && i1 > i0) clean = clean.substring(i0, i1 + 1);
+    const parsed = JSON.parse(clean);
+    aiData = Object.assign(aiData, parsed);
+  } catch (e) { aiData.resumen_ejecutivo = String(textoIA); }
+  const seccion2 = generarSeccionDetallePorFecha(mes);
+  const seccion3 = await generarSeccionGraficos(mes, stats);
+  const s1 = markdownToHtml(aiData.resumen_ejecutivo);
+  const s4 = markdownToHtml(aiData.matriz_incidencias);
+  const s5 = markdownToHtml(aiData.conclusiones);
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"><title>Informe NOC</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;padding:30px;font-size:11pt;line-height:1.5;color:#1e293b;}'
+    + 'h1{color:#1e293b;text-align:center;font-size:22pt;margin-bottom:4px;}'
+    + 'h2{color:#0369a1;border-bottom:2px solid #0369a1;padding-bottom:4px;margin-top:28px;}'
+    + 'h3{color:#0f172a;margin-top:18px;}'
+    + 'h4{color:#334155;margin-top:14px;font-size:11pt;}'
+    + 'p{margin:8px 0;text-align:justify;}'
+    + 'ul{margin:8px 0 8px 20px;}'
+    + 'table{border-collapse:collapse;width:100%;margin:10px 0;font-size:10pt;}'
+    + 'th{background:#0369a1;color:#fff;padding:6px;text-align:left;border:1px solid #ccc;}'
+    + 'td{padding:5px;border:1px solid #ccc;}'
+    + '.header-info{text-align:center;color:#64748b;margin-bottom:30px;}'
+    + '.section{margin-bottom:30px;}'
+    + '.chart-container{text-align:center;margin:20px 0;}'
+    + '.chart-container img{max-width:100%;}'
+    + '.footer{margin-top:50px;text-align:center;color:#64748b;font-size:10pt;}'
+    + '</style></head><body>'
+    + '<div class="header-info">'
+    + '<h1>INFORME DE ACTIVIDADES</h1>'
+    + '<h3>SOPORTE TÉCNICO - NOC NIVEL 2 | ZONA WIFI</h3>'
+    + '<p><b>Período:</b> ' + mes + '</p>'
+    + '<p><b>Generado:</b> ' + new Date().toLocaleString('es-VE') + '</p>'
+    + '</div><hr>'
+    + '<div class="section"><h2>1. RESUMEN EJECUTIVO</h2>' + s1 + '</div>'
+    + '<div class="section">' + seccion2 + '</div>'
+    + '<div class="section">' + seccion3 + '</div>'
+    + '<div class="section"><h2>4. MATRIZ DE INCIDENCIAS RECURRENTES</h2>' + s4 + '</div>'
+    + '<div class="section"><h2>5. CONCLUSIONES Y RECOMENDACIONES</h2>' + s5 + '</div>'
+    + '<div class="footer"><p>_________________________________________</p><p>Firma del Responsable NOC N2</p><p>' + (DB.resp || '') + '</p></div>'
+    + '</body></html>';
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Informe_Actividades_NOC_' + mes.replace(/\s+/g, '_') + '.doc';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  toast('✓ Informe Word descargado');
+}
+
+function generarSeccionDetallePorFecha(mes) {
+  const visitasPorFecha = {};
+  allClients().forEach(c => {
+    const visitas = getVisits(c.codigo);
+    const visitasMes = mes && mes !== 'General' ? visitas.filter(v => v && visitaEnMesAnio(v, mes)) : visitas;
+    visitasMes.forEach(v => {
+      if (!v.fecha) return;
+      if (!visitasPorFecha[v.fecha]) visitasPorFecha[v.fecha] = [];
+      visitasPorFecha[v.fecha].push({ cliente: c, visita: v });
+    });
+  });
+  const fechas = Object.keys(visitasPorFecha).sort();
+  if (!fechas.length) return '<h2>2. DETALLE POR FECHA</h2><p>Sin visitas en el período.</p>';
+  let html = '<h2>2. DETALLE DE TRABAJOS Y ACTIVIDADES REALIZADAS POR FECHA Y ABONADO</h2>';
+  let counter = 0;
+  fechas.forEach(fecha => {
+    const items = visitasPorFecha[fecha];
+    const [y, m, d] = fecha.split('-');
+    const fechaLarga = d + ' DE ' + MESES_ES[parseInt(m) - 1].toUpperCase() + ' DE ' + y;
+    html += '<h3>' + fechaLarga + '</h3>';
+    html += '<p><b>Resumen de visitas del día:</b></p>';
+    html += '<table><tr><th>#</th><th>Abonado</th><th>Contrato</th><th>Tipo de servicio</th></tr>';
+    items.forEach(it => { counter++; html += '<tr><td>2.' + counter + '</td><td>' + it.cliente.nombre + '</td><td>' + it.cliente.codigo + '</td><td>' + (it.visita.tipo || 'ZONA WIFI') + '</td></tr>'; });
+    html += '</table>';
+    html += '<h4>Detalle de actividades:</h4>';
+    items.forEach(it => {
+      counter++;
+      const v = it.visita; const c = it.cliente;
+      html += '<p><b>2.' + counter + '. ' + c.nombre + '</b></p>'
+        + '<p><b>Contrato:</b> ' + c.codigo + ' · <b>Tipo:</b> ' + (v.tipo || 'ZONA WIFI') + '</p>'
+        + '<p><b>Dirección:</b> ' + (c.direccion || '—') + '</p>'
+        + '<p><b>Fecha/Hora:</b> ' + (v.fecha || '—') + ' ' + (v.hora || '') + ' · <b>Estatus:</b> ' + (v.estado || 'Pendiente') + '</p>'
+        + '<p><b>Actividades y Hallazgos:</b> ' + (v.obs || 'Sin observaciones registradas.') + '</p>';
+    });
+  });
+  return html;
+}
+
+async function generarSeccionGraficos(mes, stats) {
+  const pieImg = generarPieBase64(stats);
+  const tipoCount = {};
+  allClients().forEach(c => {
+    const visitas = getVisits(c.codigo);
+    const visitasMes = mes && mes !== 'General' ? visitas.filter(v => v && visitaEnMesAnio(v, mes)) : visitas;
+    visitasMes.forEach(v => { const tipo = v.tipo || 'ZONA WIFI'; tipoCount[tipo] = (tipoCount[tipo] || 0) + 1; });
+  });
+  const barImg = generarBarBase64(tipoCount);
+  let html = '<h2>3. RESUMEN GRÁFICO Y ESTADÍSTICO DE VISITAS</h2>';
+  html += '<div class="chart-container"><img src="' + pieImg + '"><p><b>Figura 1.</b> Distribución de visitas por estatus</p></div>';
+  const total = stats.total || 1;
+  html += '<table>'
+    + '<tr><th>Estatus</th><th>Cantidad</th><th>Porcentaje</th></tr>'
+    + '<tr><td>Realizadas</td><td>' + stats.realizadas + '</td><td>' + ((stats.realizadas / total) * 100).toFixed(1) + '%</td></tr>'
+    + '<tr><td>Pendientes</td><td>' + stats.pendientes + '</td><td>' + ((stats.pendientes / total) * 100).toFixed(1) + '%</td></tr>'
+    + '<tr><td>No realizadas</td><td>' + stats.noRealizadas + '</td><td>' + ((stats.noRealizadas / total) * 100).toFixed(1) + '%</td></tr>'
+    + '<tr><td>Pospuestas</td><td>' + stats.pospuestas + '</td><td>' + ((stats.pospuestas / total) * 100).toFixed(1) + '%</td></tr>'
+    + '<tr><td><b>TOTAL</b></td><td><b>' + stats.total + '</b></td><td><b>100%</b></td></tr>'
+    + '</table>';
+  html += '<div class="chart-container"><img src="' + barImg + '"><p><b>Figura 2.</b> Distribución por tipo de servicio</p></div>';
+  return html;
+}
+
+function generarPieBase64(stats) {
+  const W = 500, H = 400;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  const data = [
+    { label: 'Realizadas', value: stats.realizadas || 0, color: '#22c55e' },
+    { label: 'Pendientes', value: stats.pendientes || 0, color: '#f59e0b' },
+    { label: 'No realizadas', value: stats.noRealizadas || 0, color: '#ef4444' },
+    { label: 'Pospuestas', value: stats.pospuestas || 0, color: '#94a3b8' }
+  ].filter(d => d.value > 0);
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Distribución por estatus (Total: ' + (stats.total || 0) + ')', W / 2, 30);
+  if (!data.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial'; ctx.fillText('Sin datos', W / 2, 200); return c.toDataURL('image/png'); }
+  const total = data.reduce((a, d) => a + d.value, 0) || 1;
+  const cx = W / 2, cy = 190, radius = 100;
+  let startAngle = -Math.PI / 2;
+  data.forEach(d => {
+    const angle = (d.value / total) * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, radius, startAngle, startAngle + angle); ctx.closePath();
+    ctx.fillStyle = d.color; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+    startAngle += angle;
+  });
+  ctx.font = '12px Arial'; ctx.textAlign = 'left';
+  data.forEach((d, i) => {
+    const y = 340 + i * 20;
+    ctx.fillStyle = d.color; ctx.fillRect(130, y - 10, 12, 12);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillText(d.label + ': ' + d.value + ' (' + ((d.value / total) * 100).toFixed(1) + '%)', 150, y);
+  });
+  return c.toDataURL('image/png');
+}
+
+function generarBarBase64(counts) {
+  const W = 600, H = 400;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Distribución por tipo de servicio', W / 2, 25);
+  if (!entries.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial'; ctx.fillText('Sin datos', W / 2, 200); return c.toDataURL('image/png'); }
+  const max = Math.max(...entries.map(e => e[1]));
+  const padL = 200, padR = 40, padT = 50, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const barH = Math.min(30, plotH / entries.length - 8);
+  entries.forEach((e, i) => {
+    const y = padT + i * (plotH / entries.length);
+    const bh = (e[1] / max) * plotW;
+    ctx.fillStyle = '#1e293b'; ctx.font = '12px Arial'; ctx.textAlign = 'right';
+    ctx.fillText(e[0], padL - 10, y + barH / 2 + 4);
+    ctx.fillStyle = '#3b82f6'; ctx.fillRect(padL, y, bh, barH);
+    ctx.fillStyle = '#1e293b'; ctx.textAlign = 'left'; ctx.font = 'bold 12px Arial';
+    ctx.fillText(String(e[1]), padL + bh + 6, y + barH / 2 + 4);
+  });
+  return c.toDataURL('image/png');
+}
+
+function markdownToHtml(md) {
+  if (!md) return '';
+  let html = String(md)
+    .replace(/### (.*?)\n/g, '<h3>$1</h3>')
+    .replace(/## (.*?)\n/g, '<h2>$1</h2>')
+    .replace(/# (.*?)\n/g, '<h1>$1</h1>')
+    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+    .replace(/\*(.*?)\*/g, '<i>$1</i>');
+  html = html.replace(/^- (.*?)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+  html = html.split('\n\n').map(p => {
+    if (p.startsWith('<h') || p.startsWith('<ul') || p.startsWith('<ol')) return p;
+    return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+  }).join('\n');
+  return html;
+}
+
 async function initApp(){
   setSyncBadge('⏳ Cargando local…','info');
   try {
@@ -2329,24 +2593,15 @@ async function initApp(){
       if (typeof DB.evid !== 'object' || DB.evid === null) DB.evid = {};
     }
   } catch(e){ DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; }
-  
   if (!DB.month) DB.month = getMesAnioActual();
   sanitizeDB();
   try { migrateVisits(); } catch(e){}
   sanitizeDB();
-
-  // 1. PINTAR RÁPIDO (La app ya es usable con todas las visitas locales)
   try { renderAgenda(); } catch(e){}
-  try { renderResumen(); } catch(e){} 
+  try { renderResumen(); } catch(e){}
   setSyncBadge('✓ Local listo', 'ok');
   driveStateReady = true;
-
-  // 2. Liberar espacio en background
-  setTimeout(async () => {
-    try { if (liberarEspacio() > 0) await saveLocal(); } catch(e){}
-  }, 2000);
-
-  // 3. Sincronizar con Drive sin bloquear la UI
+  setTimeout(async () => { try { if (liberarEspacio() > 0) await saveLocal(); } catch(e){} }, 2000);
   setTimeout(() => {
     if (!isOnline()) { setSyncBadge('📴 Sin conexión','warn'); return; }
     setSyncBadge('📥 Sync Drive…','info');

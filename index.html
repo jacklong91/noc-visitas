@@ -318,48 +318,6 @@ body{padding-bottom:170px}
   <div class="tab" onclick="setTabEvid();showTab('evid',this)">📷<br>Evidencias</div>
   <div class="tab" onclick="setTabRes();showTab('res',this)">📊<br>Resumen</div>
 </div>
-<div class="modal-bg" id="filtroFechasModal">
-  <div class="modal">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h3 style="font-size:1rem">📅 Filtrar por rango de fechas</h3>
-      <button class="btn btn-gray btn-sm" onclick="toggleFiltroFechas(false)">✕</button>
-    </div>
-    <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Muestra solo clientes con al menos UNA visita en el rango.</p>
-    <label>DESDE</label>
-    <input type="date" id="filtroDesdeInput">
-    <label style="margin-top:12px">HASTA</label>
-    <input type="date" id="filtroHastaInput">
-    <div class="row2" style="margin-top:16px">
-      <button class="btn btn-primary" style="flex:2" onclick="aplicarFiltroFechas()">✓ Aplicar</button>
-      <button class="btn btn-gray" style="flex:1" onclick="limpiarFiltroFechas()">Limpiar</button>
-    </div>
-  </div>
-</div>
-<div class="modal-bg" id="gpsModal"><div class="modal"><h3 style="margin-bottom:8px">📍 Ubicación no disponible</h3><p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">El GPS está apagado o sin permiso.</p><button class="btn btn-primary btn-block" onclick="tryOpenLocationSettings()">⚙️ Abrir ajustes</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="closeGpsHelp()">Cerrar</button></div></div>
-<div class="modal-bg" id="historialModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 id="historialTitle" style="font-size:1rem">Historial de visitas</h3><button class="btn btn-gray btn-sm" onclick="closeHistorial()">✕</button></div><div id="historialList"></div></div></div>
-<div class="modal-bg" id="debugMasterModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔍 Diagnóstico</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('debugMasterModal').classList.remove('open')">✕</button></div><div id="debugMasterContent" style="font-size:.78rem;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow-y:auto;font-family:monospace;line-height:1.4"></div></div></div>
-<div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre"><label>DIRECCIÓN</label><input id="ecDir"><div class="row2"><div><label>CÉDULA / RIF (opcional)</label><input id="ecCedula"></div><div><label>TELÉFONO (opcional)</label><input id="ecTelefono"></div></div><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
-<div class="lightbox" id="lightbox"><button class="lb-close" onclick="closeLightbox()">✕</button><button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button><button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button><img id="lightboxImg" src=""><div class="lb-caption"><b id="lightboxTitle">—</b><small id="lightboxSubtitle">—</small></div></div>
-<div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><label>CLIENTE ORIGEN</label><select id="rpOrigen"></select><label>CLIENTE DESTINO</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
-<div class="modal-bg" id="compartirModal">
-  <div class="modal" style="max-width:560px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h3 style="font-size:1rem">📤 Compartir visita</h3>
-      <button class="btn btn-gray btn-sm" onclick="cerrarCompartir()">✕</button>
-    </div>
-    <div id="compartirPreview" style="max-height:55vh;overflow-y:auto;margin-bottom:12px;background:#0b1220;border-radius:10px;padding:10px">
-      <div style="color:var(--muted);padding:40px;text-align:center">Preparando fotos…</div>
-    </div>
-    <div style="font-size:.75rem;color:var(--muted);margin-bottom:10px;text-align:center" id="compartirInfo"></div>
-    <div class="row2" style="margin-bottom:8px">
-      <button class="btn btn-gray" style="flex:1" onclick="copiarTextoVisita()">📋 Copiar texto</button>
-      <button class="btn btn-primary" style="flex:1" onclick="descargarZipVisita()">📦 Descargar ZIP</button>
-    </div>
-    <button class="btn btn-green btn-block" onclick="abrirWhatsAppVisita()" id="btnCompartirWhats" disabled style="opacity:.6">⏳ Preparando…</button>
-  </div>
-</div>
-<div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
-<div class="toast" id="toast"></div>
 <script>
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5pRjb-Pu-O3DeTUh07TfiaXG5VPdxS64RyNyioRRXhjK4HWkQoDDtEoysBqRX8NsGXQ/exec';
 const TOKEN_SECRETO   = 'noc-zonawifi-2026-a8f3k9x2';
@@ -2266,31 +2224,37 @@ function saveComp(){ DB.comp = document.getElementById('compSelect').value; save
 function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
 
 /* ==========================================================
-   📸 REPORTE FOTOGRÁFICO (EXCEL) — 1 hoja por cliente
+   📸 REPORTE FOTOGRÁFICO (EXCEL) — Formato Corporativo NOC
    ========================================================== */
 function generarReporteFotografico() {
   const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
   const mesAnio = esGeneral ? null : mesResumenFiltro;
   const wb = XLSX.utils.book_new();
   let hasData = false;
+
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
     const visitasMes = mesAnio ? visitas.filter(v => v && visitaEnMesAnio(v, mesAnio)) : visitas;
     if (visitasMes.length === 0) return;
+
     let sheetName = c.nombre.replace(/[\\/?*\[\]]/g, '').substring(0, 31) || c.codigo;
     let suffix = 1;
     while (wb.SheetNames.includes(sheetName)) { sheetName = sheetName.substring(0, 28) + '_' + suffix; suffix++; }
+
     const A = [];
     visitasMes.forEach(v => {
       const fotos = safeArray(DB.photos[c.codigo]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha));
+      
+      // Encabezado
       A.push(['', '', 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO', '', '', '', '', 'USUARIO: NOC N2']);
       A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']);
       A.push(['', '', 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2', '', '', '', 'SOPORTE NOC NIVEL 2', '']);
       A.push(['', '', '', '', '', '', '', '']);
-      const numCols = Math.min(12, Math.max(6, fotos.length));
+      
+      // Fila de Evidencias y Links (Hasta 4 fotos por fila para mantener el formato)
       const rowId = ['ID', c.codigo, '', ''];
       const rowLinks = ['', '', '', ''];
-      for (let i = 0; i < numCols; i++) {
+      for (let i = 0; i < Math.max(1, fotos.length); i++) {
         rowId.push('EVIDENCIAS:', '', '', '');
         const foto = fotos[i];
         const link = foto && foto.fileId ? 'https://drive.google.com/file/d/' + foto.fileId + '/view' : '';
@@ -2299,6 +2263,8 @@ function generarReporteFotografico() {
       A.push(rowId);
       A.push(rowLinks);
       A.push(['', '', '', '', '', '', '', '']);
+      
+      // Metadatos del cliente
       A.push(['USUARIO:', c.nombre, '', '', '', '', '', '']);
       A.push(['', '', '', '', '', '', '', '']);
       A.push(['DIRECCIÓN:', c.direccion || '', '', '', '', '', '', '']);
@@ -2318,14 +2284,64 @@ function generarReporteFotografico() {
       A.push(['', '', '', '', '', '', '', '']);
       hasData = true;
     });
+
     if (A.length > 0) {
       const ws = XLSX.utils.aoa_to_sheet(A);
       const cols = [{ wch: 24 }, { wch: 34 }, { wch: 24 }, { wch: 34 }];
       for (let i = 0; i < 12; i++) cols.push({ wch: 22 }, { wch: 4 }, { wch: 4 }, { wch: 4 });
       ws['!cols'] = cols;
+      
+      // Aplicar formato visual (colores y negritas)
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cell_address = {c:C, r:R};
+          const cell_ref = XLSX.utils.encode_cell(cell_address);
+          if (!ws[cell_ref]) continue;
+          
+          ws[cell_ref].s = {
+            font: { name: 'Arial', sz: 10 },
+            alignment: { vertical: 'center', wrapText: true },
+            border: {
+              top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+              right: { style: 'thin', color: { rgb: 'CCCCCC' } }
+            }
+          };
+          
+          if (ws[cell_ref].v === 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO' || ws[cell_ref].v === 'ID' || ws[cell_ref].v === 'USUARIO:' || ws[cell_ref].v === 'DIRECCIÓN:' || ws[cell_ref].v === 'FECHA:' || ws[cell_ref].v === 'TELÉFONO:' || ws[cell_ref].v === 'UBICACIÓN (COORDENADAS):' || ws[cell_ref].v === 'TIPO DE PLAN:' || ws[cell_ref].v === 'SERIAL DE ONU/ONT:' || ws[cell_ref].v === 'OBSERVACIONES:' || ws[cell_ref].v === 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2') {
+             ws[cell_ref].s.font.bold = true;
+          }
+          if (ws[cell_ref].v === 'EVIDENCIAS:') {
+             ws[cell_ref].s.font.bold = true;
+             ws[cell_ref].s.fill = { patternType: 'solid', fgColor: { rgb: 'DDEBF7' } };
+          }
+        }
+      }
+      
+      // Fusionar celdas para los títulos
+      const merges = [];
+      for (let i = 0; i < A.length; i += 19) { 
+         if (A[i] && A[i][2] === 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO') {
+            merges.push({ s: { r: i, c: 2 }, e: { r: i, c: 6 } });
+            merges.push({ s: { r: i + 2, c: 2 }, e: { r: i + 2, c: 6 } });
+            merges.push({ s: { r: i + 6, c: 4 }, e: { r: i + 6, c: 7 } }); 
+            merges.push({ s: { r: i + 6, c: 8 }, e: { r: i + 6, c: 11 } }); 
+            merges.push({ s: { r: i + 6, c: 12 }, e: { r: i + 6, c: 15 } }); 
+            merges.push({ s: { r: i + 6, c: 16 }, e: { r: i + 6, c: 19 } }); 
+            merges.push({ s: { r: i + 7, c: 4 }, e: { r: i + 7, c: 7 } }); 
+            merges.push({ s: { r: i + 7, c: 8 }, e: { r: i + 7, c: 11 } }); 
+            merges.push({ s: { r: i + 7, c: 12 }, e: { r: i + 7, c: 15 } }); 
+            merges.push({ s: { r: i + 7, c: 16 }, e: { r: i + 7, c: 19 } }); 
+         }
+      }
+      if (merges.length) ws['!merges'] = merges;
+
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
   });
+
   if (!hasData) { toast('⚠ No hay visitas en este período'); return; }
   const mesStr = esGeneral ? 'General' : mesAnio.replace(/\s+/g, '_');
   XLSX.writeFile(wb, 'Reporte_Fotografico_NOC_' + mesStr + '.xlsx');

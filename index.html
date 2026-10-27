@@ -2272,12 +2272,6 @@ function generarReporteFotografico() {
   const wb = XLSX.utils.book_new();
   let hasData = false;
 
-  // Estilos base para el formato corporativo
-  const bd = { top: {style: "thin", color: {rgb: "CCCCCC"}}, bottom: {style: "thin", color: {rgb: "CCCCCC"}}, left: {style: "thin", color: {rgb: "CCCCCC"}}, right: {style: "thin", color: {rgb: "CCCCCC"}} };
-  const boldFont = { name: "Arial", sz: 10, bold: true };
-  const normalFont = { name: "Arial", sz: 10 };
-  const linkFont = { name: "Arial", sz: 9, color: { rgb: "0563C1" }, underline: true };
-
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
     const visitasMes = mesAnio ? visitas.filter(v => v && visitaEnMesAnio(v, mesAnio)) : visitas;
@@ -2289,66 +2283,56 @@ function generarReporteFotografico() {
 
     const A = [];
     const merges = [];
+    let lastDate = '';
 
-    visitasMes.forEach(v => {
+    visitasMes.forEach((v, idx) => {
       const fotos = safeArray(DB.photos[c.codigo]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha));
-      const startRow = A.length; // Guardar índice para fusiones
-
-      // --- Construcción de Filas ---
-      A.push(['', '', 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO', '', '', '', '', 'USUARIO: NOC N2']); // 0
-      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']); // 1
-      A.push(['', '', 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2', '', '', '', 'SOPORTE NOC NIVEL 2', '']); // 2
-      A.push(['', '', '', '', '', '', '', '']); // 3
       
-      // Fila ID y Evidencias
-      const rowId = ['', '', 'ID', c.codigo, 'EVIDENCIAS:', '', '', ''];
-      const rowLinks = ['', '', '', '', '', '', '', ''];
-      for (let i = 0; i < 4; i++) {
-        rowId.push('EVIDENCIAS:', '', '', '');
+      // 1. Línea divisoria fucsia (solo si cambia de fecha y no es la primera)
+      if (idx > 0 && v.fecha !== lastDate) {
+        A.push(['', '', '']); // Fila vacía para la línea
+        const rLine = A.length - 1;
+        merges.push({ s: { r: rLine, c: 0 }, e: { r: rLine, c: 12 } });
+      }
+      lastDate = v.fecha;
+
+      const rTitle = A.length;
+      // Título con fondo morado claro
+      A.push(['', '', 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO', '', '', '', '', 'USUARIO: NOC N2']);
+      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']);
+      A.push(['', '', 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2', '', '', '', 'SOPORTE NOC NIVEL 2', '']);
+      A.push(['', '', '', '', '', '', '', '']);
+      
+      // Evidencias
+      A.push(['', '', 'ID', c.codigo, 'EVIDENCIAS:', '', '', '']);
+      const rEvid = A.length - 1;
+      
+      // 5 Fotos y Link Carpeta
+      for (let i = 0; i < 5; i++) {
         const foto = fotos[i];
         const link = foto && foto.fileId ? 'https://drive.google.com/file/d/' + foto.fileId + '/view' : '';
-        rowLinks.push(link, '', '', '');
+        A.push(['', '', 'Foto ' + (i+1) + ':', link, '', '', '', '']);
       }
-      A.push(rowId); // 4
-      A.push(rowLinks); // 5
-      A.push(['', '', '', '', '', '', '', '']); // 6
+      const nombreCorto = (c.nombre||'').replace(/[^\w\s]/gi,'').slice(0,20).trim();
+      const carpetaLink = 'https://drive.google.com/drive/search?q=' + encodeURIComponent(c.codigo + '_' + nombreCorto + '/' + v.fecha);
+      A.push(['', '', 'Carpeta Drive:', carpetaLink, '', '', '', '']);
+      A.push(['', '', '', '', '', '', '', '']);
       
-      A.push(['', '', 'USUARIO:', c.nombre, '', '', '', '']); // 7
-      A.push(['', '', 'DIRECCIÓN:', c.direccion || '', '', '', '', '']); // 8
-      A.push(['', '', 'UBICACIÓN (COORDENADAS):', v.gps ? (v.gps.lat + ', ' + v.gps.lng) : (c.direccion || ''), '', '', '', '']); // 9
-      A.push(['', '', 'TELÉFONO:', c.telefono || '', '', '', '', '']); // 10
-      A.push(['', '', 'TIPO DE PLAN:', v.tipo || 'ZONA WIFI', '', '', '', '']); // 11
-      A.push(['', '', 'SERIAL DE ONU/ONT:', v.serialOnu || '', '', '', '', '']); // 12
-      A.push(['', '', 'OBSERVACIONES:', v.obs || 'Sin observaciones', '', '', '', '']); // 13
-      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']); // 14
-      A.push(['', '', '', '', '', '', '', '']); // 15
-      A.push(['', '', 'Firma del Responsable NOC N2', '', '', '', '', '']); // 16
-      A.push(['', '', '', '', '', '', '', '']); // 17
-
-      // --- Fusiones (Merges) ---
-      merges.push({ s: { r: startRow, c: 2 }, e: { r: startRow, c: 6 } }); // TIPO
-      merges.push({ s: { r: startRow + 2, c: 2 }, e: { r: startRow + 2, c: 5 } }); // TÍTULO
-      merges.push({ s: { r: startRow + 2, c: 6 }, e: { r: startRow + 2, c: 7 } }); // SOPORTE
+      // Datos en fila delgada
+      const rData = A.length;
+      A.push(['', '', 'USUARIO:', c.nombre, '', '', '', '']);
+      A.push(['', '', 'DIRECCIÓN:', c.direccion || '', '', '', '', '']);
+      if (v.gps) A.push(['', '', 'UBICACIÓN (COORDENADAS):', v.gps.lat + ', ' + v.gps.lng, '', '', '', '']);
+      if (c.telefono) A.push(['', '', 'TELÉFONO:', c.telefono, '', '', '', '']);
+      A.push(['', '', 'TIPO DE PLAN:', v.tipo || 'ZONA WIFI', '', '', '', '']);
+      A.push(['', '', 'SERIAL DE ONU/ONT:', v.serialOnu || '', '', '', '', '']);
+      A.push(['', '', 'OBSERVACIONES:', v.obs || 'Sin observaciones', '', '', '', '']);
+      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']);
       
-      // EVIDENCIAS
-      merges.push({ s: { r: startRow + 4, c: 4 }, e: { r: startRow + 4, c: 7 } });
-      merges.push({ s: { r: startRow + 4, c: 8 }, e: { r: startRow + 4, c: 11 } });
-      merges.push({ s: { r: startRow + 4, c: 12 }, e: { r: startRow + 4, c: 15 } });
-      merges.push({ s: { r: startRow + 4, c: 16 }, e: { r: startRow + 4, c: 19 } });
-      
-      // Links
-      merges.push({ s: { r: startRow + 5, c: 4 }, e: { r: startRow + 5, c: 7 } });
-      merges.push({ s: { r: startRow + 5, c: 8 }, e: { r: startRow + 5, c: 11 } });
-      merges.push({ s: { r: startRow + 5, c: 12 }, e: { r: startRow + 5, c: 15 } });
-      merges.push({ s: { r: startRow + 5, c: 16 }, e: { r: startRow + 5, c: 19 } });
-
-      // Valores D:H
-      for (let i = 7; i <= 14; i++) {
-        merges.push({ s: { r: startRow + i, c: 3 }, e: { r: startRow + i, c: 7 } });
+      // Fusiones de datos (C a M)
+      for(let r = rData; r < A.length; r++) {
+          merges.push({ s: { r: r, c: 3 }, e: { r: r, c: 12 } }); // Fusiona D:L
       }
-
-      // Firma
-      merges.push({ s: { r: startRow + 16, c: 2 }, e: { r: startRow + 16, c: 7 } });
 
       hasData = true;
     });
@@ -2356,44 +2340,34 @@ function generarReporteFotografico() {
     if (A.length > 0) {
       const ws = XLSX.utils.aoa_to_sheet(A);
       
-      // --- Aplicar Estilos ---
+      // Estilos
       const range = XLSX.utils.decode_range(ws['!ref']);
       for (let R = range.s.r; R <= range.e.r; ++R) {
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cell = ws[XLSX.utils.encode_cell({c:C, r:R})];
+        for (let Cc = range.s.c; Cc <= range.e.c; ++Cc) {
+          const cell = ws[XLSX.utils.encode_cell({c:Cc, r:R})];
           if (!cell) continue;
+          cell.s = { font: {name: 'Arial', sz: 10}, alignment: { vertical: 'center', wrapText: true }, border: { bottom: {style: 'thin', color: {rgb: 'CCCCCC'}}, top: {style: 'thin', color: {rgb: 'CCCCCC'}}, left: {style: 'thin', color: {rgb: 'CCCCCC'}}, right: {style: 'thin', color: {rgb: 'CCCCCC'}} } };
           
-          cell.s = { font: normalFont, border: bd, alignment: { vertical: 'center', wrapText: true } };
+          // Línea Fucsia
+          if (A[R] && A[R].length === 3 && R > 0 && A[R-1][2] === 'FECHA:') {
+              cell.s.border = { bottom: {style: 'thick', color: {rgb: 'FF00FF'}}, top: {style: 'thin', color: {rgb: 'CCCCCC'}}, left: {style: 'thin', color: {rgb: 'CCCCCC'}}, right: {style: 'thin', color: {rgb: 'CCCCCC'}} };
+          }
+
+          // Título Morado Claro
+          if (A[R] && A[R][2] === 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO') {
+              cell.s.fill = { patternType: 'solid', fgColor: {rgb: 'E6E6FA'} };
+              cell.s.font.bold = true;
+          }
           
-          const rowInBlock = R % 18; // Cada bloque tiene 18 filas
-          
-          if (rowInBlock === 0 || rowInBlock === 2) { // Títulos
-             if (C >= 2) cell.s.font = boldFont;
-          } else if (rowInBlock === 4) { // ID y EVIDENCIAS
-             if (C === 2 || C === 4 || C === 8 || C === 12 || C === 16) {
-                cell.s.font = boldFont;
-             }
-             if (C >= 4 && cell.v === 'EVIDENCIAS:') {
-                cell.s.fill = { fgColor: { rgb: 'DDEBF7' } };
-                cell.s.alignment = { horizontal: 'center', vertical: 'center' };
-             }
-          } else if (rowInBlock === 5) { // Links
-             if (C === 4 || C === 8 || C === 12 || C === 16) {
-                cell.s.font = linkFont;
-             }
-          } else if (rowInBlock >= 7 && rowInBlock <= 14) { // Labels
-             if (C === 2) cell.s.font = boldFont;
-          } else if (rowInBlock === 16) { // Firma
-             if (C === 2) cell.s.font = boldFont;
+          // Links Azules
+          if (cell.v && typeof cell.v === 'string' && cell.v.startsWith('http')) {
+              cell.s.font = { color: {rgb: '0563C1'}, underline: true, sz: 9 };
           }
         }
       }
 
-      // Ancho de columnas
-      const cols = [{ wch: 2 }, { wch: 2 }, { wch: 30 }, { wch: 20 }];
-      for (let i = 0; i < 16; i++) cols.push({ wch: 15 });
+      const cols = [{ wch: 2 }, { wch: 2 }, { wch: 25 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
       ws['!cols'] = cols;
-
       ws['!merges'] = merges;
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     }
@@ -2404,7 +2378,6 @@ function generarReporteFotografico() {
   XLSX.writeFile(wb, 'Reporte_Fotografico_NOC_' + mesStr + '.xlsx', { cellStyles: true });
   toast('✓ Reporte Fotográfico (Excel) descargado');
 }
-
 /* ==========================================================
    🧠 INFORME IA (WORD) — Gemini + Gráficas + Formato PRO
    ========================================================== */
@@ -2536,18 +2509,22 @@ function generarSeccionDetallePorFecha(mes) {
     items.forEach(it => {
       counter++;
       const v = it.visita; const c = it.cliente;
+      // ✨ CORRECCIÓN AQUÍ: Ocultar el texto de "reconstruida"
+      let obsText = v.obs || 'Sin observaciones registradas.';
+      if (obsText === 'Visita reconstruida automáticamente desde Drive') obsText = 'Sin observaciones registradas en el sistema.';
+      
       html += '<p><b>2.' + counter + '. ' + c.nombre + '</b></p>'
         + '<p><b>Contrato:</b> ' + c.codigo + ' · <b>Tipo:</b> ' + (v.tipo || 'ZONA WIFI') + '</p>'
         + '<p><b>Dirección:</b> ' + (c.direccion || '—') + '</p>'
         + '<p><b>Fecha/Hora:</b> ' + (v.fecha || '—') + ' ' + (v.hora || '') + ' · <b>Estatus:</b> ' + (v.estado || 'Pendiente') + '</p>'
-        + '<p><b>Actividades y Hallazgos:</b> ' + (v.obs || 'Sin observaciones registradas.') + '</p>';
+        + '<p><b>Actividades y Hallazgos:</b> ' + obsText + '</p>';
     });
   });
   return html;
 }
-
 async function generarSeccionGraficos(mes, stats) {
   const pieImg = generarPieBase64(stats);
+  
   const tipoCount = {};
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
@@ -2555,6 +2532,23 @@ async function generarSeccionGraficos(mes, stats) {
     visitasMes.forEach(v => { const tipo = v.tipo || 'ZONA WIFI'; tipoCount[tipo] = (tipoCount[tipo] || 0) + 1; });
   });
   const barImg = generarBarBase64(tipoCount);
+
+  // ✨ NUEVO: Datos para gráfico de líneas y días
+  const fechaCount = {};
+  const diaCount = [0,0,0,0,0,0,0];
+  allClients().forEach(c => {
+    const visitas = getVisits(c.codigo);
+    const visitasMes = mes && mes !== 'General' ? visitas.filter(v => v && visitaEnMesAnio(v, mes)) : visitas;
+    visitasMes.forEach(v => { 
+        if(v.fecha) {
+            fechaCount[v.fecha] = (fechaCount[v.fecha] || 0) + 1;
+            const di = fechaADiaIndex(v.fecha);
+            if (di >= 0) diaCount[di]++;
+        }
+    });
+  });
+  const lineImg = generarLineBase64(fechaCount);
+  const diaImg = generarDiaBase64(diaCount);
   let html = '<h2>3. RESUMEN GRÁFICO Y ESTADÍSTICO DE VISITAS</h2>';
   html += '<div class="chart-container"><img src="' + pieImg + '"><p><b>Figura 1.</b> Distribución de visitas por estatus</p></div>';
   const total = stats.total || 1;
@@ -2567,10 +2561,10 @@ async function generarSeccionGraficos(mes, stats) {
     + '<tr><td><b>TOTAL</b></td><td><b>' + stats.total + '</b></td><td><b>100%</b></td></tr>'
     + '</table>';
   html += '<div class="chart-container"><img src="' + barImg + '"><p><b>Figura 2.</b> Distribución por tipo de servicio</p></div>';
+  html += '<div class="chart-container"><img src="' + lineImg + '"><p><b>Figura 3.</b> Evolución de visitas por fecha</p></div>';
+  html += '<div class="chart-container"><img src="' + diaImg + '"><p><b>Figura 4.</b> Visitas por día de la semana</p></div>';
   return html;
-}
-
-function generarPieBase64(stats) {
+}function generarPieBase64(stats) {
   const W = 500, H = 400;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const ctx = c.getContext('2d');
@@ -2603,6 +2597,66 @@ function generarPieBase64(stats) {
   return c.toDataURL('image/png');
 }
 
+function generarLineBase64(fechaCount) {
+  const W = 600, H = 300;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  const entries = Object.entries(fechaCount).sort((a, b) => a[0].localeCompare(b[0]));
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Evolución de visitas por fecha', W / 2, 25);
+  if (entries.length < 2) { ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial'; ctx.fillText('Datos insuficientes para gráfico de línea', W / 2, 150); return c.toDataURL('image/png'); }
+  
+  const max = Math.max(...entries.map(e => e[1]));
+  const padL = 50, padR = 20, padT = 50, padB = 50;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  
+  ctx.beginPath();
+  entries.forEach((e, i) => {
+    const x = padL + (i / (entries.length - 1)) * plotW;
+    const y = padT + plotH - (e[1] / max) * plotH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 3; ctx.stroke();
+  
+  entries.forEach((e, i) => {
+    const x = padL + (i / (entries.length - 1)) * plotW;
+    const y = padT + plotH - (e[1] / max) * plotH;
+    ctx.fillStyle = '#3b82f6'; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1e293b'; ctx.font = '10px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(e[1], x, y - 10);
+    const f = e[0].split('-').reverse().slice(0,2).join('/');
+    ctx.fillText(f, x, padT + plotH + 20);
+  });
+  return c.toDataURL('image/png');
+}
+
+function generarDiaBase64(diaCount) {
+  const W = 500, H = 300;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+  ctx.fillText('Visitas por día de la semana', W / 2, 25);
+  
+  const max = Math.max(...diaCount, 1);
+  const padL = 40, padR = 20, padT = 50, padB = 40;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const slotW = plotW / 7;
+  const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  
+  diaCount.forEach((val, i) => {
+    const x = padL + i * slotW + slotW * 0.15;
+    const bh = (val / max) * plotH;
+    const y = padT + plotH - bh;
+    ctx.fillStyle = '#8b5cf6'; ctx.fillRect(x, y, slotW * 0.7, bh);
+    ctx.fillStyle = '#1e293b'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(val, x + slotW * 0.35, y - 5);
+    ctx.font = '10px Arial';
+    ctx.fillText(dias[i], x + slotW * 0.35, padT + plotH + 20);
+  });
+  return c.toDataURL('image/png');
+}
 function generarBarBase64(counts) {
   const W = 600, H = 400;
   const c = document.createElement('canvas'); c.width = W; c.height = H;

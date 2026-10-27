@@ -2409,7 +2409,7 @@ async function generarInformeIA() {
   try {
     await callBackendWrite({ action: 'generateAIReport', prompt: prompt });
     let intentos = 0;
-    const maxIntentos = 30;
+    const maxIntentos = 120
     const verificar = async () => {
       if (intentos >= maxIntentos) { toast('⚠ La IA tardó demasiado. Intenta de nuevo.'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; return; }
       intentos++;
@@ -2418,8 +2418,8 @@ async function generarInformeIA() {
         if (res && res.ok && res.texto && res.texto.length > 50) {
           await construirInformeWord(res.texto, mesAnio || 'General', { total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS });
           btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)';
-        } else { setTimeout(verificar, 2500); }
-      } catch (e) { setTimeout(verificar, 2500); }
+        } else { setTimeout(verificar, 3000
+     } catch (e) { setTimeout(verificar, 3000); }
     };
     setTimeout(verificar, 3500);
   } catch (error) { toast('⚠ Error al conectar con la IA'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; }

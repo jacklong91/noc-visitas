@@ -2418,8 +2418,8 @@ async function generarInformeIA() {
         if (res && res.ok && res.texto && res.texto.length > 50) {
           await construirInformeWord(res.texto, mesAnio || 'General', { total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS });
           btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)';
-        } else { setTimeout(verificar, 3000
-     } catch (e) { setTimeout(verificar, 3000); }
+            } else { setTimeout(verificar, 3000); }
+      } catch (e) { setTimeout(verificar, 3000); }
     };
     setTimeout(verificar, 3500);
   } catch (error) { toast('⚠ Error al conectar con la IA'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; }
@@ -2500,7 +2500,7 @@ async function generarSeccionGraficos(mes, stats) {
     visitasMes.forEach(v => { 
         if(v.fecha) {
             fechaCount[v.fecha] = (fechaCount[v.fecha] || 0) + 1;
-            const di = fechaAdiaIndex(v.fecha);
+            const di = fechaADiaIndex(v.fecha);
             if (di >= 0) diaCount[di]++;
         }
     });

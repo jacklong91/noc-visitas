@@ -2480,48 +2480,6 @@ async function construirInformeWord(textoIA, mes, stats) {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
   toast('✓ Informe Word descargado');
 }
-
-function generarSeccionDetallePorFecha(mes) {
-  const visitasPorFecha = {};
-  allClients().forEach(c => {
-    const visitas = getVisits(c.codigo);
-    const visitasMes = mes && mes !== 'General' ? visitas.filter(v => v && visitaEnMesAnio(v, mes)) : visitas;
-    visitasMes.forEach(v => {
-      if (!v.fecha) return;
-      if (!visitasPorFecha[v.fecha]) visitasPorFecha[v.fecha] = [];
-      visitasPorFecha[v.fecha].push({ cliente: c, visita: v });
-    });
-  });
-  const fechas = Object.keys(visitasPorFecha).sort();
-  if (!fechas.length) return '<h2>2. DETALLE POR FECHA</h2><p>Sin visitas en el período.</p>';
-  let html = '<h2>2. DETALLE DE TRABAJOS Y ACTIVIDADES REALIZADAS POR FECHA Y ABONADO</h2>';
-  let counter = 0;
-  fechas.forEach(fecha => {
-    const items = visitasPorFecha[fecha];
-    const [y, m, d] = fecha.split('-');
-    const fechaLarga = d + ' DE ' + MESES_ES[parseInt(m) - 1].toUpperCase() + ' DE ' + y;
-    html += '<h3>' + fechaLarga + '</h3>';
-    html += '<p><b>Resumen de visitas del día:</b></p>';
-    html += '<table><tr><th>#</th><th>Abonado</th><th>Contrato</th><th>Tipo de servicio</th></tr>';
-    items.forEach(it => { counter++; html += '<tr><td>2.' + counter + '</td><td>' + it.cliente.nombre + '</td><td>' + it.cliente.codigo + '</td><td>' + (it.visita.tipo || 'ZONA WIFI') + '</td></tr>'; });
-    html += '</table>';
-    html += '<h4>Detalle de actividades:</h4>';
-    items.forEach(it => {
-      counter++;
-      const v = it.visita; const c = it.cliente;
-      // ✨ CORRECCIÓN AQUÍ: Ocultar el texto de "reconstruida"
-      let obsText = v.obs || 'Sin observaciones registradas.';
-      if (obsText === 'Visita reconstruida automáticamente desde Drive') obsText = 'Sin observaciones registradas en el sistema.';
-      
-      html += '<p><b>2.' + counter + '. ' + c.nombre + '</b></p>'
-        + '<p><b>Contrato:</b> ' + c.codigo + ' · <b>Tipo:</b> ' + (v.tipo || 'ZONA WIFI') + '</p>'
-        + '<p><b>Dirección:</b> ' + (c.direccion || '—') + '</p>'
-        + '<p><b>Fecha/Hora:</b> ' + (v.fecha || '—') + ' ' + (v.hora || '') + ' · <b>Estatus:</b> ' + (v.estado || 'Pendiente') + '</p>'
-        + '<p><b>Actividades y Hallazgos:</b> ' + obsText + '</p>';
-    });
-  });
-  return html;
-}
 async function generarSeccionGraficos(mes, stats) {
   const pieImg = generarPieBase64(stats);
   
@@ -2533,7 +2491,7 @@ async function generarSeccionGraficos(mes, stats) {
   });
   const barImg = generarBarBase64(tipoCount);
 
-  // ✨ NUEVO: Datos para gráfico de líneas y días
+  // Datos para gráfico de líneas y días
   const fechaCount = {};
   const diaCount = [0,0,0,0,0,0,0];
   allClients().forEach(c => {
@@ -2542,13 +2500,14 @@ async function generarSeccionGraficos(mes, stats) {
     visitasMes.forEach(v => { 
         if(v.fecha) {
             fechaCount[v.fecha] = (fechaCount[v.fecha] || 0) + 1;
-            const di = fechaADiaIndex(v.fecha);
+            const di = fechaAdiaIndex(v.fecha);
             if (di >= 0) diaCount[di]++;
         }
     });
   });
   const lineImg = generarLineBase64(fechaCount);
   const diaImg = generarDiaBase64(diaCount);
+
   let html = '<h2>3. RESUMEN GRÁFICO Y ESTADÍSTICO DE VISITAS</h2>';
   html += '<div class="chart-container"><img src="' + pieImg + '"><p><b>Figura 1.</b> Distribución de visitas por estatus</p></div>';
   const total = stats.total || 1;
@@ -2564,7 +2523,8 @@ async function generarSeccionGraficos(mes, stats) {
   html += '<div class="chart-container"><img src="' + lineImg + '"><p><b>Figura 3.</b> Evolución de visitas por fecha</p></div>';
   html += '<div class="chart-container"><img src="' + diaImg + '"><p><b>Figura 4.</b> Visitas por día de la semana</p></div>';
   return html;
-}function generarPieBase64(stats) {
+}
+function generarPieBase64(stats) {
   const W = 500, H = 400;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const ctx = c.getContext('2d');
@@ -2630,7 +2590,6 @@ function generarLineBase64(fechaCount) {
   });
   return c.toDataURL('image/png');
 }
-
 function generarDiaBase64(diaCount) {
   const W = 500, H = 300;
   const c = document.createElement('canvas'); c.width = W; c.height = H;

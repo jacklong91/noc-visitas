@@ -2386,43 +2386,90 @@ async function generarInformeIA() {
   const mesAnio = esGeneral ? null : mesResumenFiltro;
   const btn = document.getElementById('btnIA');
   if (btn.disabled) return;
+  
   btn.disabled = true;
-  btn.textContent = '🧠 Redactando... (15-30 seg)';
+  btn.textContent = '🧠 Redactando informe... (Espera)';
+
   let datosVisitas = '';
   let count = 0, totalR = 0, totalP = 0, totalN = 0, totalS = 0;
+  
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
     const visitasMes = mesAnio ? visitas.filter(v => v && visitaEnMesAnio(v, mesAnio)) : visitas;
     visitasMes.forEach(v => {
       datosVisitas += '- ' + c.nombre + ' (' + c.codigo + ') | ' + (v.fecha || 's/f') + ' | ' + (v.estado || 'Pendiente') + ' | ' + (v.obs || 'Sin obs.') + '\n';
       count++;
-      if (v.estado === 'Realizada') totalR++; else if (v.estado === 'Pendiente') totalP++; else if (v.estado === 'No Realizada') totalN++; else totalS++;
+      if (v.estado === 'Realizada') totalR++; 
+      else if (v.estado === 'Pendiente') totalP++; 
+      else if (v.estado === 'No Realizada') totalN++; 
+      else totalS++;
     });
   });
-  if (count === 0) { toast('⚠ No hay visitas en este período'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; return; }
+
+  if (count === 0) { 
+    toast('⚠ No hay visitas en este período'); 
+    btn.disabled = false; 
+    btn.textContent = '🧠 Redactar Informe (IA)'; 
+    return; 
+  }
+
   const prompt = 'Eres un Ingeniero de Redes NOC Nivel 2 de Zona WiFi. Redacta un informe de actividades profesional para la gerencia.\n\n'
     + 'PERÍODO: ' + (mesAnio || 'General') + '\n'
     + 'RESUMEN:\n- Total visitas: ' + count + '\n- Realizadas: ' + totalR + ' (' + ((totalR/count)*100).toFixed(1) + '%)\n- Pendientes: ' + totalP + '\n- No realizadas: ' + totalN + '\n- Pospuestas: ' + totalS + '\n\n'
     + 'DATOS:\n' + datosVisitas + '\n'
     + 'Responde ÚNICAMENTE con un objeto JSON válido (sin markdown, sin ```json, sin texto extra) con EXACTAMENTE estas 3 propiedades:\n\n'
-    + '{\n  "resumen_ejecutivo": "3-4 párrafos profesionales describiendo el desempeño del período, porcentaje de cumplimiento, tipos de servicio atendidos, calidad operativa",\n  "matriz_incidencias": "5-7 categorías de incidencias recurrentes. Formato: lista con viñetas. Cada una con: categoría, manifestación técnica, acción correctiva, clientes representativos",\n  "conclusiones": "5-7 conclusiones y recomendaciones con viñetas, orientadas a la planificación del próximo período"\n}';
+    + '{\n  "resumen_ejecutivo": "3-4 párrafos profesionales...",\n  "matriz_incidencias": "5-7 categorías de incidencias...",\n  "conclusiones": "5-7 conclusiones..."\n}';
+
+  // ⚠️ PEGA TU CLAVE AQUÍ (La que usaste en prueba.html)
+  const API_KEY = "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"; 
+  const URL = "https://openrouter.ai/api/v1/chat/completions";
+
+  const payload = {
+    "model": "openrouter/free", // Usamos el enrutador automático
+    "messages": [
+      { "role": "system", "content": "Eres un Ingeniero de Redes NOC Nivel 2. Responde ÚNICAMENTE con un objeto JSON válido. NO uses bloques de código markdown." },
+      { "role": "user", "content": prompt }
+    ],
+    "temperature": 0.7,
+    "max_tokens": 4096
+  };
+
   try {
-    await callBackendWrite({ action: 'generateAIReport', prompt: prompt });
-    let intentos = 0;
-    const maxIntentos = 120
-    const verificar = async () => {
-      if (intentos >= maxIntentos) { toast('⚠ La IA tardó demasiado. Intenta de nuevo.'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; return; }
-      intentos++;
-      try {
-        const res = await callBackendRead({ action: 'getLastAIReport' }, 10000);
-        if (res && res.ok && res.texto && res.texto.length > 50) {
-          await construirInformeWord(res.texto, mesAnio || 'General', { total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS });
-          btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)';
-            } else { setTimeout(verificar, 3000); }
-      } catch (e) { setTimeout(verificar, 3000); }
-    };
-    setTimeout(verificar, 3500);
-  } catch (error) { toast('⚠ Error al conectar con la IA'); btn.disabled = false; btn.textContent = '🧠 Redactar Informe (IA)'; }
+    // Llamada directa desde el navegador, igual que en tu prueba.html
+    const response = await fetch(URL, {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Error ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    let textoLimpio = data.choices[0].message.content.trim();
+    
+    // Limpiamos el texto por si acaso
+    textoLimpio = textoLimpio.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+
+    // Generamos el Word directamente
+    await construirInformeWord(textoLimpio, mesAnio || 'General', { 
+        total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS 
+    });
+    
+    toast('✓ Informe generado con éxito');
+    
+  } catch (error) {
+    console.error(error);
+    toast('⚠ Error: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🧠 Redactar Informe (IA)';
+  }
 }
 
 async function construirInformeWord(textoIA, mes, stats) {

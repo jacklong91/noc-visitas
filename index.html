@@ -15,6 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
 :root{--bg:#0f172a;--card:#1e293b;--card2:#273549;--accent:#38bdf8;--accent2:#22c55e;--text:#e2e8f0;--muted:#94a3b8;--danger:#ef4444;--warn:#f59e0b}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -144,11 +145,17 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .search-bar{position:fixed;top:64px;left:0;right:0;z-index:80;display:none;gap:8px;padding:10px 12px;background:var(--bg);border-bottom:1px solid #334155;align-items:center}
 .search-bar.open{display:flex}
 .search-bar .search{margin-bottom:0;flex:1}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid #334155;z-index:61}
-.bottom-nav .tab{flex:1;padding:13px 4px;font-size:.8rem;border-bottom:none;border-top:3px solid transparent}
-.bottom-nav .tab.active{border-bottom-color:transparent;border-top-color:var(--accent)}
-.export-bar{bottom:57px}
-body{padding-bottom:170px}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(15,23,42,.97);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid rgba(56,189,248,.25);z-index:61;box-shadow:0 -6px 24px rgba(0,0,0,.45);padding:4px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+.bottom-nav .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px 6px;font-size:.66rem;font-weight:800;color:var(--muted);border-top:none;border-radius:12px;letter-spacing:.3px;transition:all .2s;cursor:pointer;position:relative}
+.bottom-nav .tab .bn-ico{font-size:1.3rem;line-height:1;transition:transform .2s}
+.bottom-nav .tab.active{color:var(--accent);background:rgba(56,189,248,.1)}
+.bottom-nav .tab.active::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:36px;height:3px;border-radius:0 0 4px 4px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.bottom-nav .tab.active .bn-ico{transform:translateY(-1px) scale(1.15)}
+.bottom-nav .tab:active{background:rgba(148,163,184,.12)}
+.export-bar{bottom:66px;background:rgba(30,41,59,.97);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid rgba(56,189,248,.2);box-shadow:0 -6px 24px rgba(0,0,0,.4);padding:10px 12px;gap:8px}
+.export-bar .btn{border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.35);transition:transform .15s,box-shadow .15s}
+.export-bar .btn:active{transform:scale(.95)}
+body{padding-bottom:182px}
 .comp-foto-thumb{display:inline-block;position:relative;width:64px;height:64px;margin:2px;border-radius:8px;overflow:hidden;background:var(--card2)}
 .comp-foto-thumb img{width:100%;height:100%;object-fit:cover}
 </style>
@@ -314,9 +321,9 @@ body{padding-bottom:170px}
   <button class="btn btn-red" onclick="resetAll()">🗑️</button>
 </div>
 <div class="bottom-nav">
-  <div class="tab active" onclick="showTab('agenda',this)">📋<br>Agenda</div>
-  <div class="tab" onclick="setTabEvid();showTab('evid',this)">📷<br>Evidencias</div>
-  <div class="tab" onclick="setTabRes();showTab('res',this)">📊<br>Resumen</div>
+  <div class="tab active" onclick="showTab('agenda',this)"><span class="bn-ico">📋</span><span>Agenda</span></div>
+  <div class="tab" onclick="setTabEvid();showTab('evid',this)"><span class="bn-ico">📷</span><span>Evidencias</span></div>
+  <div class="tab" onclick="setTabRes();showTab('res',this)"><span class="bn-ico">📊</span><span>Resumen</span></div>
 </div>
 <div class="modal-bg" id="filtroFechasModal">
   <div class="modal">
@@ -1300,6 +1307,7 @@ function renderAgenda(){
     });
     htmlChip += '</div></details>';
     htmlChip += '<div class="row2"><button class="btn btn-warn btn-sm" style="flex:1;background:var(--warn);color:#422006" onclick="descargarFiltroFechas()">📥 Excel+Gráfica (ZIP)</button><button class="btn btn-warn btn-sm" style="flex:1;background:var(--warn);color:#422006" onclick="compartirFiltroFechas()">💬 WhatsApp</button></div>';
+    htmlChip += '<div class="row2" style="margin-top:8px"><button class="btn btn-primary btn-sm" style="flex:1" onclick="generarReporteFotografico(true)">📸 Reporte Fotográfico</button><button class="btn btn-primary btn-sm" style="flex:1;background:var(--accent2);color:#052e16" onclick="generarInformeIA(true)">🧠 Informe IA</button></div>';
     chipFiltro.innerHTML = htmlChip;
     chipFiltro.style.cssText = 'background:rgba(245,158,11,.1);border:1px solid var(--warn);border-radius:12px;padding:12px;margin-bottom:12px';
     chipFiltro.style.display = 'block';
@@ -1574,7 +1582,19 @@ function addPhotos(cod, input){
   const fechaVisita = v && v.fecha ? v.fecha : hoyYMD();
   const visitId = v ? v.id : null;
   formsAbiertos.add(cod);
-  [...input.files].forEach(file => {
+  const files = [...input.files];
+  input.value = '';
+  if (!files.length) return;
+  const total = files.length;
+  let procesadas = 0, pendientes = total;
+  const setToast = msg => { const t = document.getElementById('toast'); if (t){ t.textContent = msg; t.style.display = 'block'; } };
+  setToast('📷 Procesando fotos 0/' + total + '…');
+  const alTerminar = () => {
+    updateSyncStatusBox();
+    setToast('☁️ Subiendo ' + total + ' foto(s) a Drive…');
+    saveLocal().then(() => { markDirty(); syncToCloud(true); });
+  };
+  files.forEach(file => {
     const reader = new FileReader();
     reader.onload = e => {
       const img = new Image();
@@ -1588,13 +1608,17 @@ function addPhotos(cod, input){
         const ahora = new Date();
         DB.photos[cod] = DB.photos[cod] || [];
         DB.photos[cod].push({ data: dataUrl, fecha: ahora.toLocaleString('es-VE'), fechaVisita: fechaVisita, visitId: visitId, filename: buildPhotoFilename(ahora), synced: false, fileId: null });
-        save(); renderPhotos(cod);
+        procesadas++;
+        setToast('📷 Procesando fotos ' + procesadas + '/' + total + '…');
+        renderPhotos(cod);
+        if (--pendientes === 0) alTerminar();
       };
+      img.onerror = () => { procesadas++; setToast('📷 Procesando fotos ' + procesadas + '/' + total + '…'); if (--pendientes === 0) alTerminar(); };
       img.src = e.target.result;
     };
+    reader.onerror = () => { procesadas++; setToast('📷 Procesando fotos ' + procesadas + '/' + total + '…'); if (--pendientes === 0) alTerminar(); };
     reader.readAsDataURL(file);
   });
-  input.value = '';
 }
 function renderPhotos(cod){
   const box = document.getElementById('ph-' + cod); if (!box) return;
@@ -2264,126 +2288,258 @@ function saveComp(){ DB.comp = document.getElementById('compSelect').value; save
 function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
 
 /* ==========================================================
-   📸 REPORTE FOTOGRÁFICO (EXCEL) — Formato Idéntico a la Plantilla
+   📸 REPORTE FOTOGRÁFICO (EXCEL + IMÁGENES EMBEBIDAS REALES)
+   Morado/Fucsia · Línea divisoria · Sin observaciones
+   5 evidencias como IMÁGENES (no links) + link carpeta final
    ========================================================== */
-function generarReporteFotografico() {
-  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
-  const mesAnio = esGeneral ? null : mesResumenFiltro;
-  const wb = XLSX.utils.book_new();
-  let hasData = false;
-
-  allClients().forEach(c => {
-    const visitas = getVisits(c.codigo);
-    const visitasMes = mesAnio ? visitas.filter(v => v && visitaEnMesAnio(v, mesAnio)) : visitas;
-    if (visitasMes.length === 0) return;
-
-    let sheetName = c.nombre.replace(/[\\/?*\[\]]/g, '').substring(0, 31) || c.codigo;
-    let suffix = 1;
-    while (wb.SheetNames.includes(sheetName)) { sheetName = sheetName.substring(0, 28) + '_' + suffix; suffix++; }
-
-    const A = [];
-    const merges = [];
-    let lastDate = '';
-
-    visitasMes.forEach((v, idx) => {
-      const fotos = safeArray(DB.photos[c.codigo]).filter(p => p.visitId === v.id || (!p.visitId && p.fechaVisita === v.fecha));
-      
-      // 1. Línea divisoria fucsia (solo si cambia de fecha y no es la primera)
-      if (idx > 0 && v.fecha !== lastDate) {
-        A.push(['', '', '']); // Fila vacía para la línea
-        const rLine = A.length - 1;
-        merges.push({ s: { r: rLine, c: 0 }, e: { r: rLine, c: 12 } });
-      }
-      lastDate = v.fecha;
-
-      const rTitle = A.length;
-      // Título con fondo morado claro
-      A.push(['', '', 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO', '', '', '', '', 'USUARIO: NOC N2']);
-      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']);
-      A.push(['', '', 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2', '', '', '', 'SOPORTE NOC NIVEL 2', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      
-      // Evidencias
-      A.push(['', '', 'ID', c.codigo, 'EVIDENCIAS:', '', '', '']);
-      const rEvid = A.length - 1;
-      
-      // 5 Fotos y Link Carpeta
-      for (let i = 0; i < 5; i++) {
-        const foto = fotos[i];
-        const link = foto && foto.fileId ? 'https://drive.google.com/file/d/' + foto.fileId + '/view' : '';
-        A.push(['', '', 'Foto ' + (i+1) + ':', link, '', '', '', '']);
-      }
-      const nombreCorto = (c.nombre||'').replace(/[^\w\s]/gi,'').slice(0,20).trim();
-      const carpetaLink = 'https://drive.google.com/drive/search?q=' + encodeURIComponent(c.codigo + '_' + nombreCorto + '/' + v.fecha);
-      A.push(['', '', 'Carpeta Drive:', carpetaLink, '', '', '', '']);
-      A.push(['', '', '', '', '', '', '', '']);
-      
-      // Datos en fila delgada
-      const rData = A.length;
-      A.push(['', '', 'USUARIO:', c.nombre, '', '', '', '']);
-      A.push(['', '', 'DIRECCIÓN:', c.direccion || '', '', '', '', '']);
-      if (v.gps) A.push(['', '', 'UBICACIÓN (COORDENADAS):', v.gps.lat + ', ' + v.gps.lng, '', '', '', '']);
-      if (c.telefono) A.push(['', '', 'TELÉFONO:', c.telefono, '', '', '', '']);
-      A.push(['', '', 'TIPO DE PLAN:', v.tipo || 'ZONA WIFI', '', '', '', '']);
-      A.push(['', '', 'SERIAL DE ONU/ONT:', v.serialOnu || '', '', '', '', '']);
-      A.push(['', '', 'OBSERVACIONES:', v.obs || 'Sin observaciones', '', '', '', '']);
-      A.push(['', '', 'FECHA:', v.fecha || '', '', '', '', '']);
-      
-      // Fusiones de datos (C a M)
-      for(let r = rData; r < A.length; r++) {
-          merges.push({ s: { r: r, c: 3 }, e: { r: r, c: 12 } }); // Fusiona D:L
-      }
-
-      hasData = true;
-    });
-
-    if (A.length > 0) {
-      const ws = XLSX.utils.aoa_to_sheet(A);
-      
-      // Estilos
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        for (let Cc = range.s.c; Cc <= range.e.c; ++Cc) {
-          const cell = ws[XLSX.utils.encode_cell({c:Cc, r:R})];
-          if (!cell) continue;
-          cell.s = { font: {name: 'Arial', sz: 10}, alignment: { vertical: 'center', wrapText: true }, border: { bottom: {style: 'thin', color: {rgb: 'CCCCCC'}}, top: {style: 'thin', color: {rgb: 'CCCCCC'}}, left: {style: 'thin', color: {rgb: 'CCCCCC'}}, right: {style: 'thin', color: {rgb: 'CCCCCC'}} } };
-          
-          // Línea Fucsia
-          if (A[R] && A[R].length === 3 && R > 0 && A[R-1][2] === 'FECHA:') {
-              cell.s.border = { bottom: {style: 'thick', color: {rgb: 'FF00FF'}}, top: {style: 'thin', color: {rgb: 'CCCCCC'}}, left: {style: 'thin', color: {rgb: 'CCCCCC'}}, right: {style: 'thin', color: {rgb: 'CCCCCC'}} };
-          }
-
-          // Título Morado Claro
-          if (A[R] && A[R][2] === 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO') {
-              cell.s.fill = { patternType: 'solid', fgColor: {rgb: 'E6E6FA'} };
-              cell.s.font.bold = true;
-          }
-          
-          // Links Azules
-          if (cell.v && typeof cell.v === 'string' && cell.v.startsWith('http')) {
-              cell.s.font = { color: {rgb: '0563C1'}, underline: true, sz: 9 };
-          }
-        }
-      }
-
-      const cols = [{ wch: 2 }, { wch: 2 }, { wch: 25 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
-      ws['!cols'] = cols;
-      ws['!merges'] = merges;
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    }
-  });
-
-  if (!hasData) { toast('⚠ No hay visitas en este período'); return; }
-  const mesStr = esGeneral ? 'General' : mesAnio.replace(/\s+/g, '_');
-  XLSX.writeFile(wb, 'Reporte_Fotografico_NOC_' + mesStr + '.xlsx', { cellStyles: true });
-  toast('✓ Reporte Fotográfico (Excel) descargado');
+function visitaDentroDePeriodo(v, mes, usarRango){
+  if (!v) return false;
+  if (usarRango){
+    if (!v.fecha) return false;
+    if (filtroDesde && v.fecha < filtroDesde) return false;
+    if (filtroHasta && v.fecha > filtroHasta) return false;
+    return true;
+  }
+  return !mes || mes === 'General' || visitaEnMesAnio(v, mes);
 }
+
+function buildDataReporteFotografico(usarRango){
+  const data = [];
+  const mesRef = usarRango ? null : ((mesResumenFiltro === MES_GENERAL || !mesResumenFiltro) ? 'General' : mesResumenFiltro);
+  allClients().forEach(c => {
+    const items = [];
+    getVisits(c.codigo).forEach(v => {
+      if (!visitaDentroDePeriodo(v, mesRef, usarRango)) return;
+      const fotos = safeArray(DB.photos[c.codigo]).filter(p => p && p.filename && ((p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)));
+      items.push({ visita: v, fotos: fotos });
+    });
+    if (items.length) data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', telefono: c.telefono || '', items: items });
+  });
+  return data;
+}
+
+async function fotoABase64(foto){
+  try {
+    if (foto.data){ const partes = String(foto.data).split(','); return partes.length > 1 ? partes[1] : partes[0]; }
+    if (foto.fileId){
+      const blob = await cargarFotoComoBlob(foto);
+      if (!blob) return null;
+      const buf = await blob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+      return btoa(bin);
+    }
+  } catch(e){}
+  return null;
+}
+
+async function generarReporteFotografico(usarRango){
+  usarRango = !!usarRango;
+  if (usarRango && !filtroDesde && !filtroHasta){ toast('⚠ Primero aplica un filtro de fechas'); return; }
+  const data = buildDataReporteFotografico(usarRango);
+  if (!data.length){ toast('⚠ No hay visitas en este período'); return; }
+  const periodo = usarRango
+    ? ('RANGO ' + (filtroDesde ? filtroDesde.split('-').reverse().join('-') : 'INICIO') + ' A ' + (filtroHasta ? filtroHasta.split('-').reverse().join('-') : 'HOY'))
+    : ((mesResumenFiltro === MES_GENERAL || !mesResumenFiltro) ? 'GENERAL' : String(mesResumenFiltro).toUpperCase());
+  const nombreArchivo = 'Reporte_Fotografico_NOC_' + periodo.replace(/[^A-Za-z0-9]+/g, '_');
+  await construirReporteFotograficoExcel(data, periodo, nombreArchivo);
+}
+
+async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
+  toast('📸 Generando reporte fotográfico…');
+  const MORADO = 'FF8A2BE2', FUCSIA = 'FFFF1493', LILA = 'FFF3E5F5', LILA2 = 'FFE1BEE7', BORD = 'FFD1C4E9', MORADO_TXT = 'FF4A148C';
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'NOC N2 — Zona WiFi';
+  wb.created = new Date();
+
+  let totalImg = 0;
+  data.forEach(d => d.items.forEach(it => totalImg += Math.min(it.fotos.length, 5)));
+  let imgListas = 0;
+  const setToast = msg => { const t = document.getElementById('toast'); if (t){ t.textContent = msg; t.style.display = 'block'; } };
+
+  const fill = (cell, color) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } }; };
+  const borderBottom = cell => { cell.border = { bottom: { style: 'thin', color: { argb: BORD } } }; };
+
+  const filaDato = (ws, R, label, value, opt) => {
+    const row = ws.getRow(R);
+    const lc = row.getCell(3);
+    lc.value = label;
+    lc.font = { bold: true, size: 10, color: { argb: MORADO_TXT } };
+    fill(lc, LILA);
+    lc.alignment = { vertical: 'middle', wrapText: true };
+    const vc = row.getCell(4);
+    vc.value = value;
+    vc.font = Object.assign({ size: 10 }, (opt && opt.font) || {});
+    vc.alignment = Object.assign({ vertical: 'middle', wrapText: true }, (opt && opt.align) || {});
+    for (let c = 3; c <= 13; c++) borderBottom(row.getCell(c));
+    ws.mergeCells(R, 4, R, 13);
+    ws.getRow(R).height = (opt && opt.h) || 18;
+    return R + 1;
+  };
+
+  for (const d of data){
+    let sheetName = String(d.nombre).replace(/[\\/?*\[\]:]/g, '').substring(0, 28) || String(d.codigo);
+    let suf = 1;
+    while (wb.getWorksheet(sheetName)){ sheetName = sheetName.substring(0, 25) + '_' + suf; suf++; }
+    const ws = wb.addWorksheet(sheetName, { views: [{ showGridLines: false }] });
+    ws.columns = [
+      { width: 2.5 }, { width: 2.5 }, { width: 22 },
+      { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 },
+      { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }
+    ];
+
+    for (const item of d.items){
+      const v = item.visita;
+      const fotos = item.fotos.slice(0, 5);
+      const fechaTxt = v.fecha ? v.fecha.split('-').reverse().join('/') : 'SIN FECHA';
+      let R = ws.rowCount + 1;
+
+      // ── Banner principal morado/fucsia
+      for (let c = 1; c <= 13; c++) fill(ws.getRow(R).getCell(c), c >= 9 ? FUCSIA : MORADO);
+      ws.mergeCells(R, 3, R, 8);
+      const cTit = ws.getRow(R).getCell(3);
+      cTit.value = 'TIPO DE DOCUMENTO: FORMATO FOTOGRÁFICO';
+      cTit.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+      cTit.alignment = { vertical: 'middle', horizontal: 'left' };
+      ws.mergeCells(R, 9, R, 13);
+      const cUsu = ws.getRow(R).getCell(9);
+      cUsu.value = 'USUARIO: NOC N2';
+      cUsu.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+      cUsu.alignment = { vertical: 'middle', horizontal: 'right' };
+      ws.getRow(R).height = 24;
+      R++;
+
+      // ── FECHA (fucsia)
+      R = filaDato(ws, R, 'FECHA:', fechaTxt, { font: { bold: true, size: 11, color: { argb: FUCSIA } } });
+
+      // ── Título (banda lila)
+      for (let c = 1; c <= 13; c++) fill(ws.getRow(R).getCell(c), LILA);
+      ws.mergeCells(R, 3, R, 8);
+      const cT2 = ws.getRow(R).getCell(3);
+      cT2.value = 'TÍTULO: REPORTE DE VISITA SOPORTE NOC NIVEL 2';
+      cT2.font = { bold: true, size: 10, color: { argb: FUCSIA } };
+      cT2.alignment = { vertical: 'middle' };
+      ws.mergeCells(R, 9, R, 13);
+      const cT3 = ws.getRow(R).getCell(9);
+      cT3.value = 'SOPORTE NOC NIVEL 2';
+      cT3.font = { bold: true, size: 10, color: { argb: MORADO_TXT } };
+      cT3.alignment = { vertical: 'middle', horizontal: 'right' };
+      ws.getRow(R).height = 18;
+      R++;
+
+      // ── ID / EVIDENCIAS
+      const lcId = ws.getRow(R).getCell(3);
+      lcId.value = 'ID';
+      lcId.font = { bold: true, size: 10, color: { argb: MORADO_TXT } };
+      fill(lcId, LILA);
+      const vcId = ws.getRow(R).getCell(4);
+      vcId.value = String(d.codigo);
+      vcId.font = { bold: true, size: 12, color: { argb: MORADO } };
+      vcId.alignment = { vertical: 'middle' };
+      ws.mergeCells(R, 6, R, 8);
+      const cEv = ws.getRow(R).getCell(6);
+      cEv.value = 'EVIDENCIAS:';
+      cEv.font = { bold: true, size: 10, color: { argb: FUCSIA } };
+      cEv.alignment = { horizontal: 'right', vertical: 'middle' };
+      ws.getRow(R).height = 18;
+      R++;
+
+      // ── 5 evidencias como IMÁGENES embebidas (NO links)
+      for (let i = 0; i < 5; i++){
+        const foto = fotos[i];
+        const row = ws.getRow(R);
+        const lc = row.getCell(3);
+        lc.value = 'Evidencia N° ' + (i + 1) + ':';
+        lc.font = { bold: true, size: 9, color: { argb: MORADO_TXT } };
+        fill(lc, LILA2);
+        lc.alignment = { vertical: 'middle' };
+        let b64 = null;
+        if (foto){
+          setToast('📷 Cargando imágenes ' + imgListas + '/' + totalImg + '…');
+          b64 = await fotoABase64(foto);
+          if (b64) imgListas++;
+        }
+        if (b64){
+          const imgId = wb.addImage({ base64: b64, extension: 'jpeg' });
+          ws.addImage(imgId, { tl: { col: 3, row: R }, ext: { width: 640, height: 90 }, editAs: 'oneCell' });
+        } else {
+          const vc = row.getCell(4);
+          vc.value = foto ? '⚠ No se pudo cargar la imagen (foto solo en Drive y sin conexión)' : '— Sin evidencia —';
+          vc.font = { italic: true, size: 9, color: { argb: 'FF9E9E9E' } };
+          vc.alignment = { horizontal: 'center', vertical: 'middle' };
+          for (let c = 4; c <= 13; c++) borderBottom(row.getCell(c));
+          ws.mergeCells(R, 4, R, 13);
+        }
+        for (let c = 3; c <= 13; c++) borderBottom(ws.getRow(R).getCell(c));
+        ws.getRow(R).height = 95;
+        R++;
+      }
+
+      // ── Link de la carpeta de la fecha (único link)
+      {
+        const row = ws.getRow(R);
+        const lc = row.getCell(3);
+        lc.value = 'CARPETA DRIVE:';
+        lc.font = { bold: true, size: 10, color: { argb: MORADO_TXT } };
+        fill(lc, LILA);
+        lc.alignment = { vertical: 'middle' };
+        const nombreCorto = String(d.nombre || '').replace(/[^\w\s]/gi, '').slice(0, 20).trim();
+        const carpetaLink = 'https://drive.google.com/drive/search?q=' + encodeURIComponent(String(d.codigo) + '_' + nombreCorto + '/' + (v.fecha || ''));
+        const vc = row.getCell(4);
+        vc.value = { text: '🔗 Abrir carpeta de evidencias del ' + fechaTxt, hyperlink: carpetaLink };
+        vc.font = { size: 10, color: { argb: 'FF0563C1' }, underline: true };
+        vc.alignment = { vertical: 'middle' };
+        for (let c = 3; c <= 13; c++) borderBottom(row.getCell(c));
+        ws.mergeCells(R, 4, R, 13);
+        ws.getRow(R).height = 18;
+        R++;
+      }
+
+      ws.getRow(R).height = 6;
+      R++;
+
+      // ── Datos (SIN observaciones, como pediste)
+      R = filaDato(ws, R, 'USUARIO:', d.nombre);
+      R = filaDato(ws, R, 'DIRECCIÓN:', d.direccion || '—');
+      if (v.gps) R = filaDato(ws, R, 'UBICACIÓN (COORDENADAS):', v.gps.lat + ', ' + v.gps.lng);
+      if (d.telefono) R = filaDato(ws, R, 'TELÉFONO:', d.telefono);
+      R = filaDato(ws, R, 'TIPO DE PLAN:', v.tipo || 'ZONA WIFI');
+      R = filaDato(ws, R, 'SERIAL DE ONU/ONT:', v.serialOnu || '—');
+      R = filaDato(ws, R, 'FECHA:', fechaTxt, { font: { bold: true, color: { argb: FUCSIA } } });
+
+      // ── Línea divisoria FUCSIA entre visitas/fechas
+      for (let c = 1; c <= 13; c++) fill(ws.getRow(R).getCell(c), FUCSIA);
+      ws.getRow(R).height = 5;
+      R++;
+      ws.getRow(R).height = 10;
+    }
+  }
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nombreArchivo + '.xlsx';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  const t = document.getElementById('toast');
+  if (t) t.style.display = 'none';
+  toast('✓ Reporte fotográfico descargado (' + imgListas + ' imágenes)');
+}
+
 /* ==========================================================
    🧠 INFORME IA (WORD) — Formato Corporativo WAVE
    ========================================================== */
-async function generarInformeIA() {
-  const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
-  const mesAnio = esGeneral ? null : mesResumenFiltro;
+async function generarInformeIA(usarRango) {
+  usarRango = !!usarRango;
+  if (usarRango && !filtroDesde && !filtroHasta){ toast('⚠ Primero aplica un filtro de fechas'); return; }
+  const esGeneral = !usarRango && (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
+  const mesAnio = usarRango ? null : (esGeneral ? null : mesResumenFiltro);
+  const periodoTxt = usarRango
+    ? ('RANGO ' + (filtroDesde ? filtroDesde.split('-').reverse().join('/') : 'INICIO') + ' A ' + (filtroHasta ? filtroHasta.split('-').reverse().join('/') : 'HOY'))
+    : (mesAnio || 'General');
   const btn = document.getElementById('btnIA');
   if (btn.disabled) return;
   
@@ -2397,7 +2553,7 @@ async function generarInformeIA() {
   
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
-    const visitasMes = mesAnio ? visitas.filter(v => v && visitaEnMesAnio(v, mesAnio)) : visitas;
+    const visitasMes = visitas.filter(v => visitaDentroDePeriodo(v, mesAnio, usarRango));
     visitasMes.forEach(v => {
       count++;
       if (v.estado === 'Realizada') totalR++; 
@@ -2425,7 +2581,7 @@ async function generarInformeIA() {
 
   const prompt = `Eres un Ingeniero de Redes NOC Nivel 2 de la empresa WAVE (Internet de Alta Velocidad). Redacta un informe técnico gerencial.
   
-  PERÍODO: ${mesAnio || 'General'}
+  PERÍODO: ${periodoTxt}
   TOTAL VISITAS: ${count}
   - Realizadas: ${totalR}
   - Pendientes: ${totalP}
@@ -2479,9 +2635,9 @@ async function generarInformeIA() {
 
     let textoLimpio = data.choices[0].message.content.trim();
     
-    await construirInformeWord(textoLimpio, mesAnio || 'General', { 
+    await construirInformeWord(textoLimpio, periodoTxt, { 
         total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS, tipos: tipoCount
-    });
+    }, usarRango);
     
     toast('✓ Informe generado con éxito');
     
@@ -2497,13 +2653,13 @@ async function generarInformeIA() {
 /* ==========================================================
    SECCIÓN 2: Detalles redactados profesionalmente y expandidos
    ========================================================== */
-function generarSeccionDetallePorFecha(mes) {
+function generarSeccionDetallePorFecha(mes, usarRango) {
   let html = '<h2 style="page-break-before: always; color: #8A2BE2; border-bottom: 3px solid #FF1493;">2. DETALLE DE TRABAJOS Y ACTIVIDADES REALIZADAS</h2>';
   
   let visitasPorFecha = {};
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
-    const visitasMes = (mes && mes !== 'General') ? visitas.filter(v => v && visitaEnMesAnio(v, mes)) : visitas;
+    const visitasMes = visitas.filter(v => visitaDentroDePeriodo(v, mes, usarRango));
     visitasMes.forEach(v => {
       if (!v.fecha) return;
       if (!visitasPorFecha[v.fecha]) visitasPorFecha[v.fecha] = [];
@@ -2603,7 +2759,7 @@ function generarSeccionDetallePorFecha(mes) {
   return html;
 }
 
-async function construirInformeWord(textoIA, mes, stats) {
+async function construirInformeWord(textoIA, mes, stats, usarRango) {
   let aiData = { 
     resumen_ejecutivo: "No se pudo generar el resumen ejecutivo en este intento.", 
     matriz_incidencias: "<p>No disponible.</p>", 
@@ -2623,8 +2779,8 @@ async function construirInformeWord(textoIA, mes, stats) {
     }
   } catch (e) { console.error("Fallo el JSON de la IA:", e); }
 
-  const seccion2 = generarSeccionDetallePorFecha(mes);
-  const seccion3 = await generarSeccionGraficos(mes, stats); // Retorna el HTML con tablas
+  const seccion2 = generarSeccionDetallePorFecha(mes, usarRango);
+  const seccion3 = await generarSeccionGraficos(mes, stats, usarRango); // Retorna el HTML con tablas
   
   const s1 = aiData.resumen_ejecutivo.includes('<p>') ? aiData.resumen_ejecutivo : `<p>${aiData.resumen_ejecutivo}</p>`;
   const s4 = aiData.matriz_incidencias;
@@ -2703,17 +2859,17 @@ async function construirInformeWord(textoIA, mes, stats) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'Informe_WAVE_NOC_' + mes.replace(/\s+/g, '_') + '.doc';
+  a.download = 'Informe_WAVE_NOC_' + String(mes).replace(/[^A-Za-z0-9_\-]+/g, '_') + '.doc';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
-async function generarSeccionGraficos(mes, stats) {
+async function generarSeccionGraficos(mes, stats, usarRango) {
   const pieImg = generarPieBase64(stats);
   
   const tipoCount = {};
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
-    const visitasMes = mes && mes !== 'General' ? visitas.filter(v => v && visitaEnMesAnio(v, mes)) : visitas;
+    const visitasMes = visitas.filter(v => visitaDentroDePeriodo(v, mes, usarRango));
     visitasMes.forEach(v => { const tipo = v.tipo || 'ZONA WIFI'; tipoCount[tipo] = (tipoCount[tipo] || 0) + 1; });
   });
   const barImg = generarBarBase64(tipoCount);
@@ -2722,7 +2878,7 @@ async function generarSeccionGraficos(mes, stats) {
   const diaCount = [0,0,0,0,0,0,0];
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
-    const visitasMes = mes && mes !== 'General' ? visitas.filter(v => v && visitaEnMesAnio(v, mes)) : visitas;
+    const visitasMes = visitas.filter(v => visitaDentroDePeriodo(v, mes, usarRango));
     visitasMes.forEach(v => { 
         if(v.fecha) {
             fechaCount[v.fecha] = (fechaCount[v.fecha] || 0) + 1;

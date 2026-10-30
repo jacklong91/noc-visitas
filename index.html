@@ -53,8 +53,12 @@ header{
   z-index:50;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
-/* Logo WAVE */
-.wave-logo{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+
+/* --- AJUSTE PARA CENTRAR LA CABECERA --- */
+.hrow{display:flex;align-items:center;gap:10px; width:100%;}
+.hrow > div { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+
+.wave-logo{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
 .wave-icon{
   font-family:'Arial Black',sans-serif;
   font-size:2rem;
@@ -80,6 +84,8 @@ header h1{
   text-shadow: 0 0 10px rgba(168, 85, 247, 0.45);
 }
 header p{font-size:.78rem;color:var(--muted)}
+/* -------------------------------------- */
+
 .tabs{display:flex;position:sticky;top:64px;z-index:49;background:rgba(11,15,25,0.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid #334155;transition:top .15s}
 body.banner-visible .tabs{top:92px}
 .tab{flex:1;padding:12px 4px;text-align:center;font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
@@ -269,11 +275,16 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
         <span class="wave-icon">W</span>
         <span class="wave-text">WAVE</span>
       </div>
-      <h1>REGISTRO DE VISITAS — NOC N2</h1>
-      <p>ZONA WIFI · Sincronizado con Drive <span id="syncBadge" style="display:none;font-size:.7rem;background:rgba(255,255,255,.1);padding:2px 8px;border-radius:12px;margin-left:6px"></span> <span id="activeUsersBadge" style="display:none;font-size:.7rem;background:rgba(34,197,94,.2);color:#4ade80;padding:2px 8px;border-radius:12px;margin-left:6px;cursor:pointer" onclick="showActiveUsersModal()"></span></p>
+      <h1>REGISTRO DE VISITAS</h1>
+      <div style="font-size:0.95rem; font-weight:700; color:#d8b4fe; margin-top:2px; text-shadow: 0 0 10px rgba(168, 85, 247, 0.45);">NOC N2</div>
+      <p style="display:flex; justify-content:center; gap:6px; margin-top:6px;">
+        <span id="syncBadge" style="display:none;font-size:.7rem;background:rgba(255,255,255,.1);padding:2px 8px;border-radius:12px;"></span>
+        <span id="activeUsersBadge" style="display:none;font-size:.7rem;background:rgba(34,197,94,.2);color:#4ade80;padding:2px 8px;border-radius:12px;cursor:pointer" onclick="showActiveUsersModal()"></span>
+      </p>
     </div>
     <button class="icon-btn" onclick="toggleSearch()" title="Buscar cliente">🔍</button>
-    <button class="icon-btn" onclick="toggleFiltroFechas()" title="Filtrar por fechas" id="btnFiltro" style="margin-left:6px">📅</button>
+    <button class="icon-btn" onclick="openAddClientForm()" title="Agregar nuevo cliente">➕</button>
+    <button class="icon-btn" onclick="toggleFiltroFechas()" title="Filtrar por fechas" id="btnFiltro">📅</button>
   </div>
 </header>
 <div class="download-banner" id="downloadBanner">
@@ -288,9 +299,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 </div>
 <main>
   <div id="tab-agenda">
-    <div class="top-tools">
-      <button class="btn btn-green btn-block" id="addClientBtn" onclick="document.getElementById('addClientForm').style.display='block';this.style.display='none'">➕ Agregar nuevo cliente</button>
-    </div>
+    <div class="month-input"><input id="mesAnio" readonly title="Mes actual del sistema"></div>
     <div class="card" id="addClientForm" style="display:none;border-left:4px solid var(--accent2)">
       <h3 style="font-size:.95rem;margin-bottom:4px">Nuevo cliente</h3>
       <label>CÓDIGO DEL CLIENTE</label><input id="ncCodigo" placeholder="Ej.: 99123">
@@ -302,10 +311,9 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
       </div>
       <div class="row2" style="margin-top:12px">
         <button class="btn btn-green" style="flex:2" onclick="addClient()">💾 Guardar cliente</button>
-        <button class="btn btn-gray" style="flex:1" onclick="document.getElementById('addClientForm').style.display='none';document.getElementById('addClientBtn').style.display='block'">Cancelar</button>
+        <button class="btn btn-gray" style="flex:1" onclick="document.getElementById('addClientForm').style.display='none'">Cancelar</button>
       </div>
     </div>
-    <div class="month-input"><input id="mesAnio" readonly title="Mes actual del sistema"></div>
     <div id="clientList"></div>
   </div>
   <div id="tab-evid" style="display:none">
@@ -490,6 +498,13 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
 <div class="toast" id="toast"></div>
 <script>
+function openAddClientForm() {
+  const form = document.getElementById('addClientForm');
+  form.style.display = 'block';
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => document.getElementById('ncCodigo').focus(), 300);
+}
+
 function toggleMoreActions(e) {
   if (e) e.stopPropagation();
   const menu = document.getElementById('moreActionsMenu');
@@ -1572,7 +1587,6 @@ function addClient(){
   document.getElementById('ncCedula').value = '';
   document.getElementById('ncTelefono').value = '';
   document.getElementById('addClientForm').style.display = 'none';
-  document.getElementById('addClientBtn').style.display = 'block';
   renderAgenda();
   toast('✓ Cliente agregado');
 }

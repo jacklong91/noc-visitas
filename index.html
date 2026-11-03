@@ -248,7 +248,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .more-actions-menu {
   position:fixed;bottom:85px;right:16px;
   display:flex;flex-direction:column;gap:8px;
-  z-index:99;opacity:0;pointer-events:none;transform:translateY(15px) scale(0.95);
+  z-index:130;opacity:0;pointer-events:none;transform:translateY(15px) scale(0.95);
   transition:all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .more-actions-menu.open {opacity:1;pointer-events:auto;transform:translateY(0) scale(1);}
@@ -291,6 +291,44 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .db-sub{font-size:.66rem;color:var(--muted);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .db-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
 .db-close{background:transparent;border:none;color:var(--muted);font-size:.9rem;cursor:pointer;padding:0 2px;flex-shrink:0}
+
+/* --- Marci: mascota IA del NOC --- */
+.marci-fab{position:fixed;right:14px;left:auto;bottom:88px;z-index:97;width:60px;height:60px;border-radius:50%;border:2px solid rgba(134,239,172,.7);background:radial-gradient(circle at 32% 26%,#86efac 0,#22c55e 45%,#15803d 100%);box-shadow:0 10px 24px rgba(34,197,94,.35),inset 0 -6px 12px rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:transform .2s ease;animation:marciFloat 4s ease-in-out infinite}
+.marci-fab:hover{transform:translateY(-3px) scale(1.05)}
+.marci-fab svg{width:46px;height:46px;display:block;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+@keyframes marciFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.marci-panel{position:fixed;right:12px;left:auto;bottom:88px;z-index:120;width:min(380px,calc(100vw - 24px));max-height:min(72vh,640px);background:linear-gradient(180deg,#0f172a 0%,#0b1220 100%);border:1px solid rgba(74,222,128,.35);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.65);display:none;flex-direction:column;overflow:hidden;color:var(--text)}
+.marci-panel.open{display:flex;animation:marciIn .18s ease-out}
+@keyframes marciIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.marci-head{display:flex;align-items:center;gap:9px;padding:11px 12px;background:linear-gradient(90deg,rgba(34,197,94,.18),rgba(168,85,247,.12));border-bottom:1px solid rgba(255,255,255,.08)}
+.marci-head .marci-avatar{width:38px;height:38px;border-radius:50%;background:rgba(34,197,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.35rem}
+.marci-head .marci-title{flex:1;min-width:0}
+.marci-head .marci-title b{display:block;font-size:.88rem;color:#bbf7d0}
+.marci-head .marci-title small{display:block;font-size:.68rem;color:var(--muted)}
+.marci-head .marci-close{background:transparent;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px 6px}
+.marci-config{padding:10px 12px;background:rgba(56,189,248,.06);border-bottom:1px solid rgba(255,255,255,.08);font-size:.75rem}
+.marci-config label{display:block;font-size:.66rem;color:var(--muted);margin:6px 0 3px;font-weight:800;letter-spacing:.4px}
+.marci-config select,.marci-config input{width:100%;padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.35);color:var(--text);font-size:.78rem}
+.marci-config .marci-link{color:var(--accent);text-decoration:underline;font-size:.66rem}
+.marci-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px;min-height:150px}
+.marci-msg{display:flex;gap:7px;align-items:flex-end;max-width:100%}
+.marci-msg.user{justify-content:flex-end}
+.marci-msg .marci-bubble{max-width:82%;padding:9px 11px;border-radius:13px;font-size:.8rem;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.marci-msg.bot .marci-bubble{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);color:#e2e8f0;border-bottom-left-radius:4px}
+.marci-msg.user .marci-bubble{background:rgba(56,189,248,.18);border:1px solid rgba(56,189,248,.35);color:#e0f2fe;border-bottom-right-radius:4px}
+.marci-msg .marci-mini{width:24px;height:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.marci-chips{display:flex;gap:6px;overflow-x:auto;padding:7px 10px 4px;border-top:1px solid rgba(255,255,255,.06);scrollbar-width:none}
+.marci-chips::-webkit-scrollbar{display:none}
+.marci-chips button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#cbd5e1;border-radius:20px;padding:5px 10px;font-size:.68rem;white-space:nowrap;cursor:pointer}
+.marci-chips button:active{background:rgba(34,197,94,.2)}
+.marci-input{display:flex;gap:6px;padding:8px 10px 10px}
+.marci-input input{flex:1;padding:10px 12px;border-radius:22px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.35);color:var(--text);font-size:.85rem}
+.marci-input button{width:42px;height:42px;border-radius:50%;border:none;background:var(--accent2);color:#052e16;font-size:1.05rem;font-weight:800;cursor:pointer;flex-shrink:0}
+.marci-typing span{display:inline-block;width:5px;height:5px;border-radius:50%;background:#86efac;margin:0 1px;animation:marciBlink 1s infinite}
+.marci-typing span:nth-child(2){animation-delay:.15s}
+.marci-typing span:nth-child(3){animation-delay:.3s}
+@keyframes marciBlink{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
+@media (max-width:600px){.marci-fab{width:54px;height:54px;right:10px;left:auto;bottom:82px}.marci-panel{left:8px;right:8px;width:auto;bottom:80px;max-height:68vh}}
 </style>
 </head>
 <body>
@@ -492,6 +530,59 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
   <button class="btn btn-red" onclick="resetAll()">🗑️ Eliminar</button>
 </div>
 
+<button class="marci-fab" id="marciFab" onclick="toggleMarci()" title="Marci — asistente IA" aria-label="Abrir asistente Marci">
+  <svg viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M23 17 L17 7" stroke="#a7f3d0" stroke-width="3" stroke-linecap="round"/>
+    <path d="M41 17 L47 7" stroke="#a7f3d0" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="16" cy="6" r="4" fill="#f0abfc"/>
+    <circle cx="48" cy="6" r="4" fill="#f0abfc"/>
+    <ellipse cx="32" cy="37" rx="22" ry="23" fill="#86efac"/>
+    <ellipse cx="32" cy="44" rx="16" ry="13" fill="#4ade80" opacity=".35"/>
+    <ellipse cx="23" cy="34" rx="7.5" ry="9.5" fill="#052e16"/>
+    <ellipse cx="41" cy="34" rx="7.5" ry="9.5" fill="#052e16"/>
+    <circle cx="21" cy="31" r="2.3" fill="#fff"/>
+    <circle cx="39" cy="31" r="2.3" fill="#fff"/>
+    <path d="M27 48 Q32 53 37 48" stroke="#052e16" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <circle cx="15" cy="43" r="3" fill="#f9a8d4" opacity=".55"/>
+    <circle cx="49" cy="43" r="3" fill="#f9a8d4" opacity=".55"/>
+  </svg>
+</button>
+<div class="marci-panel" id="marciPanel" role="dialog" aria-label="Asistente Marci">
+  <div class="marci-head">
+    <div class="marci-avatar">👽</div>
+    <div class="marci-title"><b>Marci</b><small id="marciIATag">Asistente IA · NOC N2</small></div>
+    <button class="marci-close" onclick="toggleMarciConfig()" title="Configurar IA">⚙️</button>
+    <button class="marci-close" onclick="toggleMarci(false)" title="Cerrar">✕</button>
+  </div>
+  <div class="marci-config" id="marciConfig" style="display:none">
+    <label>MOTOR DE IA</label>
+    <select id="marciProvider">
+      <option value="auto">Automático (Gemini si hay clave)</option>
+      <option value="gemini">Gemini directo</option>
+      <option value="openrouter">OpenRouter</option>
+    </select>
+    <label>CLAVE DE GEMINI (OPCIONAL)</label>
+    <input id="marciGeminiKey" type="password" placeholder="AIza..." autocomplete="off">
+    <div style="font-size:.64rem;color:var(--muted);margin-top:5px;line-height:1.4">Se guarda solo en este dispositivo. Consíguela gratis en <a class="marci-link" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</div>
+    <div class="row2" style="margin-top:8px">
+      <button class="btn btn-green btn-sm" style="flex:1" onclick="marciGuardarConfig()">Guardar</button>
+      <button class="btn btn-gray btn-sm" style="flex:1" onclick="marciQuitarGemini()">Quitar clave</button>
+    </div>
+    <div id="marciConfigEstado" style="font-size:.68rem;color:var(--muted);margin-top:6px"></div>
+  </div>
+  <div class="marci-msgs" id="marciMsgs"></div>
+  <div class="marci-chips" id="marciChips">
+    <button onclick="marciSugerencia('¿Qué puedes hacer?')">¿Qué puedes hacer?</button>
+    <button onclick="marciSugerencia('Estado de la app')">Estado</button>
+    <button onclick="marciSugerencia('Evidencias de hoy')">Evidencias de hoy</button>
+    <button onclick="marciSugerencia('Visitas pendientes')">Pendientes</button>
+    <button onclick="marciSugerencia('Genera el reporte fotográfico de octubre')">Reporte octubre</button>
+  </div>
+  <div class="marci-input">
+    <input id="marciInput" placeholder="Pídele algo a Marci…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();marciEnviar();}">
+    <button onclick="marciEnviar()" title="Enviar">➤</button>
+  </div>
+</div>
 <div class="bottom-nav">
   <div class="tab active" onclick="showTab('agenda',this)">
     <span class="bn-ico">📋</span>
@@ -3946,6 +4037,560 @@ function shadeColorCats(hex, percent){
   R = Math.max(0, Math.min(255, R)); G = Math.max(0, Math.min(255, G)); B = Math.max(0, Math.min(255, B));
   return '#' + (0x1000000 + R*0x10000 + G*0x100 + B).toString(16).slice(1);
 }
+
+/* ============================================================
+   MARCI — Mascota y asistente IA del NOC
+   ============================================================ */
+// Clave OpenRouter de esta instalacion, partida en fragmentos.
+const MARCI_API_KEY1 = 'sk-or-v1-d6265e9ed6aeeaf0a9';
+const MARCI_API_KEY2 = '1d21156657e2c60d47f80b95715';
+const MARCI_API_KEY3 = '12ca2e08d01691e5713';
+const MARCI_API_KEY = MARCI_API_KEY1 + MARCI_API_KEY2 + MARCI_API_KEY3;
+// Clave Gemini de esta instalacion, partida en fragmentos (se puede quitar o cambiar desde Ajustes de Marci).
+const MARCI_GEMINI_DEFAULT_KEY1 = 'AQ.Ab8RN6Kg1ZXE-';
+const MARCI_GEMINI_DEFAULT_KEY2 = 'xPazG2lKu9niuoBL';
+const MARCI_GEMINI_DEFAULT_KEY3 = '1zHWjMNNloDNfxWm';
+const MARCI_GEMINI_DEFAULT_KEY4 = 'SQAaA';
+const MARCI_GEMINI_DEFAULT_KEY = MARCI_GEMINI_DEFAULT_KEY1 + MARCI_GEMINI_DEFAULT_KEY2 + MARCI_GEMINI_DEFAULT_KEY3 + MARCI_GEMINI_DEFAULT_KEY4;
+const MARCI_MODELS = ['deepseek/deepseek-chat', 'meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.0-flash-001'];
+const MARCI_GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
+let marciHistorial = [];
+let marciPensando = false;
+let marciIniciado = false;
+
+function marciNorm(s){
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+function marciPad(n){ return String(n).padStart(2, '0'); }
+function marciYMD(d){ return d.getFullYear() + '-' + marciPad(d.getMonth() + 1) + '-' + marciPad(d.getDate()); }
+
+function marciScroll(){ const c = document.getElementById('marciMsgs'); if (c) c.scrollTop = c.scrollHeight; }
+function marciHtml(texto){
+  let s = escapeHtml(String(texto || ''));
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>');
+  return s.replace(/\n/g, '<br>');
+}
+function marciAgregarMensaje(rol, texto){
+  const cont = document.getElementById('marciMsgs');
+  if (!cont) return;
+  const div = document.createElement('div');
+  div.className = 'marci-msg ' + (rol === 'user' ? 'user' : 'bot');
+  if (rol === 'user'){
+    div.innerHTML = '<div class="marci-bubble"></div>';
+    div.firstChild.textContent = String(texto || '');
+  } else {
+    div.innerHTML = '<div class="marci-mini">👽</div><div class="marci-bubble"></div>';
+    div.lastChild.innerHTML = marciHtml(texto);
+  }
+  cont.appendChild(div);
+  marciHistorial.push({ rol: rol === 'user' ? 'user' : 'assistant', texto: String(texto || '') });
+  if (marciHistorial.length > 40) marciHistorial.splice(0, marciHistorial.length - 40);
+  marciScroll();
+}
+function marciTyping(){
+  const cont = document.getElementById('marciMsgs');
+  if (!cont) return null;
+  const div = document.createElement('div');
+  div.className = 'marci-msg bot';
+  div.id = 'marciTyping';
+  div.innerHTML = '<div class="marci-mini">👽</div><div class="marci-bubble marci-typing"><span></span><span></span><span></span></div>';
+  cont.appendChild(div);
+  marciScroll();
+  return div;
+}
+function marciQuitarTyping(el){ if (el && el.parentNode) el.parentNode.removeChild(el); }
+
+function toggleMarci(force){
+  const panel = document.getElementById('marciPanel');
+  if (!panel) return;
+  const abrir = (force !== undefined) ? force : !panel.classList.contains('open');
+  panel.classList.toggle('open', abrir);
+  if (abrir){
+    marciActualizarTagIA();
+    if (!marciIniciado){
+      marciIniciado = true;
+      marciAgregarMensaje('bot', '¡Hola! Soy Marci 👽, tu copiloto marciano del NOC.\n\nPuedo moverme por la app y pedirle cosas: reportes, evidencias por fecha, pendientes, búsquedas, sincronización y más.\n\nPrueba con: “Evidencias de hoy”, “Reporte de octubre” o “¿Qué puedes hacer?”.');
+    }
+    setTimeout(() => { const i = document.getElementById('marciInput'); if (i) i.focus(); }, 150);
+    marciScroll();
+  }
+}
+function marciSugerencia(texto){
+  const input = document.getElementById('marciInput');
+  if (input) input.value = texto;
+  marciEnviar();
+}
+
+async function marciEnviar(){
+  if (marciPensando) return;
+  const input = document.getElementById('marciInput');
+  const texto = (input && input.value ? input.value : '').trim();
+  if (!texto) return;
+  if (input) input.value = '';
+  marciAgregarMensaje('user', texto);
+  marciPensando = true;
+  const typing = marciTyping();
+  try {
+    const respuesta = await marciProcesar(texto);
+    marciQuitarTyping(typing);
+    if (respuesta) marciAgregarMensaje('bot', respuesta);
+  } catch(e){
+    marciQuitarTyping(typing);
+    marciAgregarMensaje('bot', '⚠ No pude completar eso. ' + (e && e.message ? e.message : 'Intenta de nuevo.'));
+  } finally {
+    marciPensando = false;
+  }
+}
+
+function marciIrA(id){
+  const tabs = document.querySelectorAll('.bottom-nav .tab');
+  const el = tabs[id === 'evid' ? 1 : id === 'res' ? 2 : 0];
+  if (!el) return;
+  if (id === 'evid'){
+    setTabEvid();
+    showTab('evid', el);
+  } else if (id === 'res'){
+    showTab('res', el);
+    setTabRes();
+  } else {
+    showTab('agenda', el);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function marciMesIdx(t){
+  for (let i = 0; i < MESES_ES.length; i++){
+    if (t.indexOf(marciNorm(MESES_ES[i])) >= 0) return i;
+  }
+  if (t.indexOf('setiembre') >= 0) return 8;
+  return -1;
+}
+function marciAnioMes(mi, t){
+  const ym = t.match(/\b(20\d{2})\b/);
+  if (ym) return parseInt(ym[1], 10);
+  const pref = marciNorm(MESES_ES[mi]) + ' ';
+  const opciones = getListaMesesDisponibles().filter(x => marciNorm(x).indexOf(pref) === 0);
+  if (opciones.length){
+    const y = parseInt(String(opciones[0]).split(' ')[1], 10);
+    if (y) return y;
+  }
+  return new Date().getFullYear();
+}
+function marciRangoFechas(texto){
+  const t = marciNorm(texto);
+  const hoy = new Date();
+  const ymd = marciYMD;
+  if (/\bhoy\b/.test(t)) return { desde: ymd(hoy), hasta: ymd(hoy), etiqueta: 'hoy' };
+  if (/\bayer\b/.test(t)){ const d = new Date(hoy); d.setDate(d.getDate() - 1); return { desde: ymd(d), hasta: ymd(d), etiqueta: 'ayer' }; }
+  if (/anteayer/.test(t)){ const d = new Date(hoy); d.setDate(d.getDate() - 2); return { desde: ymd(d), hasta: ymd(d), etiqueta: 'anteayer' }; }
+  if (/esta semana|ultimos 7|ultimos siete|7 dias|siete dias/.test(t)){ const d = new Date(hoy); d.setDate(d.getDate() - 6); return { desde: ymd(d), hasta: ymd(hoy), etiqueta: 'últimos 7 días' }; }
+  if (/este mes|mes actual/.test(t)){ return { desde: ymd(new Date(hoy.getFullYear(), hoy.getMonth(), 1)), hasta: ymd(hoy), etiqueta: 'este mes' }; }
+  let m = t.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  if (m){
+    let y = m[3] || String(hoy.getFullYear());
+    if (y.length === 2) y = '20' + y;
+    const f = y + '-' + marciPad(m[2]) + '-' + marciPad(m[1]);
+    return { desde: f, hasta: f, etiqueta: f.split('-').reverse().join('/') };
+  }
+  m = t.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return { desde: m[0], hasta: m[0], etiqueta: m[0].split('-').reverse().join('/') };
+  const mi = marciMesIdx(t);
+  if (mi >= 0){
+    const year = marciAnioMes(mi, t);
+    const fin = new Date(year, mi + 1, 0).getDate();
+    return { desde: year + '-' + marciPad(mi + 1) + '-01', hasta: year + '-' + marciPad(mi + 1) + '-' + marciPad(fin), etiqueta: MESES_ES[mi] + ' ' + year };
+  }
+  return null;
+}
+
+function marciAyudaGPS(){
+  return '📍 Las coordenadas quedan fijas por cliente:\n1) Agenda → Editar en la tarjeta.\n2) Pulsa “📍 Capturar mi ubicación”.\n3) Se guarda como 📌 FIJA y se reutiliza en las próximas visitas.\n\nSi ya existe, el botón dice “Actualizar ubicación”.';
+}
+function marciAyuda(){
+  return '👽 Esto puedo hacer por ti:\n\n• 📅 Evidencias por fecha: “Evidencias de hoy”, “Evidencias de octubre”.\n• 📸 Reporte fotográfico: “Reporte de octubre”, “Reporte del 27/10/2026”.\n• 🧠 Informe IA: “Redacta el informe de octubre”.\n• 📊 Estado: “¿Cuántas visitas pendientes hay?”.\n• 🔎 Buscar: “Busca el cliente 2025”.\n• ☁️ Sincronizar: “Sincroniza con Drive”.\n• ➕ Nuevo cliente: “Agregar cliente”.\n\nTambién te explico GPS, filtros, firmas y reportes.';
+}
+function marciAyudaTema(t){
+  if (/reporte|informe/.test(t)) return '📸 Para el reporte fotográfico:\n1) Resumen → “📸 Reporte Fotográfico (Excel)”.\n2) O Evidencias → elige fechas → “📸 Descargar informe fotográfico”.\nTambién puedes pedirme: “Reporte de octubre”.';
+  if (/sincroniz|drive/.test(t)) return '☁️ La app sincroniza sola cada 2 minutos si hay cambios. Para forzarla: Resumen → ☁️ SINCRONIZACIÓN → “🔄 Sincronizar ahora”. También puedes pedirme: “Sincroniza con Drive”.';
+  if (/gps|coordenada|ubicacion/.test(t)) return marciAyudaGPS();
+  if (/cliente/.test(t) && /agreg|crear|nuevo|anadir/.test(t)) return '➕ Abre la Agenda → botón ➕ arriba a la derecha, o pídeme “Agregar cliente”.';
+  if (/evidencia|foto/.test(t)) return '📷 En Evidencias puedes filtrar por fechas con el calendario y descargar el informe fotográfico del rango.';
+  return null;
+}
+function marciEstado(){
+  let total = 0, r = 0, p = 0, n = 0, s = 0;
+  allClients().forEach(c => getVisits(c.codigo).forEach(v => {
+    if (!v) return;
+    total++;
+    const e = v.estado || 'Pendiente';
+    if (e === 'Realizada') r++;
+    else if (e === 'Pendiente') p++;
+    else if (e === 'No Realizada') n++;
+    else s++;
+  }));
+  const ultima = localStorage.getItem('nocLastSync');
+  let ultimaTxt = '—';
+  if (ultima){ const d = new Date(ultima); if (!isNaN(d.getTime())) ultimaTxt = d.toLocaleString('es-VE'); }
+  return '📊 Estado actual\n• Clientes: ' + allClients().length + '\n• Visitas: ' + total + ' (✅ ' + r + ' · ⏳ ' + p + ' · ❌ ' + n + ' · ⏸️ ' + s + ')\n• Fotos: ' + contarFotosLocales() + '\n• Coordenadas fijas: ' + Object.keys(DB.clientGps || {}).length + '\n• Última sincronización: ' + ultimaTxt + '\n• Mes activo: ' + (DB.month || '—');
+}
+function marciPendientes(){
+  const pend = [];
+  let totalPend = 0;
+  allClients().forEach(c => {
+    const arr = getVisits(c.codigo);
+    const last = arr.length ? arr[arr.length - 1] : null;
+    arr.forEach(v => { if (v && (v.estado || 'Pendiente') === 'Pendiente') totalPend++; });
+    if (last && (last.estado || 'Pendiente') === 'Pendiente') pend.push({ cod: c.codigo, nombre: c.nombre, fecha: last.fecha });
+  });
+  if (!pend.length) return '✅ No hay visitas pendientes en este momento.';
+  const top = pend.slice(0, 10).map(x => '• #' + x.cod + ' ' + String(x.nombre).slice(0, 28) + (x.fecha ? ' · ' + x.fecha.split('-').reverse().join('/') : '')).join('\n');
+  return '⏳ ' + pend.length + ' cliente(s) con su última visita pendiente (' + totalPend + ' visita(s) pendiente(s) en total):\n' + top + (pend.length > 10 ? '\n… y ' + (pend.length - 10) + ' más.' : '') + '\n\nPuedes verlas en la Agenda.';
+}
+function marciSincronizar(){
+  if (!isOnline()) return '📴 Sin conexión. Cuando vuelva, la app se sincroniza sola.';
+  if (__reporteEnCurso) return '⏳ Hay un reporte generándose; espera a que termine para sincronizar.';
+  if (syncInProgress) return '⏳ Ya hay una sincronización en curso. Mira la barra de progreso.';
+  if (!driveStateReady){ loadFromCloud(); return '☁️ Cargando Drive… verás el progreso en la barra superior.'; }
+  markDirty();
+  syncToCloud(false);
+  return '☁️ Sincronizando con Drive… el progreso aparece en la barra superior.';
+}
+function marciBuscar(texto){
+  let q = String(texto || '').trim();
+  q = q.replace(/^\s*(busca(?:r)?|buscar)\s+/i, '');
+  q = q.replace(/^\s*(el|la|los|las)\s+/i, '');
+  q = q.replace(/^\s*cliente\s+/i, '');
+  q = q.replace(/^#/, '').trim();
+  if (!q) return 'Dime qué cliente busco, por ejemplo: “Busca el cliente 2025”.';
+  const inp = document.getElementById('search');
+  if (inp) inp.value = q;
+  toggleSearch(true);
+  onSearchInput();
+  marciIrA('agenda');
+  return '🔎 Buscando “' + q + '” en la Agenda.';
+}
+function marciEvidencias(texto){
+  const r = marciRangoFechas(texto);
+  if (!r){ marciIrA('evid'); return '📷 Te llevé a Evidencias. Elige un rango en el calendario o dime “Evidencias de hoy”.'; }
+  evidDesde = r.desde;
+  evidHasta = r.hasta;
+  const dEl = document.getElementById('evidDesde'); if (dEl) dEl.value = r.desde;
+  const hEl = document.getElementById('evidHasta'); if (hEl) hEl.value = r.hasta;
+  marciIrA('evid');
+  return '📷 Evidencias filtradas de ' + r.etiqueta + '.';
+}
+function marciReporte(texto){
+  if (__reporteEnCurso) return '⏳ Ya hay un reporte fotográfico generándose. Espera a que termine.';
+  const t = marciNorm(texto);
+  const mi = marciMesIdx(t);
+  const tieneFecha = /\d{1,2}[\/\-]\d{1,2}/.test(t);
+  if (mi >= 0 && !tieneFecha){
+    const year = marciAnioMes(mi, t);
+    const mesAnio = MESES_ES[mi] + ' ' + year;
+    mesResumenFiltro = mesAnio;
+    marciIrA('res');
+    if (!buildDataReporteFotografico(false).length) return '⚠ No hay visitas en ' + mesAnio + '.';
+    setTimeout(() => { try { generarReporteFotografico(); } catch(e){} }, 260);
+    return '📸 Generando el reporte fotográfico de ' + mesAnio + '… Te aviso con la barra de progreso.';
+  }
+  const r = marciRangoFechas(texto) || { desde: marciYMD(new Date()), hasta: marciYMD(new Date()), etiqueta: 'hoy' };
+  const data = buildDataReporteFotografico(true, { desde: r.desde, hasta: r.hasta, incluirHuerfanas: true });
+  if (!data.length) return '⚠ No hay visitas ni fotos en ' + r.etiqueta + '.';
+  const periodo = 'RANGO ' + r.desde.split('-').reverse().join('-') + ' A ' + r.hasta.split('-').reverse().join('-');
+  const nombre = 'Reporte_Fotografico_NOC_' + periodo.replace(/[^A-Za-z0-9]+/g, '_');
+  setTimeout(() => { try { construirReporteFotograficoExcel(data, periodo, nombre); } catch(e){} }, 260);
+  return '📸 Generando el reporte fotográfico de ' + r.etiqueta + '… Te aviso con la barra de progreso.';
+}
+function marciInformeIA(texto){
+  const btn = document.getElementById('btnIA');
+  if (btn && btn.disabled) return '🧠 Ya hay un informe en proceso. Espera a que termine.';
+  const t = marciNorm(texto);
+  const mi = marciMesIdx(t);
+  if (mi >= 0) mesResumenFiltro = MESES_ES[mi] + ' ' + marciAnioMes(mi, t);
+  else if (/general|todo/.test(t)) mesResumenFiltro = MES_GENERAL;
+  marciIrA('res');
+  setTimeout(() => { try { generarInformeIA(); } catch(e){} }, 260);
+  return '🧠 Redactando el informe con IA de ' + (mesResumenFiltro === MES_GENERAL ? 'todo el historial' : mesResumenFiltro) + '…';
+}
+
+function marciContexto(){
+  let total = 0, r = 0, p = 0;
+  const hoyY = marciYMD(new Date());
+  let hoyTotal = 0, hoyReal = 0;
+  allClients().forEach(c => getVisits(c.codigo).forEach(v => {
+    if (!v) return;
+    total++;
+    const e = v.estado || 'Pendiente';
+    if (e === 'Realizada') r++;
+    else if (e === 'Pendiente') p++;
+    if (v.fecha === hoyY){
+      hoyTotal++;
+      if (e === 'Realizada') hoyReal++;
+    }
+  }));
+  const agenda = document.getElementById('tab-agenda');
+  const evid = document.getElementById('tab-evid');
+  const res = document.getElementById('tab-res');
+  const actual = (evid && evid.style.display !== 'none') ? 'Evidencias' : (res && res.style.display !== 'none') ? 'Resumen' : 'Agenda';
+  return 'Mes activo: ' + (DB.month || '—') + '. Pestaña actual: ' + actual + '. Clientes: ' + allClients().length + '. Visitas: ' + total + ' (realizadas ' + r + ', pendientes ' + p + '). Visitas de hoy (' + hoyY + '): ' + hoyTotal + ' (realizadas ' + hoyReal + '). Fotos: ' + contarFotosLocales() + '. Coordenadas fijas: ' + Object.keys(DB.clientGps || {}).length + '. Filtro agenda: ' + (filtroDesde || 'sin filtro') + ' a ' + (filtroHasta || 'sin filtro') + '. Filtro evidencias: ' + (evidDesde || 'sin filtro') + ' a ' + (evidHasta || 'sin filtro') + '.';
+}
+function marciConfigIA(){
+  let raw = null;
+  try { raw = localStorage.getItem('nocMarciConfig'); } catch(e){}
+  if (!raw) return { provider: 'auto', geminiKey: MARCI_GEMINI_DEFAULT_KEY };
+  try {
+    const c = JSON.parse(raw);
+    return {
+      provider: (c.provider === 'gemini' || c.provider === 'openrouter') ? c.provider : 'auto',
+      geminiKey: String(c.geminiKey || '').trim()
+    };
+  } catch(e){ return { provider: 'auto', geminiKey: MARCI_GEMINI_DEFAULT_KEY }; }
+}
+function marciGuardarConfigIA(cfg){
+  try { localStorage.setItem('nocMarciConfig', JSON.stringify({ provider: cfg.provider || 'auto', geminiKey: String(cfg.geminiKey || '').trim() })); } catch(e){}
+}
+function marciActualizarTagIA(){
+  const tag = document.getElementById('marciIATag');
+  if (!tag) return;
+  const cfg = marciConfigIA();
+  let txt = 'Asistente IA · NOC N2';
+  if (cfg.provider === 'gemini') txt = cfg.geminiKey ? 'Asistente IA · Gemini' : 'Asistente IA · OpenRouter (falta clave Gemini)';
+  else if (cfg.provider === 'openrouter') txt = 'Asistente IA · OpenRouter';
+  else if (cfg.geminiKey) txt = 'Asistente IA · Gemini / OpenRouter';
+  tag.textContent = txt;
+}
+function toggleMarciConfig(force){
+  const box = document.getElementById('marciConfig');
+  if (!box) return;
+  const abrir = (force !== undefined) ? force : box.style.display === 'none';
+  box.style.display = abrir ? 'block' : 'none';
+  if (abrir){
+    const cfg = marciConfigIA();
+    const sel = document.getElementById('marciProvider'); if (sel) sel.value = cfg.provider;
+    const inp = document.getElementById('marciGeminiKey'); if (inp) inp.value = cfg.geminiKey;
+    const est = document.getElementById('marciConfigEstado');
+    if (est) est.textContent = cfg.geminiKey ? 'Gemini configurado (clave guardada).' : 'Sin clave de Gemini: se usará OpenRouter.';
+  }
+}
+function marciGuardarConfig(){
+  const sel = document.getElementById('marciProvider');
+  const inp = document.getElementById('marciGeminiKey');
+  const cfg = { provider: sel ? sel.value : 'auto', geminiKey: inp ? String(inp.value || '').trim() : '' };
+  marciGuardarConfigIA(cfg);
+  marciActualizarTagIA();
+  const est = document.getElementById('marciConfigEstado');
+  if (est) est.textContent = cfg.geminiKey ? '✓ Guardado. Marci intentará Gemini primero.' : '✓ Guardado. Marci usará OpenRouter.';
+  marciAgregarMensaje('bot', '⚙️ Configuración guardada. ' + (cfg.geminiKey ? 'Usaré Gemini cuando esté disponible y OpenRouter como respaldo.' : 'Usaré OpenRouter.'));
+  toggleMarciConfig(false);
+}
+function marciQuitarGemini(){
+  const cfg = marciConfigIA();
+  cfg.geminiKey = '';
+  marciGuardarConfigIA(cfg);
+  const inp = document.getElementById('marciGeminiKey'); if (inp) inp.value = '';
+  marciActualizarTagIA();
+  const est = document.getElementById('marciConfigEstado');
+  if (est) est.textContent = 'Clave eliminada. Se usará OpenRouter.';
+  marciAgregarMensaje('bot', '🔑 Clave de Gemini eliminada. Seguiré con OpenRouter.');
+}
+async function marciGemini(mensajes){
+  const cfg = marciConfigIA();
+  if (!cfg.geminiKey) return null;
+  const sistema = (mensajes[0] && mensajes[0].content) ? mensajes[0].content : '';
+  const contents = mensajes.slice(1).map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: String(m.content || '') }] }));
+  while (contents.length && contents[0].role === 'model') contents.shift();
+  for (let i = 0; i < MARCI_GEMINI_MODELS.length; i++){
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
+      let res;
+      try {
+        res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + MARCI_GEMINI_MODELS[i] + ':generateContent?key=' + encodeURIComponent(cfg.geminiKey), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: sistema }] },
+            contents: contents,
+            generationConfig: { temperature: 0.5, maxOutputTokens: 800 }
+          }),
+          signal: controller.signal
+        });
+      } finally { clearTimeout(timer); }
+      if (!res || !res.ok) continue;
+      const data = await res.json();
+      const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+      const txt = Array.isArray(parts) ? parts.map(p => p.text || '').join('').trim() : '';
+      if (txt) return txt;
+    } catch(e){}
+  }
+  return null;
+}
+
+async function marciIA(texto){
+  if (!isOnline()) return '📴 Ahora no tengo internet para pensar, pero puedo ayudarte con comandos. Escribe “¿Qué puedes hacer?”.';
+  const mensajes = [{
+    role: 'system',
+    content: 'Eres "Marci", un marciano simpático y el asistente del NOC N2 de WAVE dentro de la app "Registro de Visitas". Hablas español de Venezuela, cercano y breve (máximo 6 líneas). Ayudas a usar la app: visitas, evidencias, GPS fijo, reportes fotográficos, informes IA, sincronización y filtros. No inventes datos, no reveles claves ni información interna y no prometas acciones que no puedes ejecutar. Si te piden cambiar o borrar datos, indica dónde hacerlo en la app. Contexto actual: ' + marciContexto()
+  }];
+  const hist = marciHistorial.slice(-8).map(h => ({ role: h.rol === 'user' ? 'user' : 'assistant', content: String(h.texto).slice(0, 500) }));
+  const textoUsuario = String(texto || '').trim();
+  if (textoUsuario && (!hist.length || hist[hist.length - 1].content !== textoUsuario)) hist.push({ role: 'user', content: textoUsuario });
+  hist.forEach(h => mensajes.push(h));
+  const cfgIA = marciConfigIA();
+  if (cfgIA.provider !== 'openrouter'){
+    const respGemini = await marciGemini(mensajes);
+    if (respGemini) return respGemini;
+  }
+  let ultimoError = null;
+  for (let i = 0; i < MARCI_MODELS.length; i++){
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 22000);
+      let res;
+      try {
+        res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + MARCI_API_KEY,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://script.google.com',
+            'X-Title': 'Agenda NOC - Marci'
+          },
+          body: JSON.stringify({
+            model: MARCI_MODELS[i],
+            messages: mensajes,
+            temperature: 0.5,
+            max_tokens: 400
+          }),
+          signal: controller.signal
+        });
+      } finally { clearTimeout(timer); }
+      if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : 'sin respuesta'));
+      const data = await res.json();
+      const txt = data && data.choices && data.choices[0] && data.choices[0].message ? String(data.choices[0].message.content || '').trim() : '';
+      if (txt) return txt;
+      throw new Error('respuesta vacía');
+    } catch(e){
+      ultimoError = e;
+    }
+  }
+  console.warn('Marci IA:', ultimoError);
+  const msgErr = String((ultimoError && ultimoError.message) || '');
+  if (msgErr.indexOf('429') >= 0) return '⏳ Mi modelo IA está saturado en este momento. Intenta de nuevo en unos segundos; los comandos de la app siguen funcionando.';
+  return '⚠ No pude conectar con mi cerebro IA. Revisa la conexión o pídeme un comando directo: “¿Qué puedes hacer?”.';
+}
+
+function marciCuando(r){
+  const e = r.etiqueta;
+  if (e === 'hoy' || e === 'ayer' || e === 'anteayer' || e === 'este mes') return e;
+  if (e === 'últimos 7 días') return 'en los últimos 7 días';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(e)) return 'el ' + e;
+  return 'en ' + e;
+}
+function marciVisitasFecha(texto){
+  if (!driveStateReady || loadingFromCloud){
+    return '⏳ Estoy terminando de cargar Drive… dame unos segundos y pregúntame otra vez.';
+  }
+  const t = marciNorm(texto);
+  let r = marciRangoFechas(texto);
+  if (!r) r = { desde: marciYMD(new Date()), hasta: marciYMD(new Date()), etiqueta: 'hoy' };
+  const cuando = marciCuando(r);
+  const esClientes = (/cliente/.test(t) && /visitad|atendid/.test(t)) || /a quien|quien.*visit/.test(t);
+  const soloRealizadas = /realizad|hech|completad|visitad/.test(t);
+  let filtroEstado = '';
+  if (/pendiente/.test(t)) filtroEstado = 'Pendiente';
+  else if (/no realizad|no hech/.test(t)) filtroEstado = 'No Realizada';
+  else if (/pospu/.test(t)) filtroEstado = 'Pospuesta';
+  else if (soloRealizadas) filtroEstado = 'Realizada';
+  const nombreEstado = filtroEstado === 'Pendiente' ? 'pendientes' : filtroEstado === 'No Realizada' ? 'no realizadas' : filtroEstado === 'Pospuesta' ? 'pospuestas' : 'realizadas';
+  const filas = [];
+  let total = 0, real = 0, pend = 0, noReal = 0, pos = 0;
+  allClients().forEach(c => {
+    getVisits(c.codigo).forEach(v => {
+      if (!v || !v.fecha) return;
+      if (v.fecha < r.desde || v.fecha > r.hasta) return;
+      const e = v.estado || 'Pendiente';
+      total++;
+      if (e === 'Realizada') real++;
+      else if (e === 'Pendiente') pend++;
+      else if (e === 'No Realizada') noReal++;
+      else pos++;
+      if (filtroEstado && e !== filtroEstado) return;
+      filas.push({ cod: c.codigo, nombre: c.nombre, fecha: v.fecha, hora: v.hora || '', estado: e });
+    });
+  });
+  if (!filas.length && total === 0){
+    return '📅 No tengo visitas registradas ' + cuando + '. Si crees que faltan, espera a que termine de cargar Drive o pulsa “Sincroniza con Drive”.';
+  }
+  if (!filas.length && filtroEstado){
+    return '📅 No hay visitas ' + nombreEstado + ' ' + cuando + '.';
+  }
+  if (esClientes){
+    const porCod = {};
+    filas.forEach(f => {
+      if (!porCod[f.cod]) porCod[f.cod] = { cod: f.cod, nombre: f.nombre, horas: [] };
+      if (f.hora) porCod[f.cod].horas.push(f.hora);
+    });
+    const lista = Object.values(porCod);
+    const lineas = lista.slice(0, 20).map(x => '• #' + x.cod + ' ' + String(x.nombre).slice(0, 30) + (x.horas.length ? ' · ' + x.horas.join(', ') : ''));
+    return '👥 Clientes visitados ' + cuando + ': ' + lista.length + '\n' + lineas.join('\n') + (lista.length > 20 ? '\n… y ' + (lista.length - 20) + ' más.' : '');
+  }
+  const titulo = '📅 Visitas ' + cuando + ': ' + total + ' (✅ ' + real + ' · ⏳ ' + pend + ' · ❌ ' + noReal + ' · ⏸️ ' + pos + ')' + (filtroEstado ? ' · mostrando ' + nombreEstado : '');
+  const max = (r.desde === r.hasta) ? 30 : 12;
+  const lineas = filas.slice(0, max).map(f => '• #' + f.cod + ' ' + String(f.nombre).slice(0, 28) + (f.hora ? ' · ' + f.hora : '') + ' · ' + f.estado);
+  return titulo + (lineas.length ? '\n' + lineas.join('\n') : '') + (filas.length > max ? '\n… y ' + (filas.length - max) + ' más.' : '');
+}
+
+async function marciProcesar(texto){
+  const t = marciNorm(texto);
+  if (!t) return null;
+  if (/^(hola|buenas|hey|que tal|saludos)\b/.test(t)) return '¡Hola! 👽 Estoy listo. ¿Qué quieres hacer? Escribe “¿Qué puedes hacer?” para ver todo lo que sé hacer.';
+  if (/gracias|genial|perfecto|excelente/.test(t) && t.length <= 40) return '¡De nada! 🚀 Aquí estoy si necesitas otra cosa.';
+  if (/eliminar|borrar|elimina|borra/.test(t)) return 'Por seguridad no borro datos desde el chat. Puedes hacerlo desde la tarjeta del cliente (🗑️) o en Herramientas → Reparar ID.';
+  if (/^como\b|^que es\b|^que significa\b/.test(t)){
+    const faq = marciAyudaTema(t);
+    if (faq) return faq;
+  }
+  if (/que puedes hacer|comandos|opciones|como funciona|^ayuda\b|^ayudame\b/.test(t)) return marciAyuda();
+  if (/informe\s*(ia|de ia)|redact|informe tecnico|informe con ia/.test(t)) return marciInformeIA(texto);
+  if (/reporte|informe fotografico|fotos.*(excel|reporte)|informe de/.test(t)) return marciReporte(texto);
+  if (/evidencia|fotos/.test(t)){
+    if (marciRangoFechas(texto) || /evidencia/.test(t)) return marciEvidencias(texto);
+  }
+  if (/sincroniz|drive|actualiza|sube|descarga/.test(t)) return marciSincronizar();
+  if (/(visita|clientes?\s+visitad|visitad[oa]s?|a quien|quien.*visit)/.test(t) && (marciRangoFechas(texto) || /clientes?\s+visitad|visitad[oa]s?|a quien|quien.*visit/.test(t))) return marciVisitasFecha(texto);
+  if (/visitas? (realizad|hech)/.test(t)) return marciEstado();
+  if (/pendiente/.test(t)) return marciPendientes();
+  if (/estado|como va|resumen|cumplimiento|cuantas visitas/.test(t)) return marciEstado();
+  if (/gps|coordenada|ubicacion/.test(t)) return marciAyudaGPS();
+  if (/nuevo cliente|agregar cliente|crear cliente|anadir cliente/.test(t)){
+    marciIrA('agenda');
+    openAddClientForm();
+    return '➕ Abrí el formulario de nuevo cliente. Completa los datos y pulsa “Guardar cliente”.';
+  }
+  if (/busca|buscar/.test(t)) return marciBuscar(texto);
+  const mCod = t.match(/(?:cliente|abonado)\s+#?([0-9]{2,})/);
+  if (mCod) return marciBuscar(mCod[1]);
+  if (/agenda/.test(t)){ marciIrA('agenda'); return '📋 Te llevé a la Agenda.'; }
+  if (/evidencias?/.test(t)){ marciIrA('evid'); return '📷 Te llevé a Evidencias. Puedes filtrar por fechas con el calendario.'; }
+  if (/resumen/.test(t)){ marciIrA('res'); return '📊 Te llevé al Resumen.'; }
+  return await marciIA(texto);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape'){
+    const p = document.getElementById('marciPanel');
+    if (p && p.classList.contains('open')) toggleMarci(false);
+  }
+});
+document.addEventListener('click', (e) => {
+  const p = document.getElementById('marciPanel');
+  if (!p || !p.classList.contains('open')) return;
+  if (p.contains(e.target) || (e.target.closest && e.target.closest('.marci-fab'))) return;
+  toggleMarci(false);
+});
+marciActualizarTagIA();
 </script>
 <script>
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {

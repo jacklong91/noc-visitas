@@ -12,10 +12,12 @@
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>Registro de Visitas — NOC N2 | Zona WiFi</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js">
+<link rel="dns-prefetch" href="https://script.google.com">
+<link rel="dns-prefetch" href="https://drive.google.com">
+<!-- Las librerías pesadas (xlsx, jszip, exceljs, localforage) se cargan bajo demanda
+     desde loadLib() para no bloquear el primer render. -->
 <style>
 :root{
   --bg: #0b0f19;
@@ -38,15 +40,18 @@ body{
   background-image: url('fondo.jpg'), var(--bg-gradient);
   background-size: cover, cover;
   background-position: center, center;
-  background-attachment: fixed, fixed;
+  background-attachment: scroll, scroll;
   color:var(--text);
   min-height:100vh;
   padding-bottom:100px;
 }
+/* El fondo fijo provoca repintados costosos al hacer scroll en móvil.
+   Solo se activa en equipos de escritorio con puntero fino. */
+@media (hover:hover) and (pointer:fine){
+  body{ background-attachment: fixed, fixed; }
+}
 header{
-  background: rgba(10, 15, 30, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(10, 15, 30, 0.94);
   padding:18px 16px 14px;
   position:sticky;
   top:0;
@@ -86,16 +91,15 @@ header h1{
 header p{font-size:.78rem;color:var(--muted)}
 /* -------------------------------------- */
 
-.tabs{display:flex;position:sticky;top:64px;z-index:49;background:rgba(11,15,25,0.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid #334155;transition:top .15s}
+.tabs{display:flex;position:sticky;top:64px;z-index:49;background:rgba(11,15,25,0.95);border-bottom:1px solid #334155;transition:top .15s}
 body.banner-visible .tabs{top:92px}
 .tab{flex:1;padding:12px 4px;text-align:center;font-size:.85rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 main{padding:14px;max-width:720px;margin:0 auto}
-.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:var(--card);color:var(--text);font-size:1rem;margin-bottom:12px;backdrop-filter:blur(8px)}
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(20,25,40,0.9);color:var(--text);font-size:1rem;margin-bottom:12px}
 .card{
-  background: var(--card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* Sin backdrop-filter: con ~25 tarjetas el desenfoque multiplica el coste de GPU */
+  background: linear-gradient(180deg, rgba(23,30,50,0.92), rgba(15,20,34,0.92));
   border-radius:16px;
   padding:16px;
   margin-bottom:14px;
@@ -150,12 +154,12 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .month-input{display:flex;gap:8px;margin-bottom:12px}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-bg.open{display:flex}
-.modal{background:var(--card);border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:18px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.5);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.modal{background:#141a2b;border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:18px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.5)}
 #compartirPreview img{display:block;margin:0 auto}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--accent2);color:#052e16;padding:12px 22px;border-radius:12px;font-weight:700;font-size:.88rem;z-index:1000;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:88%}
 .progress{height:4px;background:var(--card2);border-radius:2px;overflow:hidden;margin-top:8px}
 .progress>div{height:100%;background:var(--accent);transition:width .3s}
-.download-banner{position:fixed;top:64px;left:0;right:0;z-index:51;background:rgba(21,28,44,.95);backdrop-filter:blur(10px);border-bottom:1px solid rgba(56,189,248,.4);padding:6px 12px;display:none;align-items:center;gap:10px;font-size:.72rem}
+.download-banner{position:fixed;top:64px;left:0;right:0;z-index:51;background:rgba(21,28,44,.97);border-bottom:1px solid rgba(56,189,248,.4);padding:6px 12px;display:none;align-items:center;gap:10px;font-size:.72rem}
 .download-banner.visible{display:flex}
 .download-banner .spin{width:12px;height:12px;border:2px solid rgba(56,189,248,.25);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -210,20 +214,18 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .visit-actions .btn{flex:1;min-width:90px;padding:10px 6px;font-size:.78rem}
 .hrow{display:flex;align-items:center;gap:10px; width:100%;}
 .hrow > div { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.icon-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:1.15rem;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s;backdrop-filter:blur(4px);}
+.icon-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:1.15rem;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.2s;}
 .icon-btn:active{background:rgba(255,255,255,.2)}
 .icon-btn.active{background:rgba(245,158,11,.6)}
 .top-tools{position:sticky;top:64px;z-index:48;padding-bottom:10px;}
-.search-bar{position:fixed;top:64px;left:0;right:0;z-index:80;display:none;gap:8px;padding:10px 12px;background:rgba(11,15,25,0.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid #334155;align-items:center}
+.search-bar{position:fixed;top:64px;left:0;right:0;z-index:80;display:none;gap:8px;padding:10px 12px;background:rgba(11,15,25,0.97);border-bottom:1px solid #334155;align-items:center}
 .search-bar.open{display:flex}
 .search-bar .search{margin-bottom:0;flex:1}
 
 .bottom-nav {
   position:fixed;bottom:0;left:0;right:0;
   display:flex;justify-content:space-around;
-  background:rgba(15,23,42,0.6);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
+  background:rgba(15,23,42,0.96);
   border-top:1px solid rgba(255,255,255,0.1);
   z-index:100;
   box-shadow:0 -4px 20px rgba(0,0,0,0.4);
@@ -256,7 +258,6 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
   font-size:.88rem;font-weight:700;
   box-shadow:0 4px 12px rgba(0,0,0,0.3);
   border:1px solid rgba(255,255,255,0.1);
-  backdrop-filter:blur(10px);
 }
 .more-actions-menu .btn-gray {background:rgba(51,65,85,.9);color:white;}
 .more-actions-menu .btn-green {background:rgba(34,197,94,.9);color:#052e16;}
@@ -265,6 +266,31 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 
 .comp-foto-thumb{display:inline-block;position:relative;width:64px;height:64px;margin:2px;border-radius:8px;overflow:hidden;background:var(--card2)}
 .comp-foto-thumb img{width:100%;height:100%;object-fit:cover}
+
+/* --- Barra de progreso de carga de Drive --- */
+.drive-banner{
+  position:fixed;top:10px;left:50%;transform:translate(-50%,-130%);
+  width:min(94%,540px);z-index:150;
+  background:#0f172a;border:1px solid rgba(56,189,248,.45);border-radius:14px;
+  padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.55);
+  transition:transform .25s ease, opacity .25s ease;opacity:0;pointer-events:none;
+}
+.drive-banner.visible{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+.drive-banner.error{border-color:rgba(239,68,68,.65)}
+.drive-banner.done{border-color:rgba(34,197,94,.65)}
+.db-row{display:flex;align-items:center;gap:8px}
+.drive-banner .spin{width:13px;height:13px;border:2px solid rgba(56,189,248,.25);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+.drive-banner.done .spin,.drive-banner.error .spin{display:none}
+.db-text{flex:1;min-width:0;font-size:.8rem;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-pct{font-size:.75rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums}
+.drive-banner.error .db-pct{color:#f87171}
+.drive-banner.done .db-pct{color:#4ade80}
+.db-prog{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin-top:8px}
+.db-prog>div{height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#22c55e);border-radius:3px;transition:width .35s ease}
+.drive-banner.error .db-prog>div{background:#ef4444}
+.db-sub{font-size:.66rem;color:var(--muted);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
+.db-close{background:transparent;border:none;color:var(--muted);font-size:.9rem;cursor:pointer;padding:0 2px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -293,6 +319,19 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
   <div class="prog"><div id="downloadBannerProgress" style="width:0%"></div></div>
   <button class="close-btn" onclick="dismissBanner()">✕</button>
 </div>
+<div class="drive-banner" id="driveBanner" aria-live="polite">
+  <div class="db-row">
+    <div class="spin"></div>
+    <span class="db-text" id="driveBannerText">☁️ Conectando con Drive…</span>
+    <span class="db-pct" id="driveBannerPct">0%</span>
+    <button class="db-close" onclick="hideDriveBanner()" title="Ocultar">✕</button>
+  </div>
+  <div class="db-prog"><div id="driveBannerBar"></div></div>
+  <div class="db-sub" id="driveBannerSub"></div>
+  <div class="db-actions" id="driveBannerActions" style="display:none">
+    <button class="btn btn-primary btn-sm" onclick="retryDriveLoad()">🔄 Reintentar</button>
+  </div>
+</div>
 <div class="search-bar" id="searchBar">
   <input class="search" id="search" placeholder="🔍 Cliente, código o fecha (12/10/2026)" oninput="onSearchInput()">
   <button class="btn btn-gray" style="padding:10px 14px;flex-shrink:0" onclick="toggleSearch(false)">✕</button>
@@ -317,6 +356,22 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
     <div id="clientList"></div>
   </div>
   <div id="tab-evid" style="display:none">
+    <div class="card" id="evidFilterCard" style="border-left:4px solid var(--purple);margin-bottom:12px">
+      <label style="margin-top:0">📅 CALENDARIO — FILTRAR EVIDENCIAS POR FECHAS</label>
+      <div class="row2">
+        <div><label>DESDE</label><input type="date" id="evidDesde" onchange="aplicarFiltroEvid()"></div>
+        <div><label>HASTA</label><input type="date" id="evidHasta" onchange="aplicarFiltroEvid()"></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-gray btn-sm" onclick="evidRangoRapido('hoy')">Hoy</button>
+        <button class="btn btn-gray btn-sm" onclick="evidRangoRapido('7d')">7 días</button>
+        <button class="btn btn-gray btn-sm" onclick="evidRangoRapido('30d')">30 días</button>
+        <button class="btn btn-gray btn-sm" onclick="evidRangoRapido('mes')">Este mes</button>
+        <button class="btn btn-gray btn-sm" onclick="limpiarFiltroEvid()">Todo</button>
+      </div>
+      <div id="evidFiltroInfo" style="font-size:.72rem;color:var(--muted);margin-top:8px">Mostrando todas las fechas.</div>
+      <button class="btn btn-green btn-block" style="margin-top:10px" onclick="descargarReporteEvidencias()">📸 Descargar informe fotográfico</button>
+    </div>
     <div id="evidFoldersView">
       <div class="empty" id="evidEmpty">No hay evidencias registradas todavía.</div>
       <div id="evidFoldersList" class="folder-grid"></div>
@@ -326,6 +381,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
         <button class="btn btn-gray" style="padding:8px 12px" onclick="closeEvidFolder()">←</button>
         <div class="folder-icon">📂</div>
         <div class="info"><b id="evidFolderName">—</b><small id="evidFolderMeta">—</small></div>
+        <button class="btn btn-green" style="padding:8px 12px" onclick="descargarReporteEvidencias(true)" title="Informe fotográfico de esta carpeta">📸 Informe</button>
         <button class="btn btn-primary" style="padding:8px 12px" onclick="downloadAllPending()" id="dlAllBtn">⬇ Todas</button>
       </div>
       <div id="evidPhotosList"></div>
@@ -445,7 +501,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
     <span class="bn-ico">📷</span>
     <span>Evidencias</span>
   </div>
-  <div class="tab" onclick="setTabRes();showTab('res',this)">
+  <div class="tab" onclick="showTab('res',this);setTabRes()">
     <span class="bn-ico">📊</span>
     <span>Resumen</span>
   </div>
@@ -498,6 +554,34 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
 <div class="toast" id="toast"></div>
 <script>
+/* ---- Carga diferida de librerías (evita ~2.5 MB de JS bloqueante al inicio) ---- */
+const LIBS = {
+  localforage: 'https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js',
+  xlsx: 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
+  jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+  exceljs: 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'
+};
+const libPromises = {};
+function loadLib(name){
+  if (!LIBS[name]) return Promise.reject(new Error('Librería desconocida: ' + name));
+  if (libPromises[name]) return libPromises[name];
+  libPromises[name] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = LIBS[name];
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => { delete libPromises[name]; reject(new Error('No se pudo cargar ' + name)); };
+    document.head.appendChild(s);
+  });
+  return libPromises[name];
+}
+function loadLibTimeout(name, ms){
+  return Promise.race([
+    loadLib(name),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Tiempo de espera agotado cargando ' + name)), ms || 60000))
+  ]);
+}
+
 function openAddClientForm() {
   const form = document.getElementById('addClientForm');
   form.style.display = 'block';
@@ -537,6 +621,14 @@ let loadingFromCloud = false;
 let filtroDesde = '';
 let filtroHasta = '';
 let mesResumenFiltro = MES_GENERAL;
+let evidDesde = '';
+let evidHasta = '';
+let cloudRetryCount = 0;
+let __reporteEnCurso = false;
+let __reporteDeadline = 0;
+const __imgB64Cache = new Map();
+function __sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function __reporteSinTiempo(){ return !!__reporteDeadline && Date.now() > __reporteDeadline; }
 
 function isOnline(){ return navigator.onLine !== false; }
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
@@ -561,6 +653,12 @@ function sanitizeDB(){
   if (!DB.autoSync) DB.autoSync = 'on';
   if (typeof DB.month !== 'string' || !DB.month) DB.month = getMesAnioActual();
   if (typeof DB.resp !== 'string') DB.resp = '';
+  if (!DB.clientGps || typeof DB.clientGps !== 'object') DB.clientGps = {};
+  for (const cod in DB.clientGps){
+    const g = DB.clientGps[cod];
+    if (!g || typeof g !== 'object' || !isFinite(Number(g.lat)) || !isFinite(Number(g.lng))){ delete DB.clientGps[cod]; continue; }
+    DB.clientGps[cod] = { lat: Number(g.lat), lng: Number(g.lng), acc: Number(g.acc) || 0, time: g.time || '' };
+  }
   for (const cod in DB.photos){
     if (!Array.isArray(DB.photos[cod])) { DB.photos[cod] = []; continue; }
     DB.photos[cod] = DB.photos[cod].filter(p => p && typeof p === 'object' && p.filename);
@@ -586,6 +684,19 @@ function sanitizeDB(){
     });
   }
   DB.customClients = DB.customClients.filter(c => c && typeof c === 'object' && c.codigo);
+  // Recupera coordenadas ya registradas para que queden fijas en el cliente.
+  for (const cod in DB.visits){
+    if (DB.clientGps[cod]) continue;
+    const arr = DB.visits[cod];
+    if (!Array.isArray(arr)) continue;
+    for (let i = arr.length - 1; i >= 0; i--){
+      const g = arr[i] && arr[i].gps;
+      if (g && isFinite(Number(g.lat)) && isFinite(Number(g.lng))){
+        DB.clientGps[cod] = { lat: Number(g.lat), lng: Number(g.lng), acc: Number(g.acc) || 0, time: g.time || '' };
+        break;
+      }
+    }
+  }
   for (const key in DB.evid){
     const e = DB.evid[key];
     if (e === null || e === undefined){ delete DB.evid[key]; continue; }
@@ -600,12 +711,13 @@ function isDirty(){ try{ return localStorage.getItem('nocDirty') === '1'; }catch
 async function saveLocal(){
   try {
     if (typeof localForage !== 'undefined'){
-      await localForage.ready();
-      await localForage.setItem('nocVisitasDB', DB);
+      // Con límite de tiempo: si IndexedDB se bloquea, la app no debe quedarse "guardando" para siempre.
+      await Promise.race([localForage.ready(), new Promise((_, rej) => setTimeout(() => rej(new Error('localForage ready timeout')), 8000))]);
+      await Promise.race([localForage.setItem('nocVisitasDB', DB), new Promise((_, rej) => setTimeout(() => rej(new Error('localForage setItem timeout')), 15000))]);
     }
   } catch(e){ console.warn('Error guardando localForage:', e); }
   try {
-    const metaCritica = { visits: {}, customClients: DB.customClients, hiddenClients: DB.hiddenClients, month: DB.month, resp: DB.resp, comp: DB.comp, autoSync: DB.autoSync };
+    const metaCritica = { visits: {}, photos: {}, customClients: DB.customClients, hiddenClients: DB.hiddenClients, month: DB.month, resp: DB.resp, comp: DB.comp, autoSync: DB.autoSync, clientGps: DB.clientGps || {} };
     for (const cod in DB.visits) {
       metaCritica.visits[cod] = DB.visits[cod].map(v => {
         const vCopy = Object.assign({}, v);
@@ -615,6 +727,21 @@ async function saveLocal(){
         return vCopy;
       });
     }
+    // Respaldo liviano de las fotos (sin base64) para que, si localForage no carga,
+    // la app siga mostrando y sincronizando las evidencias en vez de aparecer vacía.
+    for (const cod in DB.photos) {
+      const lista = safeArray(DB.photos[cod]);
+      if (!lista.length) continue;
+      metaCritica.photos[cod] = lista.map(p => ({
+        filename: p.filename,
+        fecha: p.fecha || '',
+        fechaVisita: p.fechaVisita || '',
+        visitId: p.visitId || null,
+        fileId: p.fileId || null,
+        folderId: p.folderId || null,
+        synced: !!p.synced
+      }));
+    }
     localStorage.setItem('nocVisitasMeta', JSON.stringify(metaCritica));
   } catch(e){ console.warn('LocalStorage lleno o error:', e); }
 }
@@ -623,8 +750,8 @@ async function loadLocal(){
   let db = null;
   try{
     if (typeof localForage !== 'undefined'){
-      await localForage.ready();
-      db = await localForage.getItem('nocVisitasDB');
+      await Promise.race([localForage.ready(), new Promise((_, rej) => setTimeout(() => rej(new Error('localForage ready timeout')), 8000))]);
+      db = await Promise.race([localForage.getItem('nocVisitasDB'), new Promise((_, rej) => setTimeout(() => rej(new Error('localForage getItem timeout')), 12000))]);
     }
   }catch(e){}
   try {
@@ -635,12 +762,14 @@ async function loadLocal(){
       if (!db.visits || Object.keys(db.visits).length === 0) {
         if (meta.visits) db.visits = meta.visits;
       }
+      if ((!db.photos || Object.keys(db.photos).length === 0) && meta.photos) db.photos = meta.photos;
       if (meta.customClients) db.customClients = meta.customClients;
       if (meta.hiddenClients) db.hiddenClients = meta.hiddenClients;
       if (meta.month) db.month = meta.month;
       if (meta.resp !== undefined) db.resp = meta.resp;
       if (meta.comp) db.comp = meta.comp;
       if (meta.autoSync) db.autoSync = meta.autoSync;
+      if (meta.clientGps && typeof meta.clientGps === 'object') db.clientGps = meta.clientGps;
     }
   } catch(e){}
   return db;
@@ -650,10 +779,63 @@ async function save(){ sanitizeDB(); await saveLocal(); markDirty(); scheduleSyn
 function scheduleSync(){ if (DB.autoSync === 'off') return; if (syncTimer) clearTimeout(syncTimer); setSyncBadge('⏳ Pendiente…','warn'); syncTimer = setTimeout(()=>{ syncToCloud(true); }, 8000); }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',3500); }
 function showTab(id, el){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); ['agenda','evid','res'].forEach(x=>document.getElementById('tab-'+x).style.display='none'); document.getElementById('tab-'+id).style.display='block'; }
-function setTabEvid(){ evidCurrentFolder = null; renderEvid(); }
+function setTabEvid(){
+  evidCurrentFolder = null;
+  const dEl = document.getElementById('evidDesde'); if (dEl) dEl.value = evidDesde;
+  const hEl = document.getElementById('evidHasta'); if (hEl) hEl.value = evidHasta;
+  renderEvid();
+}
 function setTabRes(){ renderResumen(); initSig('sigSuper'); }
 function setSyncBadge(msg, type){ const b = document.getElementById('syncBadge'); if (!b) return; b.style.display = 'inline'; b.textContent = msg; b.style.background = type === 'ok' ? 'rgba(34,197,94,.2)' : type === 'warn' ? 'rgba(245,158,11,.2)' : type === 'err' ? 'rgba(239,68,68,.2)' : 'rgba(255,255,255,.1)'; }
 function setDriveStatus(msg, color){ const el = document.getElementById('driveStatus'); if (el){ el.textContent = msg; el.style.color = color || 'var(--muted)'; } }
+
+/* ---- Barra de progreso de la carga de Drive ---- */
+let driveBannerTick = null, driveBannerVal = 0, driveBannerLimit = 0, driveBannerT0 = 0, driveBannerSeq = 0;
+function setDriveBar(pct){
+  const bar = document.getElementById('driveBannerBar');
+  const lbl = document.getElementById('driveBannerPct');
+  const v = Math.round(Math.max(0, Math.min(100, pct)));
+  if (bar) bar.style.width = v + '%';
+  if (lbl) lbl.textContent = v + '%';
+}
+function driveProgress(pct, text, sub, opts){
+  opts = opts || {};
+  const b = document.getElementById('driveBanner'); if (!b) return;
+  if (!b.classList.contains('visible')){ b.classList.add('visible'); driveBannerT0 = Date.now(); driveBannerSeq++; }
+  b.classList.toggle('error', !!opts.error);
+  b.classList.toggle('done', !!opts.done);
+  const txt = document.getElementById('driveBannerText');
+  if (txt && text) txt.textContent = text;
+  const subEl = document.getElementById('driveBannerSub');
+  if (subEl && sub !== undefined){ subEl.dataset.base = sub; subEl.textContent = sub; }
+  const act = document.getElementById('driveBannerActions');
+  if (act) act.style.display = opts.error ? 'flex' : 'none';
+  driveBannerVal = Math.max(0, Math.min(100, pct));
+  driveBannerLimit = (opts.limit === undefined) ? driveBannerVal : opts.limit;
+  setDriveBar(driveBannerVal);
+  if (driveBannerTick){ clearInterval(driveBannerTick); driveBannerTick = null; }
+  if (opts.error || opts.done) return;
+  // Avance "estimado" mientras se espera la respuesta del backend, con segundos transcurridos.
+  driveBannerTick = setInterval(() => {
+    if (driveBannerVal < driveBannerLimit){ driveBannerVal = Math.min(driveBannerLimit, driveBannerVal + 0.7); setDriveBar(driveBannerVal); }
+    const sEl = document.getElementById('driveBannerSub');
+    if (sEl){ const base = sEl.dataset.base || ''; sEl.textContent = (base ? base + ' · ' : '') + Math.round((Date.now() - driveBannerT0) / 1000) + ' s'; }
+  }, 500);
+}
+function hideDriveBanner(){
+  if (driveBannerTick){ clearInterval(driveBannerTick); driveBannerTick = null; }
+  const b = document.getElementById('driveBanner'); if (b) b.classList.remove('visible');
+}
+function hideDriveBannerSoon(ms){
+  const seq = driveBannerSeq;
+  setTimeout(() => { if (driveBannerSeq === seq) hideDriveBanner(); }, ms || 1600);
+}
+function retryDriveLoad(){
+  hideDriveBanner();
+  localStorage.removeItem('nocLastLoadOk');
+  driveStateReady = false;
+  loadFromCloud();
+}
 function updateSyncStatusBox(){
   const el = document.getElementById('syncQueueInfo'); if (!el) return;
   let pendientes = 0;
@@ -693,6 +875,17 @@ function getVisits(cod){ const v = DB.visits[cod]; if (!v) return []; if (!Array
 function ensureVisitsArr(cod){ if (!DB.visits[cod]) DB.visits[cod] = []; if (!Array.isArray(DB.visits[cod])) DB.visits[cod] = [DB.visits[cod]]; DB.visits[cod] = DB.visits[cod].filter(v => v && typeof v === 'object'); return DB.visits[cod]; }
 function getCurrentVisit(cod){ const arr = getVisits(cod); if (!arr.length) return null; const id = editingVisitId[cod]; if (id){ const v = arr.find(x => x.id === id); if (v) return v; } editingVisitId[cod] = arr[arr.length - 1].id; return arr[arr.length - 1]; }
 function getLatestVisit(cod){ const arr = getVisits(cod); return arr.length ? arr[arr.length - 1] : null; }
+function getGpsGuardada(cod){
+  if (!cod) return null;
+  const g = DB.clientGps && DB.clientGps[cod];
+  if (g && isFinite(Number(g.lat)) && isFinite(Number(g.lng))) return g;
+  const arr = getVisits(cod);
+  for (let i = arr.length - 1; i >= 0; i--){
+    const vg = arr[i] && arr[i].gps;
+    if (vg && isFinite(Number(vg.lat)) && isFinite(Number(vg.lng))) return vg;
+  }
+  return null;
+}
 
 function verificarFechaDuplicada(cod, fecha, idActual){
   if (!fecha) return false;
@@ -701,6 +894,17 @@ function verificarFechaDuplicada(cod, fecha, idActual){
     if (v.id !== idActual && v.fecha === fecha) return true;
   }
   return false;
+}
+function anioFechaSospechoso(fecha){
+  if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return 0;
+  const anio = parseInt(fecha.slice(0, 4), 10);
+  const actual = new Date().getFullYear();
+  return (anio < actual - 1 || anio > actual + 1) ? anio : 0;
+}
+function confirmarFechaSospechosa(fecha){
+  const anio = anioFechaSospechoso(fecha);
+  if (!anio) return true;
+  return confirm('⚠ El año ' + anio + ' parece un error (estamos en ' + new Date().getFullYear() + ').\n\n¿Guardar la fecha ' + fecha.split('-').reverse().join('/') + ' de todos modos?');
 }
 
 function fechaADiaIndex(fechaYMD){ if (!fechaYMD) return -1; const partes = String(fechaYMD).split('-'); if (partes.length !== 3) return -1; const d = new Date(parseInt(partes[0],10), parseInt(partes[1],10)-1, parseInt(partes[2],10)); if (isNaN(d.getTime())) return -1; return (d.getDay() + 6) % 7; }
@@ -735,6 +939,10 @@ function onFechaChange(cod){
   const fEl = document.getElementById('f-' + cod);
   const nuevaFecha = fEl ? fEl.value : '';
   const v = getCurrentVisit(cod);
+  if (v && nuevaFecha && !confirmarFechaSospechosa(nuevaFecha)){
+    if (fEl) fEl.value = v.fecha || '';
+    return;
+  }
   if (v && nuevaFecha && verificarFechaDuplicada(cod, nuevaFecha, v.id)){
     toast('⚠ Ya existe una visita guardada con esta misma fecha');
     if (fEl) fEl.value = v.fecha || '';
@@ -765,7 +973,8 @@ function onFechaChange(cod){
 function newVisit(cod){
   const arr = ensureVisitsArr(cod);
   const last = arr.length ? arr[arr.length - 1] : null;
-  const nv = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: '', hora: '', estado: 'Pendiente', obs: '', gps: null, days: last ? (last.days || []).slice() : [], updatedAt: new Date().toISOString() };
+  const gpsFija = getGpsGuardada(cod);
+  const nv = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: '', hora: '', estado: 'Pendiente', obs: '', gps: gpsFija ? { lat: gpsFija.lat, lng: gpsFija.lng, acc: gpsFija.acc || 0, time: gpsFija.time || '' } : null, days: last ? (last.days || []).slice() : [], updatedAt: new Date().toISOString() };
   arr.push(nv);
   editingVisitId[cod] = nv.id;
   formsAbiertos.add(cod);
@@ -830,30 +1039,75 @@ function showDownloadBanner(force){ if (bannerDismissed && !force) return; const
 function hideDownloadBanner(){ const b = document.getElementById('downloadBanner'); if (b) b.classList.remove('visible'); document.body.classList.remove('banner-visible'); }
 function dismissBanner(){ bannerDismissed = true; hideDownloadBanner(); }
 function updateDownloadBanner(){ const textEl = document.getElementById('downloadBannerText'); const progEl = document.getElementById('downloadBannerProgress'); const t = downloadState.total, d = downloadState.done, f = downloadState.failed, p = d + f; if (textEl){ textEl.textContent = '📥 ' + p + '/' + t; } if (progEl) progEl.style.width = (t > 0 ? Math.round(p / t * 100) : 0) + '%'; }
-function jsonpRequest(url, timeoutMs){ return new Promise((resolve, reject) => { const cbName = 'nocJsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); const script = document.createElement('script'); let done = false; const cleanup = () => { try { delete window[cbName]; } catch(e){ window[cbName] = undefined; } if (script.parentNode) script.parentNode.removeChild(script); }; const timer = setTimeout(() => { if (done) return; done = true; cleanup(); reject(new Error('Timeout JSONP')); }, timeoutMs || 25000); window[cbName] = (data) => { if (done) return; done = true; clearTimeout(timer); cleanup(); resolve(data); }; script.onerror = () => { if (done) return; done = true; clearTimeout(timer); cleanup(); reject(new Error('Error de red (JSONP)')); }; const sep = url.indexOf('?') >= 0 ? '&' : '?'; script.src = url + sep + 'callback=' + cbName; document.head.appendChild(script); }); }
-async function callBackendRead(payload, timeoutMs){
+function jsonpRequest(url, timeoutMs){ return new Promise((resolve, reject) => { const cbName = 'nocJsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); const script = document.createElement('script'); let done = false; const cleanup = () => { if (script.parentNode) script.parentNode.removeChild(script); // Si la respuesta llega después del timeout, el callback ya no debe romper la consola.
+    try { window[cbName] = function(){}; } catch(e){}
+    setTimeout(() => { try { delete window[cbName]; } catch(e){ window[cbName] = undefined; } }, 120000); }; const timer = setTimeout(() => { if (done) return; done = true; cleanup(); reject(new Error('Timeout JSONP')); }, timeoutMs || 25000); window[cbName] = (data) => { if (done) return; done = true; clearTimeout(timer); cleanup(); resolve(data); }; script.onerror = () => { if (done) return; done = true; clearTimeout(timer); cleanup(); reject(new Error('Error de red (JSONP)')); }; const sep = url.indexOf('?') >= 0 ? '&' : '?'; script.src = url + sep + 'callback=' + cbName; document.head.appendChild(script); }); }
+async function callBackendRead(payload, timeoutMs, fetchTimeoutMs){
   timeoutMs = timeoutMs || 25000;
   const params = new URLSearchParams();
   params.append('token', TOKEN_SECRETO);
+  // Evita que un proxy/CDN entregue una respuesta vieja.
+  params.append('_t', String(Date.now()));
   for (const k in payload){ const v = payload[k]; if (v !== undefined && v !== null) params.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)); }
   const baseUrl = APPS_SCRIPT_URL + '?' + params.toString();
   let result = null;
-  for (let intento = 0; intento < 2; intento++){
-    try { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 25000); const res = await fetch(baseUrl, { method: 'GET', signal: controller.signal }); clearTimeout(timer); if (res.ok){ const text = await res.text(); try { result = JSON.parse(text); break; } catch(e){} } } catch(e){}
-    if (intento === 0){ setSyncBadge('⏳ Conectando…', 'warn'); await new Promise(r => setTimeout(r, 2000)); }
+  // 1) Intento directo (CORS) con límite corto. El temporizador sigue activo hasta
+  // terminar de leer el cuerpo: si la conexión se queda a medias, se aborta y se pasa a JSONP.
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), fetchTimeoutMs || 15000);
+    let text = '';
+    try {
+      const res = await fetch(baseUrl, { method: 'GET', signal: controller.signal, cache: 'no-store' });
+      if (res.ok) text = await res.text();
+    } finally { clearTimeout(timer); }
+    if (text){ try { result = JSON.parse(text); } catch(e){} }
+  } catch(e){}
+  // 2) JSONP (evita bloqueos de CORS/proxy). Hasta 2 intentos.
+  if (!result){
+    setSyncBadge('⏳ Conectando…', 'warn');
+    const tiempos = [timeoutMs, Math.min(timeoutMs, 25000)];
+    for (let i = 0; i < tiempos.length && !result; i++){
+      try { result = await jsonpRequest(baseUrl, tiempos[i]); }
+      catch(e){ if (i < tiempos.length - 1) await new Promise(r => setTimeout(r, 900)); }
+    }
   }
-  if (!result){ result = await jsonpRequest(baseUrl, timeoutMs); }
   const badge = document.getElementById('syncBadge');
   if (badge && badge.textContent.includes('Conectando')){ setSyncBadge('✓ Listo', 'ok'); setTimeout(() => { if (badge.textContent === '✓ Listo'){ badge.style.display = 'none'; } }, 2500); }
   return result;
 }
-async function callBackendWrite(payload){ try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, ...payload }) }); } catch(e){ throw new Error('No se pudo enviar: ' + e.message); } return { ok: true }; }
-async function callBackendWriteAndRead(payload){ await callBackendWrite(payload); await new Promise(r => setTimeout(r, 3000)); const res = await callBackendRead({ action:'getIndex' }, 40000); if (res && res.ok && res.content){ return { ok: true, merged: res.content }; } return { ok: false }; }
+async function callBackendWrite(payload, intentos){
+  const max = intentos || 3;
+  let ultimoError = null;
+  for (let i = 1; i <= max; i++){
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+      try {
+        await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, ...payload }), signal: controller.signal });
+      } finally { clearTimeout(timer); }
+      return { ok: true };
+    } catch(e){
+      ultimoError = e;
+      if (i < max) await new Promise(r => setTimeout(r, 700 * i));
+    }
+  }
+  throw new Error('No se pudo enviar: ' + (ultimoError && ultimoError.message ? ultimoError.message : 'error de red'));
+}
+async function callBackendWriteAndRead(payload){
+  await callBackendWrite(payload);
+  // Se espera y se reintenta la lectura: antes un único intento fallaba si Apps Script tardaba.
+  for (let i = 0; i < 3; i++){
+    await new Promise(r => setTimeout(r, 2000 + i * 1500));
+    try { const res = await callBackendRead({ action:'getIndex' }, 45000, 90000); if (res && res.ok && res.content){ return { ok: true, merged: res.content }; } } catch(e){}
+  }
+  return { ok: false };
+}
 async function testBackend(){ toast('🔬 Probando…'); try { const r = await callBackendRead({ action: 'ping' }, 15000); if (r.ok){ setDriveStatus('✓ Backend OK', '#4ade80'); toast('✓ OK'); } else { toast('⚠ ' + r.error); } } catch(e){ toast('⚠ ' + e.message); } }
 function buildPhotoFilename(fecha){ const d = fecha ? new Date(fecha) : new Date(); const pad = n => String(n).padStart(2, '0'); const stamp = d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()); const rand = Math.random().toString(36).slice(2, 6); return 'foto_' + stamp + '_' + rand + '.jpg'; }
 function arrayBufferToBase64(buffer){ let binary = ''; const bytes = new Uint8Array(buffer); const chunk = 0x8000; for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk)); return btoa(binary); }
 function hoyYMD(){ const d = new Date(); const pad = n => String(n).padStart(2,'0'); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
-async function sendHeartbeat(){ if (!isOnline()) return; try { const res = await callBackendRead({ action: 'heartbeat', deviceId: getDeviceId(), deviceName: getDeviceName(), userName: DB.resp || '' }, 10000); if (res && res.ok){ activeUsersCache = res.devices || []; updateActiveUsersBadge(res.active); } } catch(e){} }
+async function sendHeartbeat(){ if (!isOnline() || document.hidden) return; try { const res = await callBackendRead({ action: 'heartbeat', deviceId: getDeviceId(), deviceName: getDeviceName(), userName: DB.resp || '' }, 10000); if (res && res.ok){ activeUsersCache = res.devices || []; updateActiveUsersBadge(res.active); } } catch(e){} }
 function updateActiveUsersBadge(count){ const el = document.getElementById('activeUsersBadge'); if (!el) return; if (!count || count <= 0){ el.style.display = 'none'; return; } if (count === 1){ el.textContent = '👤 Solo tú'; } else { el.textContent = '👥 ' + count + ' técnicos'; } el.style.display = 'inline-block'; }
 function showActiveUsersModal(){ const modal = document.getElementById('historialModal'); const title = document.getElementById('historialTitle'); const list = document.getElementById('historialList'); title.textContent = '👥 Técnicos conectados (' + activeUsersCache.length + ')'; list.innerHTML = ''; if (!activeUsersCache.length){ list.innerHTML = '<div class="empty">Nadie más</div>'; } else { activeUsersCache.forEach(u => { const row = document.createElement('div'); row.className = 'card'; row.style.padding = '10px'; row.style.marginBottom = '8px'; row.innerHTML = '<b>📱 ' + (u.name || 'Dispositivo') + '</b>' + (u.user ? '<br><small style="color:var(--muted)">👤 ' + u.user + '</small>' : ''); list.appendChild(row); }); } modal.classList.add('open'); }
 
@@ -866,7 +1120,7 @@ async function syncMasterNow(){
   const updates = collectMasterUpdates();
   if (updates.length === 0){ toast('⚠ No hay visitas para sincronizar'); setSyncBadge('','info'); syncInProgress = false; return; }
   const startTs = Date.now();
-  try { await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ token: TOKEN_SECRETO, action: 'updateMasterSheet', updates, mesAnio: DB.month }) }); } catch(e){}
+  try { await callBackendWrite({ action: 'updateMasterSheet', updates, mesAnio: DB.month }, 3); } catch(e){ toast('⚠ No se pudo enviar al Master: ' + e.message); syncInProgress = false; setSyncBadge('⚠ Error red','err'); return; }
   toast('⏳ Procesando…');
   setSyncBadge('⏳ Procesando…','info');
   const MAX_ESPERA = 3 * 60 * 1000;
@@ -924,27 +1178,46 @@ async function syncToCloud(silent){
     const pending = collectPendingUploads();
     setSyncProgress(0);
     for (const item of pending){
+      if (!isOnline()){ failed += pending.length - done - failed; break; }
       try {
         await callBackendWrite({ action:'uploadPhoto', codigo:item.codigo, nombre:item.nombre, fecha:item.fechaVisita, filename:item.filename, mime:item.mime, base64:item.base64 });
-        if (item.ref) item.ref.synced = true;
-        try { const fid = await callBackendRead({ action:'getFileId', codigo:item.codigo, filename:item.filename, fecha:item.fechaVisita }, 15000); if (fid && fid.ok && fid.fileId && item.ref) item.ref.fileId = fid.fileId; if (item.ref && item.ref.synced && item.ref.fileId) delete item.ref.data; } catch(e){}
-        done++;
-        setSyncProgress(Math.round(done/Math.max(pending.length,1)*100));
-        setSyncBadge('⬆ ' + done + '/' + pending.length,'info');
+        // No se marca como sincronizada hasta confirmar que Drive devuelve el fileId.
+        const fid = await confirmarSubida(item);
+        if (fid && fid.fileId){
+          if (item.ref){ item.ref.synced = true; item.ref.fileId = fid.fileId; if (fid.folderId) item.ref.folderId = fid.folderId; delete item.ref.data; }
+          done++;
+        } else {
+          if (item.ref) item.ref.synced = false;
+          failed++;
+        }
+        setSyncProgress(Math.round((done + failed) / Math.max(pending.length, 1) * 100));
+        setSyncBadge('⬆ ' + (done + failed) + '/' + pending.length, 'info');
         await saveLocal();
-      } catch(err){ failed++; }
+      } catch(err){ if (item.ref) item.ref.synced = false; failed++; }
     }
     setSyncBadge('☁️ Índice + Excel…','info');
     const indexData = buildIndex();
     const deletions = getDeletionsList();
     const deletedPhotos = getDeletedPhotosList();
-    const wb = buildStyledWorkbook();
-    const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
-    const excelBase64 = arrayBufferToBase64(excelBuffer);
+    let excelBase64 = null;
+    try {
+      await loadLibTimeout('xlsx', 60000);
+      const wb = buildStyledWorkbook();
+      const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
+      excelBase64 = arrayBufferToBase64(excelBuffer);
+    } catch(e){ console.warn('No se pudo generar el Excel de sincronización:', e); }
     const resp = await callBackendWriteAndRead({ action:'saveIndex', index: JSON.stringify(indexData), deletions, deletedPhotos, deviceId: getDeviceId(), excelBase64 });
-    if (resp && resp.ok && resp.merged){ try { const merged = JSON.parse(resp.merged); lastKnownRemoteTs = merged.updatedAt || null; localStorage.setItem('nocLastLoadOk', String(Date.now())); liberarEspacio(); await saveLocal(); } catch(e){} }
+    if (!resp || !resp.ok || !resp.merged){
+      // Si el índice no se guardó, NO se borran las marcas de eliminación: se reintenta todo después.
+      setSyncBadge('⚠ Índice no guardado','warn');
+      toast('⚠ No se pudo guardar en Drive. Se reintentará.');
+      updateSyncStatusBox();
+      return;
+    }
+    try { const merged = JSON.parse(resp.merged); lastKnownRemoteTs = merged.updatedAt || null; if (merged.updatedAt) localStorage.setItem('nocRemoteTs', merged.updatedAt); localStorage.setItem('nocLastLoadOk', String(Date.now())); liberarEspacio(); await saveLocal(); } catch(e){}
     setSyncProgress(100); setTimeout(()=>setSyncProgress(0), 800);
     clearDeletionsList(); clearDeletedPhotosList();
+    try { localStorage.setItem('nocRemotePhotoCount', String(contarFotosLocales())); } catch(e){}
     if (failed === 0){
       clearDirty();
       localStorage.setItem('nocLastSync', new Date().toISOString());
@@ -959,6 +1232,24 @@ async function syncToCloud(silent){
     updateSyncStatusBox();
   } catch(err){ setSyncBadge('⚠ Error','err'); }
   finally { syncInProgress = false; }
+}
+async function confirmarSubida(item){
+  // Apps Script puede tardar unos segundos en reflejar la foto recién subida.
+  for (let i = 0; i < 3; i++){
+    await new Promise(r => setTimeout(r, 700 + i * 900));
+    try {
+      const fid = await callBackendRead({ action:'getFileId', codigo:item.codigo, filename:item.filename, fecha:item.fechaVisita }, 20000);
+      if (fid && fid.ok && fid.fileId) return fid;
+    } catch(e){}
+  }
+  return null;
+}
+function programarReintentoDrive(){
+  if (!isOnline() || cloudRetryCount >= 2) return;
+  cloudRetryCount++;
+  const espera = 10000 * cloudRetryCount;
+  setSyncBadge('⏳ Reintentando en ' + Math.round(espera / 1000) + 's…', 'warn');
+  setTimeout(() => { if (isOnline() && !loadingFromCloud) loadFromCloud(); }, espera);
 }
 function applyRemoteIndex(remote){
   if (!remote || typeof remote !== 'object') return;
@@ -1031,53 +1322,135 @@ function buildIndex(){
   return { version: 10, month: DB.month, resp: DB.resp, comp: DB.comp, autoSync: DB.autoSync, visits: visitsSerializable, customClients: DB.customClients, hiddenClients: DB.hiddenClients, photosMeta, evidMeta, updatedAt: new Date().toISOString() };
 }
 function setSyncProgress(pct){ const el = document.getElementById('syncProgress'); if (el) el.style.width = pct + '%'; }
+function contarFotosLocales(){
+  let n = 0;
+  for (const cod in DB.photos) n += safeArray(DB.photos[cod]).length;
+  return n;
+}
+function localDataCompleta(){
+  // Si el índice remoto tenía más fotos que las que hay en memoria (p. ej. localForage no cargó),
+  // NO se usa el atajo: se descarga el índice completo.
+  try {
+    const guardado = localStorage.getItem('nocRemotePhotoCount');
+    const local = contarFotosLocales();
+    if (guardado === null) return !(local === 0 && Object.keys(DB.visits || {}).length > 0);
+    return local >= parseInt(guardado, 10);
+  } catch(e){ return true; }
+}
 async function loadFromCloud(){
   if (loadingFromCloud) return false;
   const lastLoad = parseInt(localStorage.getItem('nocLastLoadOk') || '0', 10);
   const MIN = 3 * 60 * 1000;
-  if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN)){ setSyncBadge('✓ Drive reciente','ok'); updateSyncStatusBox(); return true; }
+  if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN) && localDataCompleta()){ setSyncBadge('✓ Drive reciente','ok'); updateSyncStatusBox(); return true; }
   loadingFromCloud = true;
+  // Válvula de seguridad: si algo inesperado se cuelga, se libera la carga para poder reintentar.
+  const watchdogCarga = setTimeout(() => {
+    if (!loadingFromCloud) return;
+    loadingFromCloud = false;
+    setSyncBadge('⚠ Drive lento','warn');
+    updateSyncStatusBox();
+  }, 240000);
   try {
     if (!isOnline()){ driveStateReady = true; setSyncBadge('📴 Sin conexión','warn'); updateSyncStatusBox(); return false; }
+    driveProgress(6, '☁️ Preparando Drive…', 'Mostrando los datos guardados en este equipo', { limit: 14 });
     setSyncBadge('📥 Cargando Drive…','info');
     updateSyncStatusBox();
     const timeoutGlobal = setTimeout(() => { if (!driveStateReady){ driveStateReady = true; setSyncBadge('⚠ Drive lento','warn'); updateSyncStatusBox(); } }, 90000);
+
+    const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
+
+    // Atajo: si el servidor no registra cambios desde la última carga, no se descarga el índice completo.
+    const cachedTs = localStorage.getItem('nocRemoteTs') || '';
+    if (cachedTs && localHasData && !isDirty() && localDataCompleta()){
+      try {
+        driveProgress(25, '☁️ Verificando cambios…', 'Consulta rápida a Drive', { limit: 55 });
+        const meta = await callBackendRead({ action:'getIndexMeta' }, 12000);
+        if (meta && meta.ok && meta.exists && meta.updatedAt === cachedTs){
+          clearTimeout(timeoutGlobal);
+          driveStateReady = true;
+          cloudRetryCount = 0;
+          localStorage.setItem('nocLastLoadOk', String(Date.now()));
+          setSyncBadge('✓ Drive al día','ok');
+          updateSyncStatusBox();
+          driveProgress(100, '✓ Drive al día', 'Sin cambios desde la última sincronización', { done: true });
+          hideDriveBannerSoon(1600);
+          return true;
+        }
+      } catch(e){}
+    }
+
+    driveProgress(35, '☁️ Descargando índice…', 'Conectando con Google Apps Script', { limit: 70 });
     let res = null;
-    try { res = await callBackendRead({ action:'getIndex' }, 80000); } catch(err){ clearTimeout(timeoutGlobal); setSyncBadge('⚠ Error red','err'); driveStateReady = true; updateSyncStatusBox(); return false; }
+    try { res = await callBackendRead({ action:'getIndex' }, 60000, 90000); }
+    catch(err){
+      clearTimeout(timeoutGlobal);
+      driveStateReady = true;
+      setSyncBadge('⚠ Error red','err');
+      updateSyncStatusBox();
+      driveProgress(100, '⚠ No se pudo cargar Drive', 'Revisa tu conexión e inténtalo de nuevo', { error: true });
+      programarReintentoDrive();
+      return false;
+    }
     clearTimeout(timeoutGlobal);
     if (!res || !res.ok){
-      if (res && (res.error || '').indexOf('No hay') !== -1){ driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); updateSyncStatusBox(); return false; }
+      if (res && (res.error || '').indexOf('No hay') !== -1){
+        driveStateReady = true; setSyncBadge('✓ Drive vacío','ok'); updateSyncStatusBox();
+        driveProgress(100, '✓ Drive vacío', 'Aún no hay datos guardados en la nube', { done: true }); hideDriveBannerSoon(1500);
+        return false;
+      }
+      const detalle = res && res.error ? String(res.error).slice(0,60) : 'Sin respuesta del servidor';
+      driveStateReady = true;
       setSyncBadge('⚠ ' + (res && res.error ? String(res.error).slice(0,25) : 'sin respuesta'),'err');
-      driveStateReady = true; updateSyncStatusBox(); return false;
+      updateSyncStatusBox();
+      driveProgress(100, '⚠ No se pudo cargar Drive', detalle, { error: true });
+      programarReintentoDrive();
+      return false;
     }
+    driveProgress(72, '☁️ Índice recibido', 'Procesando visitas y fotos…', { limit: 86 });
     let remote;
-    try { remote = JSON.parse(res.content); } catch(e){ driveStateReady = true; setSyncBadge('⚠ Error JSON','err'); updateSyncStatusBox(); return false; }
-    if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('⚠ Formato inválido','warn'); updateSyncStatusBox(); return false; }
+    try { remote = JSON.parse(res.content); }
+    catch(e){ driveStateReady = true; setSyncBadge('⚠ Error JSON','err'); updateSyncStatusBox(); driveProgress(100, '⚠ Datos inválidos', 'El índice de Drive no se pudo leer', { error: true }); return false; }
+    if (!remote || typeof remote !== 'object'){ driveStateReady = true; setSyncBadge('⚠ Formato inválido','warn'); updateSyncStatusBox(); driveProgress(100, '⚠ Datos inválidos', 'Formato inesperado del índice', { error: true }); return false; }
     const remoteHasData = (remote.visits && Object.keys(remote.visits).length > 0) || (remote.photosMeta && Object.keys(remote.photosMeta).length > 0);
-    const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
-    if (!remoteHasData && localHasData){ driveStateReady = true; setSyncBadge('⚠ Drive vacío','warn'); updateSyncStatusBox(); return false; }
+    if (!remoteHasData && localHasData){
+      driveStateReady = true; setSyncBadge('⚠ Drive vacío','warn'); updateSyncStatusBox();
+      driveProgress(100, '⚠ Drive vacío', 'Se conservan los datos locales', { done: true }); hideDriveBannerSoon(1800);
+      return false;
+    }
     try {
+      driveProgress(82, '🔄 Actualizando datos…', 'Mezclando cambios de otros equipos', { limit: 90 });
       applyRemoteIndex(remote);
+      try {
+        let remotoCount = 0;
+        for (const cod in (remote.photosMeta || {})) remotoCount += Array.isArray(remote.photosMeta[cod]) ? remote.photosMeta[cod].length : 0;
+        localStorage.setItem('nocRemotePhotoCount', String(remotoCount));
+      } catch(e){}
       lastKnownRemoteTs = remote.updatedAt || new Date().toISOString();
+      if (remote.updatedAt) localStorage.setItem('nocRemoteTs', remote.updatedAt);
       migrateVisits();
       sanitizeDB();
+      driveProgress(93, '💾 Guardando en el equipo…', 'Un momento…', { limit: 97 });
       await saveLocal();
       localStorage.setItem('nocLastSync', new Date().toISOString());
       localStorage.setItem('nocLastLoadOk', String(Date.now()));
+      cloudRetryCount = 0;
       if (formsAbiertos.size === 0) renderActiveTab();
       driveStateReady = true;
       setSyncBadge('✓ Drive cargado','ok');
       updateSyncStatusBox();
+      driveProgress(100, '✓ Drive cargado', 'Datos actualizados', { done: true });
+      hideDriveBannerSoon(1600);
       return true;
     } catch (criticalError){
       driveStateReady = true;
       const detalle = (criticalError && (criticalError.message || criticalError.toString())) || 'desconocido';
       setSyncBadge('⚠ Error','err');
       updateSyncStatusBox();
+      driveProgress(100, '⚠ Error al aplicar Drive', detalle.slice(0,60), { error: true });
       try { localStorage.setItem('nocLastDriveError', JSON.stringify({ msg: detalle, ts: new Date().toISOString() })); } catch(e){}
       return false;
     }
-  } finally { loadingFromCloud = false; }
+  } finally { clearTimeout(watchdogCarga); loadingFromCloud = false; }
 }
 async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los datos locales con Drive?')) return; if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; renderAgenda(); renderEvid(); renderResumen(); driveStateReady = false; await loadFromCloud(); }
 async function forceSyncNow(){ if (!driveStateReady){ if (!confirm('⚠ Drive NO se ha cargado. ¿Continuar?')) return; driveStateReady = true; } markDirty(); await syncToCloud(false); }
@@ -1330,6 +1703,8 @@ async function compartirTextoWhatsApp(txt, imagenBlob){
   setTimeout(() => document.body.removeChild(a), 1000);
 }
 async function exportarZipConGrafica(clienteData, titulo, nombreBase, stats){
+  try { await Promise.all([loadLibTimeout('xlsx', 60000), loadLibTimeout('jszip', 60000)]); }
+  catch(e){ toast('⚠ No se pudo cargar Excel/ZIP (revisa tu conexión)'); return false; }
   const wb = buildExcelResumen(clienteData, titulo, 'Resumen');
   const excelBuffer = XLSX.write(wb, { bookType:'xlsx', type:'array', cellStyles:true });
   const pngBlob = await generarGraficaBlob(stats, titulo);
@@ -1342,6 +1717,7 @@ async function exportarZipConGrafica(clienteData, titulo, nombreBase, stats){
   a.download = nombreBase + '.zip';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  return true;
 }
 async function descargarResumenMes(){
   const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
@@ -1352,8 +1728,7 @@ async function descargarResumenMes(){
   const titulo = esGeneral ? 'RESUMEN GENERAL' : ('RESUMEN ' + mesAnio.toUpperCase());
   const sufijo = esGeneral ? 'General' : mesAnio.replace(/\s+/g,'_');
   toast('📦 Generando ZIP…');
-  await exportarZipConGrafica(clienteData, titulo, 'Resumen_' + sufijo, stats);
-  toast('✓ ZIP descargado (Excel + gráfica)');
+  if (await exportarZipConGrafica(clienteData, titulo, 'Resumen_' + sufijo, stats) !== false) toast('✓ ZIP descargado (Excel + gráfica)');
 }
 async function compartirResumenMes(){
   const esGeneral = (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro);
@@ -1372,8 +1747,7 @@ async function descargarFiltroFechas(){
   const hastaTxt = filtroHasta ? filtroHasta.split('-').reverse().join('/') : '—';
   const stats = calcularStatsData(clienteData);
   toast('📦 Generando ZIP…');
-  await exportarZipConGrafica(clienteData, 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt, 'Filtro_' + desdeTxt.replace(/\//g,'-') + '_a_' + hastaTxt.replace(/\//g,'-'), stats);
-  toast('✓ ZIP descargado (Excel + gráfica)');
+  if (await exportarZipConGrafica(clienteData, 'FILTRO: ' + desdeTxt + ' a ' + hastaTxt, 'Filtro_' + desdeTxt.replace(/\//g,'-') + '_a_' + hastaTxt.replace(/\//g,'-'), stats) !== false) toast('✓ ZIP descargado (Excel + gráfica)');
 }
 async function compartirFiltroFechas(){
   const clienteData = buildDataFiltroFechas();
@@ -1424,6 +1798,27 @@ function renderPreviewMes(mesFiltro){
     const ancho = canvas.clientWidth || 320;
     canvas.style.height = Math.round(ancho * 340 / 640) + 'px';
   });
+}
+
+function buildVisitFormHTML(cod, nombre, current){
+  if (!current) return '<div class="empty">Crea una visita con <b>➕ Nueva</b>.</div>';
+  const nombreSafe = String(nombre || '').replace(/'/g, "\\'");
+  const gpsFija = getGpsGuardada(cod);
+  const gpsTxt = gpsFija ? (Number(gpsFija.lat).toFixed(6) + ', ' + Number(gpsFija.lng).toFixed(6)) : '';
+  return `
+        <div class="row2"><div><label>FECHA DE VISITA 📅</label><input type="date" id="f-${cod}" value="${current.fecha||''}" onchange="onFechaChange('${cod}')"></div><div><label>HORA</label><input type="time" id="h-${cod}" value="${current.hora||''}" onchange="saveVisit('${cod}')"></div></div>
+        <label>ESTADO</label><select id="e-${cod}" onchange="saveVisit('${cod}')">${['Pendiente','Realizada','No Realizada','Pospuesta'].map(o=>`<option ${o===current.estado?'selected':''}>${o}</option>`).join('')}</select>
+        <label>OBSERVACIONES</label><textarea id="o-${cod}" placeholder="..." oninput="onObsInput('${cod}', this.value)">${current.obs||''}</textarea>
+        <label>FIRMA DEL CLIENTE</label><canvas class="sig" id="sig-${cod}"></canvas>
+        <button class="btn btn-gray" style="margin:6px 0" onclick="clearSig('sig-${cod}')">Limpiar firma</button>
+        <div style="font-size:.75rem;color:#4ade80">${current.firma && current.firma.filename ? '✓ Firma guardada' : ''}</div>
+        <label>UBICACIÓN GPS ${gpsFija ? '<span style="color:var(--accent2);font-weight:800">· 📌 FIJA</span>' : ''}</label>
+        <button class="btn btn-gray" id="gpsBtn-${cod}" onclick="captureGPS('${cod}')">📍 ${gpsFija ? 'Actualizar ubicación' : 'Capturar mi ubicación'}</button>
+        <div id="gpsInfo-${cod}" style="font-size:.78rem;margin-top:6px;color:var(--muted)">${gpsFija ? ('✓ ' + gpsTxt + '<br><span style="font-size:.68rem;color:var(--accent2)">Se reutiliza automáticamente en las próximas visitas.</span>') : ''}</div>
+        <label>FOTOS DE LA VISITA <span id="photoReq-${cod}" style="color:var(--danger);display:none">* obligatoria</span></label>
+        <div class="photos" id="ph-${cod}"></div>
+        <div class="row2" style="margin-top:8px"><label class="btn-photo" style="flex:1">📷 <span>Tomar foto</span><input type="file" accept="image/*" capture="environment" onchange="addPhotos('${cod}',this)"></label><label class="btn-photo" style="flex:1">🖼️ <span>Galería</span><input type="file" accept="image/*" multiple onchange="addPhotos('${cod}',this)"></label></div>
+        <div class="row2" style="margin-top:12px"><button class="btn btn-green" style="flex:2" onclick="guardarVisita('${cod}','${nombreSafe}')">💾 GUARDAR</button><button class="btn btn-red" style="flex:1" onclick="deleteVisit('${cod}','${current.id}')">🗑️ Borrar</button></div>`;
 }
 
 function renderAgenda(){
@@ -1486,24 +1881,33 @@ function renderAgenda(){
     chip.style.display = 'flex';
   } else if (chip){ chip.style.display = 'none'; }
 
+  let cardsHTML = '';
+  const abiertosRender = [];
   allClients().filter(c => {
     if (filtroDesde || filtroHasta){ if (!clienteTieneVisitaEnRango(c.codigo)) return false; }
     if (!q) return true;
     if (setConVisitaFecha !== null) return setConVisitaFecha.has(String(c.codigo).trim());
     return c.nombre.toLowerCase().includes(q) || c.codigo.includes(q);
   }).forEach((c) => {
+    // Se reutiliza una sola lectura de visitas (antes getVisits se llamaba 3 veces por cliente).
     const visits = getVisits(c.codigo);
-    const latest = getLatestVisit(c.codigo);
-    const current = getCurrentVisit(c.codigo) || latest;
+    const latest = visits.length ? visits[visits.length - 1] : null;
+    let current = latest;
+    const editId = editingVisitId[c.codigo];
+    if (editId){
+      const found = visits.find(x => x.id === editId);
+      if (found) current = found;
+      else editingVisitId[c.codigo] = latest ? latest.id : null;
+    } else if (latest){
+      editingVisitId[c.codigo] = latest.id;
+    }
     if (current && current.fecha && (!current.days || current.days.length === 0)){
       const diAuto = fechaADiaIndex(current.fecha);
       if (diAuto >= 0){ current.days = [diAuto]; current.updatedAt = new Date().toISOString(); }
     }
     const estado = latest ? (latest.estado || 'Pendiente') : 'Pendiente';
     const nFotos = safeArray(DB.photos[c.codigo]).length;
-    const card = document.createElement('div');
-    card.className = 'card ' + (estado === 'Realizada' ? 'done' : estado === 'Pendiente' ? 'pending-visit' : '');
-    const nombreSafe = c.nombre.replace(/'/g, "\\'");
+    cardsHTML += '<div class="card ' + (estado === 'Realizada' ? 'done' : estado === 'Pendiente' ? 'pending-visit' : '') + '">';
     const currentDays = current ? (current.days || []) : [];
     const nVisitas = visits.length;
     const idxActual = current ? (visits.indexOf(current) + 1) : 0;
@@ -1512,7 +1916,7 @@ function renderAgenda(){
     const strCed = c.cedula ? `<div class="dir">🆔 C.I./RIF: ${c.cedula}</div>` : '';
     const strTel = c.telefono ? `<div class="dir">📞 Tel: ${c.telefono}</div>` : '';
 
-    card.innerHTML = `
+    cardsHTML += `
       <div class="top"><div><span class="code">#${c.codigo}</span><h3>${c.nombre}</h3></div><span class="badge ${statusClass(estado)}">${estado.toUpperCase()}</span></div>
       <div class="dir">📍 ${c.direccion}</div>
       ${strCed}
@@ -1527,25 +1931,13 @@ function renderAgenda(){
       </div>
       ${current && current.fecha ? `<button class="btn btn-share btn-block btn-sm" style="margin-top:8px" onclick="abrirCompartir('${c.codigo}')">📤 Compartir visita</button>` : ''}
       ${nFotos?`<span style="font-size:.75rem;color:var(--accent);margin-left:8px">📷 ${nFotos}</span>`:''}
-      <div class="form ${formAbierto ? 'open' : ''}" id="form-${c.codigo}">
-        ${current ? `
-        <div class="row2"><div><label>FECHA DE VISITA 📅</label><input type="date" id="f-${c.codigo}" value="${current.fecha||''}" onchange="onFechaChange('${c.codigo}')"></div><div><label>HORA</label><input type="time" id="h-${c.codigo}" value="${current.hora||''}" onchange="saveVisit('${c.codigo}')"></div></div>
-        <label>ESTADO</label><select id="e-${c.codigo}" onchange="saveVisit('${c.codigo}')">${['Pendiente','Realizada','No Realizada','Pospuesta'].map(o=>`<option ${o===current.estado?'selected':''}>${o}</option>`).join('')}</select>
-        <label>OBSERVACIONES</label><textarea id="o-${c.codigo}" placeholder="..." oninput="onObsInput('${c.codigo}', this.value)">${current.obs||''}</textarea>
-        <label>FIRMA DEL CLIENTE</label><canvas class="sig" id="sig-${c.codigo}"></canvas>
-        <button class="btn btn-gray" style="margin:6px 0" onclick="clearSig('sig-${c.codigo}')">Limpiar firma</button>
-        <div style="font-size:.75rem;color:#4ade80">${current.firma && current.firma.filename ? '✓ Firma guardada' : ''}</div>
-        <label>UBICACIÓN GPS</label><button class="btn btn-gray" id="gpsBtn-${c.codigo}" onclick="captureGPS('${c.codigo}')">📍 Capturar mi ubicación</button>
-        <div id="gpsInfo-${c.codigo}" style="font-size:.78rem;margin-top:6px;color:var(--muted)">${current.gps?`✓ ${current.gps.lat.toFixed(6)}, ${current.gps.lng.toFixed(6)}`:''}</div>
-        <label>FOTOS DE LA VISITA <span id="photoReq-${c.codigo}" style="color:var(--danger);display:none">* obligatoria</span></label>
-        <div class="photos" id="ph-${c.codigo}"></div>
-        <div class="row2" style="margin-top:8px"><label class="btn-photo" style="flex:1">📷 <span>Tomar foto</span><input type="file" accept="image/*" capture="environment" onchange="addPhotos('${c.codigo}',this)"></label><label class="btn-photo" style="flex:1">🖼️ <span>Galería</span><input type="file" accept="image/*" multiple onchange="addPhotos('${c.codigo}',this)"></label></div>
-        <div class="row2" style="margin-top:12px"><button class="btn btn-green" style="flex:2" onclick="guardarVisita('${c.codigo}','${nombreSafe}')">💾 GUARDAR</button><button class="btn btn-red" style="flex:1" onclick="deleteVisit('${c.codigo}','${current.id}')">🗑️ Borrar</button></div>
-        ` : `<div class="empty">Crea una visita con <b>➕ Nueva</b>.</div>`}
-      </div>`;
-    list.appendChild(card);
-    if (current){ renderPhotos(c.codigo); updatePhotoReq(c.codigo); }
+      <div class="form ${formAbierto ? 'open' : ''}" id="form-${c.codigo}">${formAbierto ? buildVisitFormHTML(c.codigo, c.nombre, current) : ''}</div>`;
+    cardsHTML += '</div>';
+    if (formAbierto && current) abiertosRender.push(c.codigo);
   });
+  // Una sola asignación de HTML para todo el listado (mucho más rápido que 25 tarjetas sueltas).
+  list.innerHTML = cardsHTML;
+  abiertosRender.forEach(cod => { renderPhotos(cod); updatePhotoReq(cod); });
   document.getElementById('mesAnio').value = DB.month || getMesAnioActual();
   document.getElementById('responsable').value = DB.resp || '';
   const as = document.getElementById('autoSyncSelect'); if (as) as.value = DB.autoSync || 'on';
@@ -1567,7 +1959,26 @@ function onObsInput(cod, value){
   formsAbiertos.add(cod);
 }
 function toggleDay(cod, di){ const v = getCurrentVisit(cod) || getLatestVisit(cod); if (!v){ toast('⚠ Crea una visita primero'); return; } v.days = v.days || []; const i = v.days.indexOf(di); if (i >= 0) v.days.splice(i, 1); else v.days.push(di); v.updatedAt = new Date().toISOString(); const scrollY = window.scrollY; save(); renderAgenda(); requestAnimationFrame(() => window.scrollTo(0, scrollY)); }
-function toggleForm(cod){ const f = document.getElementById('form-' + cod); const vaAbrir = !f.classList.contains('open'); const scrollY = window.scrollY; f.classList.toggle('open'); if (vaAbrir) formsAbiertos.add(cod); else formsAbiertos.delete(cod); if (vaAbrir){ requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); }); } }
+function toggleForm(cod){
+  const f = document.getElementById('form-' + cod);
+  if (!f) return;
+  const vaAbrir = !f.classList.contains('open');
+  const scrollY = window.scrollY;
+  f.classList.toggle('open', vaAbrir);
+  if (vaAbrir){
+    formsAbiertos.add(cod);
+    // El formulario se construye solo al abrirlo (antes se generaba en las 25 tarjetas).
+    if (!f.firstElementChild){
+      const cliente = getClientByCode(cod);
+      f.innerHTML = buildVisitFormHTML(cod, cliente ? cliente.nombre : '', getCurrentVisit(cod));
+      renderPhotos(cod);
+      updatePhotoReq(cod);
+    }
+    requestAnimationFrame(() => { window.scrollTo(0, scrollY); setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); });
+  } else {
+    formsAbiertos.delete(cod);
+  }
+}
 function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; const fEl = document.getElementById('f-' + cod); if (fEl) v.fecha = fEl.value; const hEl = document.getElementById('h-' + cod); if (hEl) v.hora = hEl.value; const eEl = document.getElementById('e-' + cod); if (eEl) v.estado = eEl.value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
 
 function addClient(){
@@ -1694,11 +2105,17 @@ async function ejecutarRepararID(){
   toast('✓ Reparado: #' + origen + ' → #' + destino);
 }
 const sigData = {};
-function initSig(id){
+function initSig(id, intentos){
   const c = document.getElementById(id);
-  if (!c) return;
+  if (!c || !c.isConnected) return;
   const w = c.offsetWidth;
-  if (w === 0){ requestAnimationFrame(() => initSig(id)); return; }
+  if (w === 0){
+    // Antes se reintentaba para siempre (~60 veces/seg) aunque la pestaña estuviera oculta,
+    // consumiendo CPU. Ahora se limita a ~1 segundo de reintentos.
+    const n = (intentos || 0) + 1;
+    if (n <= 20) requestAnimationFrame(() => initSig(id, n));
+    return;
+  }
   const newW = w * 2;
   if (c.width !== newW || c.height !== 300){ c.width = newW; c.height = 300; }
   if (c.dataset.listeners === '1'){
@@ -1793,7 +2210,7 @@ function renderPhotos(cod){
     let src = null;
     if (p.fileId) src = driveThumbUrl(p.fileId, 200);
     else if (p.data) src = p.data;
-    if (src) return `<div class="photo-box"><img src="${src}"><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
+    if (src) return `<div class="photo-box"><img src="${src}" loading="lazy" decoding="async"><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
     return `<div class="photo-box"><div class="placeholder">⏳</div><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
   }).join('');
 }
@@ -1813,7 +2230,13 @@ function guardarVisita(cod, nombre){
   const v = getCurrentVisit(cod);
   if (!v){ toast('⚠ No hay visita activa'); return; }
   const fEl = document.getElementById('f-' + cod);
+  const fechaAnterior = v.fecha;
   if (fEl) v.fecha = fEl.value;
+  if (v.fecha && !confirmarFechaSospechosa(v.fecha)){
+    v.fecha = fechaAnterior;
+    if (fEl) fEl.value = fechaAnterior || '';
+    return;
+  }
   if (v.fecha && verificarFechaDuplicada(cod, v.fecha, v.id)){
     toast('⚠ Ya existe una visita guardada con esta misma fecha');
     return;
@@ -1841,6 +2264,28 @@ function guardarVisita(cod, nombre){
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
 }
 function updatePhotoReq(cod){ const el = document.getElementById('photoReq-' + cod); if (el){ const v = getCurrentVisit(cod); el.style.display = (v && v.estado === 'Realizada') ? 'inline' : 'none'; } }
+function evidFechaEnRango(fecha){
+  if (!evidDesde && !evidHasta) return true;
+  if (!fecha || fecha === 'sin-fecha') return false;
+  const f = String(fecha).slice(0,10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) return false;
+  if (evidDesde && f < evidDesde) return false;
+  if (evidHasta && f > evidHasta) return false;
+  return true;
+}
+function evidRangoTxt(){
+  if (!evidDesde && !evidHasta) return 'todas las fechas';
+  const d = evidDesde ? evidDesde.split('-').reverse().join('/') : 'inicio';
+  const h = evidHasta ? evidHasta.split('-').reverse().join('/') : 'hoy';
+  return d + ' → ' + h;
+}
+function actualizarInfoFiltroEvid(total){
+  const el = document.getElementById('evidFiltroInfo');
+  if (!el) return;
+  const n = (typeof total === 'number') ? (' · ' + total + ' archivo(s)') : '';
+  if (!evidDesde && !evidHasta){ el.textContent = 'Mostrando todas las fechas' + n + '.'; return; }
+  el.innerHTML = '📅 Filtro activo: <b style="color:var(--accent)">' + evidRangoTxt() + '</b>' + n + '.';
+}
 function renderEvid(){
   const foldersView = document.getElementById('evidFoldersView');
   const folderView = document.getElementById('evidFolderView');
@@ -1848,35 +2293,87 @@ function renderEvid(){
   foldersView.style.display = 'block'; folderView.style.display = 'none';
   const list = document.getElementById('evidFoldersList');
   list.innerHTML = '';
+  const fragEvid = document.createDocumentFragment();
   const folders = [];
+  let totalArchivos = 0;
   allClients().forEach(c => {
-    const fotos = safeArray(DB.photos[c.codigo]).length;
+    const fotos = safeArray(DB.photos[c.codigo]).filter(p => p && p.filename && evidFechaEnRango(p.fechaVisita)).length;
     const visits = getVisits(c.codigo);
-    const firmas = visits.filter(v => v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)).length;
+    const firmas = visits.filter(v => v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data) && evidFechaEnRango(v.fecha || v.firma.fechaVisita)).length;
     const total = fotos + firmas;
-    if (total > 0) folders.push({ codigo: c.codigo, nombre: c.nombre, fotos, firmas, total });
+    if (total > 0){ folders.push({ codigo: c.codigo, nombre: c.nombre, fotos, firmas, total }); totalArchivos += total; }
   });
   const sup = DB.evid['super_sig'];
-  if (sup && typeof sup === 'object' && (sup.fileId || sup.data)) folders.push({ codigo: '_supervisor', nombre: 'Supervisor NOC', fotos: 0, firmas: 1, total: 1 });
-  document.getElementById('evidEmpty').style.display = folders.length ? 'none' : 'block';
+  if (sup && typeof sup === 'object' && (sup.fileId || sup.data)){ folders.push({ codigo: '_supervisor', nombre: 'Supervisor NOC', fotos: 0, firmas: 1, total: 1 }); totalArchivos += 1; }
+  const emptyEl = document.getElementById('evidEmpty');
+  if (emptyEl){
+    emptyEl.style.display = folders.length ? 'none' : 'block';
+    emptyEl.textContent = (!folders.length && (evidDesde || evidHasta)) ? ('No hay evidencias en ' + evidRangoTxt() + '.') : 'No hay evidencias registradas todavía.';
+  }
+  actualizarInfoFiltroEvid(totalArchivos);
   folders.sort((a, b) => b.total - a.total);
   folders.forEach(f => {
     let thumbHTML = '<div class="folder-emoji">📁</div>';
-    const firstPhoto = safeArray(DB.photos[f.codigo]).find(p => p.fileId || p.data);
-    if (firstPhoto){ const u = firstPhoto.fileId ? driveThumbUrl(firstPhoto.fileId, 400) : firstPhoto.data; thumbHTML = `<img src="${u}" loading="lazy">`; }
+    const firstPhoto = safeArray(DB.photos[f.codigo]).find(p => (p.fileId || p.data) && evidFechaEnRango(p.fechaVisita));
+    if (firstPhoto){ const u = firstPhoto.fileId ? driveThumbUrl(firstPhoto.fileId, 400) : firstPhoto.data; thumbHTML = `<img src="${u}" loading="lazy" decoding="async">`; }
     else {
       const visits = getVisits(f.codigo);
-      const withSig = visits.find(v => v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data));
-      if (withSig){ const fr = withSig.firma; const u = fr.fileId ? driveThumbUrl(fr.fileId, 400) : fr.data; thumbHTML = `<img src="${u}" loading="lazy">`; }
-      else if (sup && f.codigo === '_supervisor' && (sup.fileId || sup.data)){ const u = sup.fileId ? driveThumbUrl(sup.fileId, 400) : sup.data; thumbHTML = `<img src="${u}" loading="lazy">`; }
+      const withSig = visits.find(v => v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data) && evidFechaEnRango(v.fecha || v.firma.fechaVisita));
+      if (withSig){ const fr = withSig.firma; const u = fr.fileId ? driveThumbUrl(fr.fileId, 400) : fr.data; thumbHTML = `<img src="${u}" loading="lazy" decoding="async">`; }
+      else if (sup && f.codigo === '_supervisor' && (sup.fileId || sup.data)){ const u = sup.fileId ? driveThumbUrl(sup.fileId, 400) : sup.data; thumbHTML = `<img src="${u}" loading="lazy" decoding="async">`; }
     }
-    const pendientes = safeArray(DB.photos[f.codigo]).filter(p => !p.fileId && !p.data).length;
+    const pendientes = safeArray(DB.photos[f.codigo]).filter(p => !p.fileId && !p.data && evidFechaEnRango(p.fechaVisita)).length;
     const card = document.createElement('div');
     card.className = 'folder-card';
     card.onclick = () => openEvidFolder(f.codigo);
     card.innerHTML = `<div class="thumb">${thumbHTML}<div class="count-badge">${f.total}</div></div><div class="meta"><b>${f.nombre}</b><small>#${f.codigo}${f.firmas ? ' · ' + f.firmas + ' firma(s)' : ''}${pendientes ? ' · ' + pendientes + ' por cargar' : ''}</small></div>`;
-    list.appendChild(card);
+    fragEvid.appendChild(card);
   });
+  list.appendChild(fragEvid);
+}
+function aplicarFiltroEvid(){
+  const dEl = document.getElementById('evidDesde');
+  const hEl = document.getElementById('evidHasta');
+  const d = dEl ? dEl.value : '';
+  const h = hEl ? hEl.value : '';
+  if (d && h && d > h){ toast('⚠ La fecha DESDE no puede ser mayor que HASTA'); return; }
+  evidDesde = d; evidHasta = h;
+  renderEvid();
+  if (d || h) toast('✓ Evidencias filtradas');
+}
+function limpiarFiltroEvid(){
+  evidDesde = ''; evidHasta = '';
+  const dEl = document.getElementById('evidDesde'); if (dEl) dEl.value = '';
+  const hEl = document.getElementById('evidHasta'); if (hEl) hEl.value = '';
+  renderEvid();
+  toast('✓ Mostrando todas las fechas');
+}
+function evidRangoRapido(tipo){
+  const hoy = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const toYMD = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  let desde = '', hasta = toYMD(hoy);
+  if (tipo === 'hoy'){ desde = hasta; }
+  else if (tipo === '7d'){ const d = new Date(hoy); d.setDate(d.getDate() - 6); desde = toYMD(d); }
+  else if (tipo === '30d'){ const d = new Date(hoy); d.setDate(d.getDate() - 29); desde = toYMD(d); }
+  else if (tipo === 'mes'){ desde = toYMD(new Date(hoy.getFullYear(), hoy.getMonth(), 1)); }
+  const dEl = document.getElementById('evidDesde'); if (dEl) dEl.value = desde;
+  const hEl = document.getElementById('evidHasta'); if (hEl) hEl.value = hasta;
+  evidDesde = desde; evidHasta = hasta;
+  renderEvid();
+  toast('📅 ' + (desde ? desde.split('-').reverse().join('/') : '—') + ' → ' + (hasta ? hasta.split('-').reverse().join('/') : '—'));
+}
+async function descargarReporteEvidencias(soloCarpeta){
+  const codigo = soloCarpeta ? evidCurrentFolder : null;
+  if (soloCarpeta && !codigo){ toast('⚠ Abre una carpeta primero'); return; }
+  const desde = evidDesde, hasta = evidHasta;
+  const data = buildDataReporteFotografico(true, { codigo: codigo, desde: desde, hasta: hasta, incluirHuerfanas: true });
+  if (!data.length){ toast('⚠ No hay fotos en ' + evidRangoTxt()); return; }
+  const periodo = (desde || hasta)
+    ? ('RANGO ' + (desde ? desde.split('-').reverse().join('-') : 'INICIO') + ' A ' + (hasta ? hasta.split('-').reverse().join('-') : 'HOY'))
+    : 'TODAS LAS FECHAS';
+  const nombreArchivo = 'Reporte_Fotografico_NOC_' + (codigo ? String(codigo) + '_' : '') + periodo.replace(/[^A-Za-z0-9]+/g, '_');
+  await construirReporteFotograficoExcel(data, periodo, nombreArchivo);
 }
 function openEvidFolder(codigo){ evidCurrentFolder = codigo; renderEvid(); window.scrollTo({ top:0, behavior:'smooth' }); }
 function closeEvidFolder(){ evidCurrentFolder = null; renderEvid(); }
@@ -1892,6 +2389,7 @@ function renderEvidFolderContent(codigo){
   todasFotos.forEach((p, i) => {
     const perteneceAVisitaActual = (p.visitId && idsValidos.has(p.visitId)) || (!p.visitId && fechasValidas.has(p.fechaVisita));
     if (!perteneceAVisitaActual) return;
+    if (!evidFechaEnRango(p.fechaVisita)) return;
     const fecha = p.fechaVisita || 'sin-fecha';
     if (!grupos[fecha]) grupos[fecha] = [];
     grupos[fecha].push({ type:'foto', item: p, idx: i });
@@ -1899,13 +2397,15 @@ function renderEvidFolderContent(codigo){
   visits.forEach(v => {
     if (v && v.firma && typeof v.firma === 'object' && (v.firma.fileId || v.firma.data)){
       const fecha = v.fecha || v.firma.fechaVisita || 'sin-fecha';
+      if (!evidFechaEnRango(fecha)) return;
       if (!grupos[fecha]) grupos[fecha] = [];
       grupos[fecha].push({ type:'firma', item: v.firma, visitInfo: v });
     }
   });
   const totalArchivosFiltrados = Object.values(grupos).reduce((acc, curr) => acc + curr.length, 0);
-  const pendientesFolder = Object.values(grupos).flat().filter(it => it.type === 'foto' && !it.item.fileId && !it.item.data).length + visits.filter(v => v && v.firma && typeof v.firma === 'object' && !v.firma.fileId && !v.firma.data).length;
-  document.getElementById('evidFolderMeta').textContent = `${totalArchivosFiltrados} archivo(s) · ${Object.keys(grupos).length} fecha(s)`;
+  const pendientesFolder = Object.values(grupos).flat().filter(it => it.type === 'foto' && !it.item.fileId && !it.item.data).length + visits.filter(v => v && v.firma && typeof v.firma === 'object' && !v.firma.fileId && !v.firma.data && evidFechaEnRango(v.fecha || v.firma.fechaVisita)).length;
+  document.getElementById('evidFolderMeta').textContent = `${totalArchivosFiltrados} archivo(s) · ${Object.keys(grupos).length} fecha(s)` + ((evidDesde || evidHasta) ? (' · ' + evidRangoTxt()) : '');
+  actualizarInfoFiltroEvid(totalArchivosFiltrados);
   const dlAllBtn = document.getElementById('dlAllBtn');
   if (dlAllBtn){ if (pendientesFolder > 0){ dlAllBtn.style.display = 'inline-block'; dlAllBtn.textContent = '⬇ Preparar ' + pendientesFolder; } else dlAllBtn.style.display = 'none'; }
   const cont = document.getElementById('evidPhotosList');
@@ -1928,7 +2428,7 @@ function renderEvidFolderContent(codigo){
       const thisIdx = lightboxItems.length - 1;
       const tile = document.createElement('div'); tile.className = 'photo-tile';
       if (src){
-        tile.innerHTML = `<img src="${src}" loading="lazy">${it.type === 'firma' ? '<div class="badge-firma">FIRMA</div>' : ''}`;
+        tile.innerHTML = `<img src="${src}" loading="lazy" decoding="async">${it.type === 'firma' ? '<div class="badge-firma">FIRMA</div>' : ''}`;
         tile.onclick = () => openLightbox(thisIdx);
       }
       else {
@@ -2024,7 +2524,14 @@ function renderResumen(){
   renderMasterStats();
   renderPreviewMes(mesFiltro);
 }
-function updateStorageInfo(){ let bytes = 0; try{ bytes = (JSON.stringify(DB) || '').length; }catch(e){} const el = document.getElementById('storageInfo'); if (el) el.innerHTML = '📦 Local: <b style="color:var(--accent)">' + (bytes/1048576).toFixed(1) + ' MB</b>'; }
+function updateStorageInfo(){
+  const el = document.getElementById('storageInfo'); if (!el) return;
+  // Serializar toda la BD (con fotos en base64) es caro: solo se hace con la pestaña visible.
+  const tabRes = document.getElementById('tab-res');
+  if (tabRes && tabRes.style.display === 'none') return;
+  let bytes = 0; try{ bytes = (JSON.stringify(DB) || '').length; }catch(e){}
+  el.innerHTML = '📦 Local: <b style="color:var(--accent)">' + (bytes/1048576).toFixed(1) + ' MB</b>';
+}
 
 function buildEvidenciasRows(){
   const rows = []; let n = 0;
@@ -2160,11 +2667,21 @@ function buildStyledWorkbook(){
   XLSX.utils.book_append_sheet(wb, wsR, 'Resumen Mensual');
   return wb;
 }
-function exportExcel(){ const wb = buildStyledWorkbook(); const mes = (DB.month || 'Mes').replace(/\s+/g, '_'); XLSX.writeFile(wb, `Agenda_Visitas_NOC_${mes}.xlsx`, { cellStyles: true }); toast('✓ Excel descargado'); }
-async function exportPhotos(){ const zip = new JSZip(); let any = false; allClients().forEach(c => { safeArray(DB.photos[c.codigo]).forEach(p => { if (p.data){ const fecha = p.fechaVisita || 'sin-fecha'; zip.file(`${c.codigo}_${c.nombre.replace(/[^\w\sáéíóúñ]/gi,'').slice(0,25)}/${fecha}/${p.filename}`, p.data.split(',')[1], { base64: true }); any = true; } }); const arr = getVisits(c.codigo); arr.forEach(v => { if (v && v.firma && typeof v.firma === 'object' && v.firma.data){ const fecha = v.fecha || 'sin-fecha'; zip.file(`${c.codigo}_${c.nombre.replace(/[^\w\sáéíóúñ]/gi,'').slice(0,25)}/${fecha}/${v.firma.filename}`, v.firma.data.split(',')[1], { base64: true }); any = true; } }); }); const sup = DB.evid['super_sig']; if (sup && sup.data){ zip.file('firma_supervisor.png', sup.data.split(',')[1], { base64: true }); any = true; } if (!any){ toast('Sin fotos locales'); return; } const blob = await zip.generateAsync({ type:'blob' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Evidencias_Visitas.zip'; a.click(); toast('✓ ZIP descargado'); }
+async function exportExcel(){
+  try { toast('⏳ Preparando Excel…'); await loadLibTimeout('xlsx', 60000); }
+  catch(e){ toast('⚠ No se pudo cargar Excel (revisa tu conexión)'); return; }
+  const wb = buildStyledWorkbook(); const mes = (DB.month || 'Mes').replace(/\s+/g, '_');
+  XLSX.writeFile(wb, `Agenda_Visitas_NOC_${mes}.xlsx`, { cellStyles: true });
+  toast('✓ Excel descargado');
+}
+async function exportPhotos(){ try { await loadLibTimeout('jszip', 60000); } catch(e){ toast('⚠ No se pudo cargar el compresor ZIP'); return; } const zip = new JSZip(); let any = false; allClients().forEach(c => { safeArray(DB.photos[c.codigo]).forEach(p => { if (p.data){ const fecha = p.fechaVisita || 'sin-fecha'; zip.file(`${c.codigo}_${c.nombre.replace(/[^\w\sáéíóúñ]/gi,'').slice(0,25)}/${fecha}/${p.filename}`, p.data.split(',')[1], { base64: true }); any = true; } }); const arr = getVisits(c.codigo); arr.forEach(v => { if (v && v.firma && typeof v.firma === 'object' && v.firma.data){ const fecha = v.fecha || 'sin-fecha'; zip.file(`${c.codigo}_${c.nombre.replace(/[^\w\sáéíóúñ]/gi,'').slice(0,25)}/${fecha}/${v.firma.filename}`, v.firma.data.split(',')[1], { base64: true }); any = true; } }); }); const sup = DB.evid['super_sig']; if (sup && sup.data){ zip.file('firma_supervisor.png', sup.data.split(',')[1], { base64: true }); any = true; } if (!any){ toast('Sin fotos locales'); return; } const blob = await zip.generateAsync({ type:'blob' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Evidencias_Visitas.zip'; a.click(); toast('✓ ZIP descargado'); }
 async function importarDatos(input){
   const file = input.files[0]; if (!file) return;
   const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'zip' || ext === 'xlsx' || ext === 'xls'){
+    try { await (ext === 'zip' ? loadLibTimeout('jszip', 60000) : loadLibTimeout('xlsx', 60000)); }
+    catch(e){ toast('⚠ No se pudo cargar la librería necesaria'); input.value = ''; return; }
+  }
   toast('Procesando ' + ext + '…');
   if (ext === 'json'){ const r = new FileReader(); r.onload = async e => { try{ const data = JSON.parse(e.target.result); if (data.visits || data.evid || data.customClients || data.photos){ DB = Object.assign(DB, data); migrateVisits(); sanitizeDB(); await save(); renderAgenda(); renderEvid(); renderResumen(); toast('✓ Respaldo cargado'); } else toast('⚠ Formato'); } catch(err){ toast('⚠ Error'); } }; r.readAsText(file); }
   else if (ext === 'zip'){ const r = new FileReader(); r.onload = async e => { try{ const zip = await JSZip.loadAsync(e.target.result); let n=0; for (const [path, entry] of Object.entries(zip.files)){ if (entry.dir || path.includes('__MACOSX')) continue; if (!path.match(/\.(jpg|jpeg|png)$/i)) continue; const b64 = await entry.async('base64'); const mime = path.match(/\.png$/i) ? 'image/png' : 'image/jpeg'; const dataUrl = 'data:' + mime + ';base64,' + b64; const m = path.match(/(?:^|\/)([0-9a-zA-Z]+)_/); if (m && m[1] && m[1] !== 'foto' && m[1] !== 'firma'){ const codigo = m[1]; const fm = path.match(/(\d{4}-\d{2}-\d{2})/); const fechaVisita = fm ? fm[1] : hoyYMD(); const fname = path.split('/').pop(); if (path.includes('firma_cliente')){ const arr = ensureVisitsArr(codigo); let visit = arr.find(v => v.fecha === fechaVisita); if (!visit){ visit = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: fechaVisita, hora: '', estado: 'Pendiente', obs: '', gps: null, days: [], updatedAt: new Date().toISOString() }; arr.push(visit); } visit.firma = { data: dataUrl, filename: fname, fechaVisita, synced: false }; n++; } else { DB.photos[codigo] = DB.photos[codigo] || []; if (!DB.photos[codigo].some(p => p && p.filename === fname)){ DB.photos[codigo].push({ data: dataUrl, fecha:'Importado ZIP', filename: fname, synced:false, fechaVisita }); n++; } } } } await save(); renderAgenda(); renderEvid(); toast('✓ ZIP: ' + n + ' archivos'); } catch(err){ toast('⚠ Error ZIP'); } }; r.readAsArrayBuffer(file); }
@@ -2256,10 +2773,11 @@ async function cargarFotoComoBlob(foto){
       const proxyUrl = 'https://images.weserv.nl/?url=' + encodeURIComponent(driveUrl.replace(/^https?:\/\//, '')) + '&w=1600&output=jpg&q=82';
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 45000);
-      const res = await fetch(proxyUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (!res.ok) return null;
-      const blobOrig = await res.blob();
+      let blobOrig = null;
+      try {
+        const res = await fetch(proxyUrl, { signal: controller.signal });
+        if (res.ok) blobOrig = await res.blob();
+      } finally { clearTimeout(timeoutId); }
       if (!blobOrig || blobOrig.size < 100) return null;
       return new Blob([blobOrig], { type: tipo });
     }
@@ -2271,6 +2789,7 @@ async function copiarTextoVisita(){
   catch(e){ const ta = document.createElement('textarea'); ta.value = compartirCtx.texto; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('✓ Texto copiado'); } catch(err){ toast('⚠ No se pudo copiar'); } document.body.removeChild(ta); }
 }
 async function descargarZipVisita(){
+  try { await loadLibTimeout('jszip', 60000); } catch(e){ toast('⚠ No se pudo cargar el compresor ZIP'); return; }
   const cod = compartirCtx.cod;
   const v = getCurrentVisit(cod);
   const cliente = getClientByCode(cod);
@@ -2436,68 +2955,226 @@ function openGpsHelp(cod){ pendingGPS = cod; document.getElementById('gpsModal')
 function closeGpsHelp(){ document.getElementById('gpsModal').classList.remove('open'); }
 function tryOpenLocationSettings(){ window.location.href = 'intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end'; }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && pendingGPS){ const cod = pendingGPS; pendingGPS = null; closeGpsHelp(); captureGPS(cod); } });
-function captureGPS(cod){ const info = document.getElementById('gpsInfo-' + cod); const btn = document.getElementById('gpsBtn-' + cod); if (!navigator.geolocation) return; btn.textContent = '⏳...'; btn.disabled = true; const onExito = pos => { const v = getCurrentVisit(cod); if (!v) return; v.gps = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy || 0, time: new Date().toLocaleString('es-VE') }; v.updatedAt = new Date().toISOString(); save(); info.innerHTML = '✓ ' + v.gps.lat.toFixed(6) + ', ' + v.gps.lng.toFixed(6); btn.textContent = '📍 Actualizar'; btn.disabled = false; }; navigator.geolocation.getCurrentPosition(onExito, () => openGpsHelp(cod), { enableHighAccuracy:true, timeout:30000, maximumAge:60000 }); }
+function captureGPS(cod){
+  const info = document.getElementById('gpsInfo-' + cod);
+  const btn = document.getElementById('gpsBtn-' + cod);
+  if (!navigator.geolocation){ toast('⚠ Este dispositivo no soporta GPS'); return; }
+  if (btn){ btn.textContent = '⏳...'; btn.disabled = true; }
+  const onExito = pos => {
+    const gps = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy || 0, time: new Date().toLocaleString('es-VE') };
+    const v = getCurrentVisit(cod);
+    if (v){ v.gps = gps; v.updatedAt = new Date().toISOString(); }
+    if (!DB.clientGps) DB.clientGps = {};
+    // Coordenada fija del cliente: se hereda en cada visita nueva.
+    DB.clientGps[cod] = gps;
+    save();
+    if (info) info.innerHTML = '✓ ' + gps.lat.toFixed(6) + ', ' + gps.lng.toFixed(6) + '<br><span style="font-size:.68rem;color:var(--accent2)">📌 Coordenada fija guardada para las próximas visitas.</span>';
+    if (btn){ btn.textContent = '📍 Actualizar ubicación'; btn.disabled = false; }
+    toast('✓ Coordenada guardada');
+  };
+  const onError = () => { if (btn){ btn.textContent = '📍 Capturar mi ubicación'; btn.disabled = false; } openGpsHelp(cod); };
+  navigator.geolocation.getCurrentPosition(onExito, onError, { enableHighAccuracy:true, timeout:30000, maximumAge:60000 });
+}
 function saveResp(){ DB.resp = document.getElementById('responsable').value; save(); sendHeartbeat(); }
 function saveComp(){ DB.comp = document.getElementById('compSelect').value; save(); toast('🗜️ ' + DB.comp); }
 function saveAutoSync(){ DB.autoSync = document.getElementById('autoSyncSelect').value; save(); toast(DB.autoSync === 'on' ? '✓ Auto-sync ON' : 'Manual'); }
 
-function visitaDentroDePeriodo(v, mes, usarRango){
+function fechaEnRangoISO(fecha, desde, hasta){
+  if (!desde && !hasta) return true;
+  if (!fecha) return false;
+  const f = String(fecha).slice(0,10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) return false;
+  if (desde && f < desde) return false;
+  if (hasta && f > hasta) return false;
+  return true;
+}
+function visitaDentroDePeriodo(v, mes, usarRango, desde, hasta){
   if (!v) return false;
   if (usarRango){
+    const d = (desde !== undefined) ? desde : filtroDesde;
+    const h = (hasta !== undefined) ? hasta : filtroHasta;
+    if (!d && !h) return true;
     if (!v.fecha) return false;
-    if (filtroDesde && v.fecha < filtroDesde) return false;
-    if (filtroHasta && v.fecha > filtroHasta) return false;
+    if (d && v.fecha < d) return false;
+    if (h && v.fecha > h) return false;
     return true;
   }
   return !mes || mes === 'General' || visitaEnMesAnio(v, mes);
 }
 
-function buildDataReporteFotografico(usarRango){
+function buildDataReporteFotografico(usarRango, opts){
+  opts = opts || {};
+  const codFiltro = opts.codigo ? String(opts.codigo).trim() : '';
+  const desde = (opts.desde !== undefined) ? String(opts.desde || '') : (usarRango ? filtroDesde : '');
+  const hasta = (opts.hasta !== undefined) ? String(opts.hasta || '') : (usarRango ? filtroHasta : '');
+  const usarRangoEf = !!usarRango || !!(desde || hasta);
+  const incluirHuerfanas = !!opts.incluirHuerfanas;
   const data = [];
-  const mesRef = usarRango ? null : ((mesResumenFiltro === MES_GENERAL || !mesResumenFiltro) ? 'General' : mesResumenFiltro);
+  const codigosVistos = new Set();
+  const mesRef = usarRangoEf ? null : ((mesResumenFiltro === MES_GENERAL || !mesResumenFiltro) ? 'General' : mesResumenFiltro);
   allClients().forEach(c => {
+    if (codFiltro && String(c.codigo).trim() !== codFiltro) return;
+    const codKey = String(c.codigo).trim();
+    if (!codFiltro && codigosVistos.has(codKey)) return; // evita hojas duplicadas si el cliente está repetido
+    codigosVistos.add(codKey);
     const items = [];
+    const usadas = new Set();
+    const todas = safeArray(DB.photos[c.codigo]);
     getVisits(c.codigo).forEach(v => {
-      if (!visitaDentroDePeriodo(v, mesRef, usarRango)) return;
-      const fotos = safeArray(DB.photos[c.codigo]).filter(p => p && p.filename && ((p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)));
+      if (!visitaDentroDePeriodo(v, mesRef, usarRangoEf, desde, hasta)) return;
+      const fotos = todas.filter(p => p && p.filename && ((p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)));
+      fotos.forEach(p => usadas.add(p));
       items.push({ visita: v, fotos: fotos });
     });
-    if (items.length) data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', telefono: c.telefono || '', items: items });
+    if (incluirHuerfanas){
+      const porFecha = {};
+      todas.forEach(p => {
+        if (!p || !p.filename || usadas.has(p)) return;
+        if (!fechaEnRangoISO(p.fechaVisita, desde, hasta)) return;
+        const f = p.fechaVisita || 'sin-fecha';
+        if (!porFecha[f]) porFecha[f] = [];
+        porFecha[f].push(p);
+      });
+      Object.keys(porFecha).sort().forEach(f => {
+        items.push({ visita: { id: 'evid_' + f, fecha: (f === 'sin-fecha' ? '' : f), hora: '', estado: 'Realizada', obs: '', tipo: '', gps: getGpsGuardada(c.codigo) || null, days: [] }, fotos: porFecha[f] });
+      });
+    }
+    if (items.length) data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', cedula: c.cedula || '', telefono: c.telefono || '', items: items });
   });
   return data;
 }
 
-async function fotoABase64(foto){
-  try {
-    if (foto.data){ const partes = String(foto.data).split(','); return partes.length > 1 ? partes[1] : partes[0]; }
-    if (foto.fileId){
-      const blob = await cargarFotoComoBlob(foto);
-      if (!blob) return null;
-      const buf = await blob.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let bin = '';
-      const chunk = 0x8000;
-      for (let i = 0; i < bytes.length; i += chunk) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-      return btoa(bin);
+function blobABase64(blob){
+  return new Promise(resolve => {
+    try {
+      const fr = new FileReader();
+      fr.onload = () => { try { const s = String(fr.result || ''); resolve(s.split(',')[1] || null); } catch(e){ resolve(null); } };
+      fr.onerror = () => resolve(null);
+      fr.readAsDataURL(blob);
+    } catch(e){ resolve(null); }
+  });
+}
+
+async function fetchImagenDrive(fileId, ancho, timeoutMs){
+  if (!fileId) return null;
+  const w = ancho || 900;
+  const driveUrl = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(fileId) + '&sz=w' + w;
+  const enc = encodeURIComponent(driveUrl.replace(/^https?:\/\//, ''));
+  // Dos proxies equivalentes: si uno está saturado, el otro responde.
+  const candidatos = [
+    'https://images.weserv.nl/?url=' + enc + '&w=' + w + '&output=jpg&q=72',
+    'https://wsrv.nl/?url=' + enc + '&w=' + w + '&output=jpg&q=72'
+  ];
+  for (let c = 0; c < candidatos.length; c++){
+    for (let intento = 0; intento < 2; intento++){
+      if (__reporteSinTiempo()) return null;
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs || 12000);
+        let blob = null;
+        try {
+          const res = await fetch(candidatos[c], { signal: controller.signal });
+          if (res && res.ok) blob = await res.blob();
+        } finally { clearTimeout(timer); }
+        if (blob && blob.size > 100) return blob;
+      } catch(e){}
+      await __sleep(250 + intento * 400);
     }
+  }
+  return null;
+}
+
+async function fotoABase64(foto, opts){
+  opts = opts || {};
+  try {
+    if (!foto) return null;
+    if (foto.data){ const partes = String(foto.data).split(','); return partes.length > 1 ? partes[1] : partes[0]; }
+    if (!foto.fileId) return null;
+    const clave = 'f:' + foto.fileId + ':' + (opts.ancho || 900);
+    if (__imgB64Cache.has(clave)) return __imgB64Cache.get(clave);
+    if (__reporteSinTiempo()) return null;
+    const blob = await fetchImagenDrive(foto.fileId, opts.ancho || 900, opts.timeout || 12000);
+    if (!blob) return null;
+    const b64 = await blobABase64(blob);
+    if (!b64) return null;
+    if (__imgB64Cache.size > 1200){ try { __imgB64Cache.clear(); } catch(e){} }
+    __imgB64Cache.set(clave, b64);
+    return b64;
   } catch(e){}
   return null;
 }
 
-async function generarReporteFotografico(usarRango){
-  usarRango = !!usarRango;
-  if (usarRango && !filtroDesde && !filtroHasta){ toast('⚠ Primero aplica un filtro de fechas'); return; }
-  const data = buildDataReporteFotografico(usarRango);
+function actualizarProgresoReporte(hechos, total, fase){
+  const pct = total ? Math.round(hechos / total * 100) : 0;
+  const t = document.getElementById('toast');
+  if (t){ t.textContent = '📸 ' + (fase || 'Cargando imágenes') + ' ' + hechos + '/' + total + '…'; t.style.display = 'block'; }
+  driveProgress(pct, '📸 Reporte fotográfico', (fase || 'Imágenes') + ' ' + hechos + ' de ' + total, { limit: Math.min(99, pct + 3) });
+}
+
+async function prefetchImagenesItems(items, ancho, etiquetaCliente){
+  const uniq = new Map();
+  items.forEach(it => (it.fotos || []).slice(0, 5).forEach(f => { if (f && f.fileId && !f.data && !uniq.has(f.fileId)) uniq.set(f.fileId, f); }));
+  const lista = Array.from(uniq.values());
+  if (!lista.length) return { total: 0, ok: 0 };
+  let idx = 0, ok = 0, hechos = 0;
+  const total = lista.length;
+  const etiqueta = etiquetaCliente ? ('Cargando ' + String(etiquetaCliente).slice(0, 22)) : 'Cargando imágenes';
+  const CONC = 6;
+  const trabajador = async () => {
+    while (idx < lista.length){
+      if (__reporteSinTiempo()) return;
+      const f = lista[idx++];
+      const b64 = await fotoABase64(f, { ancho: ancho || 900 });
+      hechos++;
+      if (b64) ok++;
+      actualizarProgresoReporte(hechos, total, etiqueta);
+      if (hechos % 8 === 0) await __sleep(0);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONC, lista.length) }, trabajador));
+  return { total: total, ok: ok };
+}
+
+async function generarReporteFotografico(usarRango, opts){
+  opts = opts || {};
+  if (__reporteEnCurso){ toast('⏳ Ya se está generando un reporte'); return; }
+  const desde = (opts.desde !== undefined) ? opts.desde : (usarRango ? filtroDesde : '');
+  const hasta = (opts.hasta !== undefined) ? opts.hasta : (usarRango ? filtroHasta : '');
+  const usarRangoEf = !!usarRango;
+  if (usarRangoEf && !desde && !hasta){ toast('⚠ Primero aplica un filtro de fechas'); return; }
+  const data = buildDataReporteFotografico(usarRangoEf, Object.assign({}, opts, { desde: desde, hasta: hasta }));
   if (!data.length){ toast('⚠ No hay visitas en este período'); return; }
-  const periodo = usarRango
-    ? ('RANGO ' + (filtroDesde ? filtroDesde.split('-').reverse().join('-') : 'INICIO') + ' A ' + (filtroHasta ? filtroHasta.split('-').reverse().join('-') : 'HOY'))
+  const periodo = usarRangoEf
+    ? ('RANGO ' + (desde ? desde.split('-').reverse().join('-') : 'INICIO') + ' A ' + (hasta ? hasta.split('-').reverse().join('-') : 'HOY'))
     : ((mesResumenFiltro === MES_GENERAL || !mesResumenFiltro) ? 'GENERAL' : String(mesResumenFiltro).toUpperCase());
   const nombreArchivo = 'Reporte_Fotografico_NOC_' + periodo.replace(/[^A-Za-z0-9]+/g, '_');
   await construirReporteFotograficoExcel(data, periodo, nombreArchivo);
 }
 
+function nombreHojaUnico(wb, nombre, codigo, usados){
+  // Excel limita a 31 caracteres y no distingue mayúsculas/minúsculas:
+  // "HOTEL VENETUR ..." y "Hotel Venetur ..." colisionaban y rompían el reporte.
+  let base = String(nombre || '').replace(/[\\\/?*\[\]:]/g, '').replace(/\s+/g, ' ').trim().substring(0, 28).replace(/\s+$/, '');
+  if (!base) base = String(codigo || 'Cliente');
+  let hoja = base;
+  let suf = 1;
+  while (usados.has(hoja.toLowerCase()) || wb.getWorksheet(hoja)){
+    const suffix = '_' + suf;
+    hoja = base.substring(0, 31 - suffix.length).replace(/\s+$/, '') + suffix;
+    suf++;
+  }
+  usados.add(hoja.toLowerCase());
+  return hoja;
+}
 async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
+  if (__reporteEnCurso){ toast('⏳ Ya se está generando un reporte'); return; }
+  __reporteEnCurso = true;
+  __reporteDeadline = Date.now() + 8 * 60 * 1000; // límite total: nunca queda "cargando para siempre"
+  try {
+  try { await loadLibTimeout('exceljs', 90000); }
+  catch(e){ toast('⚠ No se pudo cargar ExcelJS (revisa tu conexión)'); return; }
   toast('📸 Generando reporte fotográfico…');
+  driveProgress(2, '📸 Reporte fotográfico', 'Preparando el libro…', { limit: 12 });
   const MORADO = 'FF8A2BE2'; 
   const FUCSIA = 'FFFF1493'; 
   const LILA = 'FFF3E5F5'; 
@@ -2522,10 +3199,9 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
       left: {style: 'medium', color:{argb: MORADO}},
       right: {style: 'medium', color:{argb: MORADO}}
   };
+  const usadosHojas = new Set();
   for (const d of data){
-    let sheetName = String(d.nombre).replace(/[\\/?*\[\]:]/g, '').substring(0, 28) || String(d.codigo);
-    let suf = 1;
-    while (wb.getWorksheet(sheetName)){ sheetName = sheetName.substring(0, 25) + '_' + suf; suf++; }
+    const sheetName = nombreHojaUnico(wb, d.nombre, d.codigo, usadosHojas);
     const ws = wb.addWorksheet(sheetName, { views: [{ showGridLines: false }] });
     ws.columns = [
       { width: 2 }, { width: 2 }, { width: 22 }, { width: 25 }, 
@@ -2533,6 +3209,8 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
       { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, 
       { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }
     ];
+    // Descarga las imágenes de esta hoja en paralelo (antes eran secuenciales y podían tardar horas).
+    await prefetchImagenesItems(d.items, 900, d.nombre);
     for (let i = 0; i < d.items.length; i++){
       const item = d.items[i];
       const v = item.visita;
@@ -2602,7 +3280,7 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
       const dataRows = [
           { label: 'USUARIO:', value: d.nombre },
           { label: 'DIRECCIÓN:', value: d.direccion || '—' },
-          { label: 'UBICACIÓN (COORDENADAS):', value: v.gps ? `${v.gps.lat}, ${v.gps.lng}` : '—' },
+          { label: 'UBICACIÓN (COORDENADAS):', value: (() => { const g = v.gps || getGpsGuardada(d.codigo); return g ? `${g.lat}, ${g.lng}` : '—'; })() },
           { label: 'CEDULA:', value: d.cedula || '—' },
           { label: 'SERIAL DE ONU/ONT:', value: v.serialOnu || '—' },
           { label: 'FECHA:', value: fechaTxt },
@@ -2656,8 +3334,8 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
           const foto = fotos[f];
           let b64 = null;
           if (foto) {
-              setToast('📷 Cargando imágenes ' + imgListas + '/' + totalImg + '…');
-              b64 = await fotoABase64(foto);
+              setToast('📷 Colocando imágenes ' + imgListas + '/' + totalImg + '…');
+              b64 = await fotoABase64(foto, { ancho: 900 });
               if (b64) imgListas++;
           }
           if (b64) {
@@ -2668,6 +3346,7 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
                   br: { col: colStart + 2, row: dataEndRow }, 
                   editAs: 'oneCell'
               });
+              if (foto && foto.fileId){ try { __imgB64Cache.delete('f:' + foto.fileId + ':900'); } catch(e){} }
           }
       }
       if (i < d.items.length - 1) {
@@ -2679,8 +3358,13 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
           R++;
       }
       ws.getRow(R).height = 15; 
+      if (i % 2 === 1) await __sleep(0);
     }
   }
+  const t = document.getElementById('toast');
+  if (t){ t.textContent = '📦 Empaquetando Excel (' + imgListas + ' imágenes)…'; t.style.display = 'block'; }
+  driveProgress(97, '📸 Reporte fotográfico', 'Empaquetando Excel…', { limit: 99 });
+  await __sleep(30);
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const a = document.createElement('a');
@@ -2688,9 +3372,19 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
   a.download = nombreArchivo + '.xlsx';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  const t = document.getElementById('toast');
   if (t) t.style.display = 'none';
-  toast('✓ Reporte fotográfico descargado (' + imgListas + ' imágenes)');
+  const faltanImg = Math.max(0, totalImg - imgListas);
+  toast('✓ Reporte fotográfico descargado (' + imgListas + ' imágenes' + (faltanImg ? ' · ' + faltanImg + ' sin cargar' : '') + ')');
+  driveProgress(100, '✓ Reporte fotográfico', 'Descargado', { done: true });
+  hideDriveBannerSoon(1800);
+  } catch(err){
+    console.error('Error en reporte fotográfico:', err);
+    toast('⚠ Error al generar el reporte: ' + (err && err.message ? err.message : err));
+    driveProgress(100, '⚠ Reporte fotográfico', 'No se pudo completar', { error: true });
+  } finally {
+    __reporteEnCurso = false;
+    __reporteDeadline = 0;
+  }
 }
 async function generarInformeIA(usarRango) {
   usarRango = !!usarRango;
@@ -3134,6 +3828,10 @@ function markdownToHtml(md) {
 }
 async function initApp(){
   setSyncBadge('⏳ Cargando local…','info');
+  // localForage se necesita para leer los datos locales; el resto se carga al usarse.
+  // Con 5 s de límite: si el CDN no responde, la app arranca igual con el respaldo en localStorage.
+  try { await Promise.race([loadLib('localforage'), new Promise(r => setTimeout(r, 5000))]); }
+  catch(e){ console.warn('localForage no disponible, usando localStorage:', e); }
   try {
     const local = await loadLocal();
     if (local && typeof local === 'object'){
@@ -3158,7 +3856,10 @@ async function initApp(){
   try { migrateVisits(); } catch(e){}
   sanitizeDB();
   try { renderAgenda(); } catch(e){}
-  try { renderResumen(); } catch(e){}
+  // El resumen (gráficas + red) se calcula en tiempo ocioso para no retrasar el primer render.
+  const renderResumenDiferido = () => { try { renderResumen(); } catch(e){} };
+  if ('requestIdleCallback' in window) requestIdleCallback(renderResumenDiferido, { timeout: 3000 });
+  else setTimeout(renderResumenDiferido, 1200);
   setSyncBadge('✓ Local listo', 'ok');
   driveStateReady = true;
   setTimeout(async () => { try { if (liberarEspacio() > 0) await saveLocal(); } catch(e){} }, 2000);
@@ -3178,16 +3879,26 @@ setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && 
 const CATS = [['ZONA WIFI','#3b82f6'],['DEDICADO - ZONA WIFI','#ef4444'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['PYME','#f97316'],['ANTENA','#14b8a6'],['NODO','#60a5fa']];
 async function renderMasterStats(){
   const box = document.getElementById('masterStatsBox'); if (!box) return;
+  // No pedir datos al backend mientras la pestaña Resumen está oculta.
+  const tabRes = document.getElementById('tab-res');
+  if (tabRes && tabRes.style.display === 'none') return;
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem('nocMasterStats') || 'null'); } catch(e){}
+  const pintar = data => {
+    const cv = document.getElementById('chartCategorias');
+    if (!data || !data.stats){ box.innerHTML = '<span style="color:var(--muted)">⚠ Master no disponible aún.</span>'; if (cv) cv.style.display = 'none'; return; }
+    if (cv) cv.style.display = 'block';
+    const map = {};
+    (data.stats || []).forEach(s => { map[s.tipo] = s.count; });
+    box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.85rem">' + CATS.map(c => '<tr><td style="padding:6px 8px;color:' + c[1] + ';font-weight:700">' + c[0] + '</td><td style="text-align:right;padding:6px 8px;font-weight:800">' + (map[c[0]] || 0) + '</td></tr>').join('') + '<tr style="border-top:1px solid #334155"><td style="padding:6px 8px;font-weight:800">TOTAL VISITAS</td><td style="text-align:right;padding:6px 8px;font-weight:800;color:var(--accent)">' + (data.total || 0) + '</td></tr></table>';
+    drawChartCategorias(CATS.map(c => [c[0], map[c[0]] || 0, c[1]]));
+  };
+  // Pinta de inmediato lo último guardado (sensación de instantaneidad) y refresca en segundo plano.
+  if (cached && cached.stats) pintar(cached);
   let data = null;
   try { const r = await callBackendRead({ action:'getMasterStats', mesAnio: DB.month }, 20000); if (r && r.ok && r.stats){ data = r; try{ localStorage.setItem('nocMasterStats', JSON.stringify(r)); }catch(e){} } } catch(e){}
-  if (!data){ try { data = JSON.parse(localStorage.getItem('nocMasterStats') || 'null'); } catch(e){} }
-  const cv = document.getElementById('chartCategorias');
-  if (!data){ box.innerHTML = '<span style="color:var(--muted)">⚠ Master no disponible aún.</span>'; if (cv) cv.style.display = 'none'; return; }
-  if (cv) cv.style.display = 'block';
-  const map = {};
-  (data.stats || []).forEach(s => { map[s.tipo] = s.count; });
-  box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.85rem">' + CATS.map(c => '<tr><td style="padding:6px 8px;color:' + c[1] + ';font-weight:700">' + c[0] + '</td><td style="text-align:right;padding:6px 8px;font-weight:800">' + (map[c[0]] || 0) + '</td></tr>').join('') + '<tr style="border-top:1px solid #334155"><td style="padding:6px 8px;font-weight:800">TOTAL VISITAS</td><td style="text-align:right;padding:6px 8px;font-weight:800;color:var(--accent)">' + (data.total || 0) + '</td></tr></table>';
-  drawChartCategorias(CATS.map(c => [c[0], map[c[0]] || 0, c[1]]));
+  if (!data) data = cached;
+  pintar(data);
 }
 function drawChartCategorias(data){
   const cv = document.getElementById('chartCategorias'); if (!cv) return;

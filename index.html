@@ -2019,6 +2019,7 @@ function renderAgenda(){
         <button class="btn btn-green" onclick="newVisit('${c.codigo}')">➕ Nueva</button>
         <button class="btn btn-gray" onclick="showVisitsHistory('${c.codigo}')">📋 ${nVisitas}</button>
         <button class="btn btn-gray" style="max-width:44px" onclick="editClient('${c.codigo}')" title="Editar cliente">🔧</button>
+        <button class="btn btn-red" style="max-width:44px" onclick="deleteClient('${c.codigo}')" title="Eliminar cliente">🗑️</button>
       </div>
       ${current && current.fecha ? `<button class="btn btn-share btn-block btn-sm" style="margin-top:8px" onclick="abrirCompartir('${c.codigo}')">📤 Compartir visita</button>` : ''}
       ${nFotos?`<span style="font-size:.75rem;color:var(--accent);margin-left:8px">📷 ${nFotos}</span>`:''}
@@ -2104,6 +2105,38 @@ function editClient(cod){
   document.getElementById('ecTelefono').value = c.telefono || '';
   document.getElementById('editClientModal').classList.add('open');
 }
+function deleteClient(cod){
+  const c = getClientByCode(cod);
+  const nombre = c ? c.nombre : cod;
+  if (!confirm('¿ELIMINAR CLIENTE "' + nombre + '" (# ' + cod + ')?\n\n• Se quita de la agenda\n• Se eliminan sus visitas e índice\n• Las FOTOS/FIRMAS se borran también de Drive\n\n⚠ Esta acción NO se puede deshacer.\n\n¿Continuar?')) return;
+  // Marca fotos para borrarse también en Drive (tombstones)
+  const fotos = safeArray(DB.photos[cod]);
+  fotos.forEach(p => {
+    if (p && p.filename){
+      markPhotoDeleted(cod, p.filename);
+      if (p.synced) callBackendWrite({ action:'deletePhoto', codigo:cod, filename:p.filename, fecha: p.fechaVisita || '' }).catch(()=>{});
+    }
+  });
+  // Marca las visitas como eliminadas
+  getVisits(cod).forEach(v => { if (v && v.id) markVisitDeleted(v.id); });
+  // Limpia datos locales del cliente
+  delete DB.visits[cod];
+  delete DB.photos[cod];
+  if (DB.clientGps) delete DB.clientGps[cod];
+  delete editingVisitId[cod];
+  formsAbiertos.delete(cod);
+  // Si es un cliente personalizado, lo quita de la lista; si es de la lista base, lo oculta
+  const esCustom = (DB.customClients || []).find(x => String(x.codigo).trim() === String(cod).trim());
+  if (esCustom){
+    DB.customClients = DB.customClients.filter(x => String(x.codigo).trim() !== String(cod).trim());
+  } else if (!DB.hiddenClients.includes(cod)){
+    DB.hiddenClients.push(cod);
+  }
+  save();
+  renderAgenda(); renderEvid(); renderResumen();
+  toast('🗑️ Cliente eliminado: #' + cod);
+}
+
 async function saveClientEdit(){
   const oldCod = document.getElementById('ecCodigoOld').value.trim();
   const newCod = document.getElementById('ecCodigo').value.trim();

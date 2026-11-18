@@ -1133,7 +1133,7 @@ function updateDownloadBanner(){ const textEl = document.getElementById('downloa
 function jsonpRequest(url, timeoutMs){ return new Promise((resolve, reject) => { const cbName = 'nocJsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); const script = document.createElement('script'); let done = false; const cleanup = () => { if (script.parentNode) script.parentNode.removeChild(script); // Si la respuesta llega después del timeout, el callback ya no debe romper la consola.
     try { window[cbName] = function(){}; } catch(e){}
     setTimeout(() => { try { delete window[cbName]; } catch(e){ window[cbName] = undefined; } }, 120000); }; const timer = setTimeout(() => { if (done) return; done = true; cleanup(); reject(new Error('Timeout JSONP')); }, timeoutMs || 25000); window[cbName] = (data) => { if (done) return; done = true; clearTimeout(timer); cleanup(); resolve(data); }; script.onerror = () => { if (done) return; done = true; clearTimeout(timer); cleanup(); reject(new Error('Error de red (JSONP)')); }; const sep = url.indexOf('?') >= 0 ? '&' : '?'; script.src = url + sep + 'callback=' + cbName; document.head.appendChild(script); }); }
-async function callBackendRead(payload, timeoutMs, fetchTimeoutMs){
+async function callBackendRead(payload, timeoutMs, fetchTimeoutMs, skipJsonp){
   timeoutMs = timeoutMs || 25000;
   const params = new URLSearchParams();
   params.append('token', TOKEN_SECRETO);
@@ -1155,7 +1155,7 @@ async function callBackendRead(payload, timeoutMs, fetchTimeoutMs){
     if (text){ try { result = JSON.parse(text); } catch(e){} }
   } catch(e){}
   // 2) JSONP (evita bloqueos de CORS/proxy). Hasta 2 intentos.
-  if (!result){
+  if (!result && !skipJsonp){
     setSyncBadge('⏳ Conectando…', 'warn');
     const tiempos = [timeoutMs, Math.min(timeoutMs, 25000)];
     for (let i = 0; i < tiempos.length && !result; i++){
@@ -1184,6 +1184,43 @@ async function callBackendWrite(payload, intentos){
     }
   }
   throw new Error('No se pudo enviar: ' + (ultimoError && ultimoError.message ? ultimoError.message : 'error de red'));
+}
+function callBackendWriteConProgreso(payload, onPct){
+  let body;
+  try { body = JSON.stringify({ token: TOKEN_SECRETO, ...payload }); }
+  catch(e){ return Promise.resolve({ ok:false, error:String(e) }); }
+  const porFases = async () => {
+    if (onPct) onPct(10);
+    await new Promise(r => setTimeout(r, 220));
+    if (onPct) onPct(45);
+    const res = await fetch(APPS_SCRIPT_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body });
+    if (onPct) onPct(85);
+    let data = {};
+    try { data = await res.json(); } catch(e){ try { data = JSON.parse(await res.text()); } catch(e2){} }
+    if (onPct) onPct(100);
+    return { ok: res.ok && data.ok !== false, fileId: data.fileId || '', folderId: data.folderId || '', data: data };
+  };
+  // file://: XHR devuelve status 0 con Apps Script; fetch funciona y además da el fileId.
+  if (location.protocol === 'file:') return porFases();
+  return new Promise(resolve => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', APPS_SCRIPT_URL, true);
+    xhr.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
+    xhr.timeout = 60000;
+    const done = ok => {
+      if (onPct) onPct(100);
+      let data = {};
+      try { data = JSON.parse(xhr.responseText || '{}'); } catch(e){}
+      resolve({ ok: ok && data.ok !== false, fileId: data.fileId || '', folderId: data.folderId || '', data: data });
+    };
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable && onPct) onPct(Math.min(99, Math.round(e.loaded / e.total * 100)));
+    };
+    xhr.onload = () => done(true);
+    xhr.onerror = () => { if (xhr.status === 0) porFases().then(resolve).catch(e => resolve({ ok:false, error:String(e) })); else done(true); };
+    xhr.ontimeout = () => porFases().then(resolve).catch(e => resolve({ ok:false, error:String(e) }));
+    try { xhr.send(body); } catch(e){ porFases().then(resolve).catch(err => resolve({ ok:false, error:String(err) })); }
+  });
 }
 async function callBackendWriteAndRead(payload){
   await callBackendWrite(payload);
@@ -1337,6 +1374,7 @@ async function confirmarSubida(item){
 }
 function programarReintentoDrive(){
   if (!isOnline() || cloudRetryCount >= 2) return;
+  if (colaSubidaFotos.length || subiendoFotosAhora || isDirty()) return;
   cloudRetryCount++;
   const espera = 10000 * cloudRetryCount;
   setSyncBadge('⏳ Reintentando en ' + Math.round(espera / 1000) + 's…', 'warn');
@@ -1397,8 +1435,8 @@ async function pollForUpdates(){
 setInterval(pollForUpdates, 90000);
 function collectPendingUploads(){
   const items = [];
-  for (const codigo in DB.photos){ const cliente = getClientByCode(codigo); const nombreCliente = cliente ? cliente.nombre : ('Cliente ' + codigo); const arr = safeArray(DB.photos[codigo]); for (const p of arr) if (p.data && !p.synced && p.filename) items.push({ codigo: String(codigo).trim(), nombre: nombreCliente, fechaVisita: p.fechaVisita || hoyYMD(), filename: p.filename, mime:'image/jpeg', base64: p.data.split(',')[1], ref: p }); }
-  for (const codigo in DB.visits){ const visits = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; const cliente = getClientByCode(codigo); const nombreCliente = cliente ? cliente.nombre : ('Cliente ' + codigo); for (const v of visits) if (v && v.firma && v.firma.data && !v.firma.synced && v.firma.filename) items.push({ codigo: String(codigo).trim(), nombre: nombreCliente, fechaVisita: v.fecha || hoyYMD(), filename: v.firma.filename, mime:'image/png', base64: v.firma.data.split(',')[1], ref: v.firma }); }
+  for (const codigo in DB.photos){ const cliente = getClientByCode(codigo); const nombreCliente = cliente ? cliente.nombre : ('Cliente ' + codigo); const arr = safeArray(DB.photos[codigo]); for (const p of arr) if (p.data && !p.synced && !p.__subiendo && p.filename) items.push({ codigo: String(codigo).trim(), nombre: nombreCliente, fechaVisita: p.fechaVisita || hoyYMD(), filename: p.filename, mime:'image/jpeg', base64: p.data.split(',')[1], ref: p }); }
+  for (const codigo in DB.visits){ const visits = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; const cliente = getClientByCode(codigo); const nombreCliente = cliente ? cliente.nombre : ('Cliente ' + codigo); for (const v of visits) if (v && v.firma && v.firma.data && !v.firma.synced && !v.firma.__subiendo && v.firma.filename) items.push({ codigo: String(codigo).trim(), nombre: nombreCliente, fechaVisita: v.fecha || hoyYMD(), filename: v.firma.filename, mime:'image/png', base64: v.firma.data.split(',')[1], ref: v.firma }); }
   const sup = DB.evid['super_sig']; if (sup && typeof sup === 'object' && sup.data && !sup.synced && sup.filename) items.push({ codigo:'_supervisor', nombre:'Supervisor NOC', fechaVisita: hoyYMD(), filename: sup.filename, mime:'image/png', base64: sup.data.split(',')[1], ref: sup });
   return items;
 }
@@ -1449,6 +1487,18 @@ async function loadFromCloud(){
     const timeoutGlobal = setTimeout(() => { if (!driveStateReady){ driveStateReady = true; setSyncBadge('⚠ Drive lento','warn'); updateSyncStatusBox(); } }, 90000);
 
     const localHasData = Object.keys(DB.visits || {}).length > 0 || Object.keys(DB.photos || {}).length > 0;
+    // Si hay fotos locales esperando, NO descargar el índice viejo: puede borrar lo que acabamos de subir.
+    let fotosPendientesLocales = 0;
+    for (const c in (DB.photos || {})) for (const p of safeArray(DB.photos[c])) if (p && p.data && !p.synced && !p.__subiendo) fotosPendientesLocales++;
+    for (const c in (DB.visits || {})){ const arr = Array.isArray(DB.visits[c]) ? DB.visits[c] : []; for (const v of arr) if (v && v.firma && v.firma.data && !v.firma.synced && !v.firma.__subiendo) fotosPendientesLocales++; }
+    if (fotosPendientesLocales > 0){
+      clearTimeout(timeoutGlobal); clearTimeout(watchdogCarga);
+      driveStateReady = true; loadingFromCloud = false;
+      setSyncBadge('☁️ ' + fotosPendientesLocales + ' foto(s) subiendo','info');
+      updateSyncStatusBox();
+      encolarPendientesExistentes();
+      return false;
+    }
 
     // Atajo: si el servidor no registra cambios desde la última carga, no se descarga el índice completo.
     const cachedTs = localStorage.getItem('nocRemoteTs') || '';
@@ -1472,7 +1522,7 @@ async function loadFromCloud(){
 
     driveProgress(35, '☁️ Descargando índice…', 'Conectando con Google Apps Script', { limit: 70 });
     let res = null;
-    try { res = await callBackendRead({ action:'getIndex' }, 60000, 90000); }
+    try { res = await callBackendRead({ action:'getIndex' }, 12000, 12000, true); }
     catch(err){
       clearTimeout(timeoutGlobal);
       driveStateReady = true;
@@ -2272,6 +2322,141 @@ function initSig(id, intentos){
   if (firmaData){ const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, c.width, c.height); img.src = firmaData; }
 }
 function clearSig(id){ const c = document.getElementById(id); if (c){ c.getContext('2d').clearRect(0, 0, c.width, c.height); delete sigData[id]; } if (id === 'sigSuper'){ delete DB.evid['super_sig']; save(); } else if (id.startsWith('sig-')){ const cod = id.replace('sig-',''); const v = getCurrentVisit(cod); if (v) delete v.firma; save(); renderAgenda(); } }
+
+/* ---- Subida inmediata de fotos: cola propia + reintentos + progreso "x de y" ----
+   Antes las fotos esperaban a syncToCloud() y se quedaban en "⏳" para siempre
+   si esa sincronización fallaba. Ahora cada foto sube en cuanto se procesa. */
+let colaSubidaFotos = [];
+let subiendoFotosAhora = false;
+function subidaBanner(msg, pct, color){
+  let b = document.getElementById('uploadNowBanner');
+  if (!b){
+    b = document.createElement('div');
+    b.id = 'uploadNowBanner';
+    b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:86px;z-index:140;background:#0f172a;border:1px solid rgba(34,197,94,.55);border-radius:14px;padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.55);display:none;align-items:center;gap:10px;max-width:94%;min-width:300px;font-size:.82rem;font-weight:800;color:#bbf7d0;';
+    b.innerHTML = '<div id="uploadNowSpin" style="width:13px;height:13px;border:2px solid rgba(34,197,94,.25);border-top-color:#22c55e;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></div><div style="flex:1;min-width:0"><span id="uploadNowBannerText"></span><div style="height:6px;background:rgba(255,255,255,.14);border-radius:99px;overflow:hidden;margin-top:7px"><div id="uploadNowBannerBar" style="height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,#22c55e,#38bdf8);transition:width .2s"></div></div></div><b id="uploadNowPct" style="font-family:monospace;font-size:.78rem;min-width:40px;text-align:right"></b>';
+    document.body.appendChild(b);
+  }
+  const t = b.querySelector('#uploadNowBannerText');
+  const bar = b.querySelector('#uploadNowBannerBar');
+  const pctEl = b.querySelector('#uploadNowPct');
+  const spin = b.querySelector('#uploadNowSpin');
+  if (msg){
+    b.style.display = 'flex';
+    if (t) t.textContent = msg;
+    if (typeof pct === 'number'){
+      const v = Math.max(0, Math.min(100, Math.round(pct)));
+      if (bar){ bar.style.width = v + '%'; bar.style.background = color === '#38bdf8' ? 'linear-gradient(90deg,#38bdf8,#818cf8)' : 'linear-gradient(90deg,#22c55e,#38bdf8)'; }
+      if (pctEl) pctEl.textContent = v + '%';
+      if (spin) spin.style.borderTopColor = color || '#22c55e';
+    } else {
+      if (bar) bar.style.width = '0%';
+      if (pctEl) pctEl.textContent = '';
+    }
+  } else { b.style.display = 'none'; }
+}
+function esperarOnline(){ return new Promise(res => { if (isOnline()) return res(); const chk = () => { window.removeEventListener('online', chk); res(); }; window.addEventListener('online', chk); }); }
+async function subirFotoInmediata(item, etiqueta){
+  const MAX_INTENTOS = 8;
+  for (let i = 1; i <= MAX_INTENTOS; i++){
+    if (item.ref.synced && item.ref.fileId){ delete item.ref.__subiendo; return true; }
+    if (!isOnline()){
+      subidaBanner('📴 Sin conexión — ' + etiqueta + ' queda en cola y se sube al volver…');
+      await esperarOnline();
+      i = Math.max(1, i - 1);
+      continue;
+    }
+    try {
+      subidaBanner('☁️ Subiendo foto ' + etiqueta + ' — 0%', 0);
+      const enviado = await callBackendWriteConProgreso(
+        { action:'uploadPhoto', codigo:item.codigo, nombre:item.nombre, fecha:item.fechaVisita, filename:item.filename, mime:item.mime, base64:item.base64 },
+        pct => { subidaBanner('☁️ Subiendo foto ' + etiqueta + ' — ' + pct + '%', pct); if (item.ref) item.ref.__uploadPct = pct; });
+      if (!enviado.ok) throw new Error('No se pudo enviar');
+      let fid = enviado.fileId ? { fileId: enviado.fileId, folderId: enviado.folderId } : null;
+      if (!fid){
+        subidaBanner('☁️ Subiendo foto ' + etiqueta + ' — 100% · confirmando en Drive…', 100);
+        fid = await confirmarSubida(item);
+      }
+      if (fid && fid.fileId){
+        item.ref.synced = true;
+        item.ref.fileId = fid.fileId;
+        if (fid.folderId) item.ref.folderId = fid.folderId;
+        delete item.ref.data;
+        delete item.ref.__subiendo;
+        return true;
+      }
+    } catch(e){}
+    if (i < MAX_INTENTOS){
+      subidaBanner('☁️ Subiendo foto ' + etiqueta + ' · reintento ' + i + '/' + MAX_INTENTOS + '…');
+      await new Promise(r => setTimeout(r, Math.min(12000, 1200 * i)));
+    }
+  }
+  delete item.ref.__subiendo;
+  return false;
+}
+async function procesarColaSubidaFotos(){
+  if (subiendoFotosAhora) return;
+  subiendoFotosAhora = true;
+  let okCount = 0, failCount = 0;
+  while (colaSubidaFotos.length){
+    const job = colaSubidaFotos.shift();
+    colaSubidaFotos.forEach((j, i) => { j.etiqueta = (i + 1) + ' de ' + colaSubidaFotos.length; });
+    subidaBanner('☁️ Subiendo foto ' + (okCount + failCount + 1) + ' — 0% · ' + job.etiqueta + ' en cola', 0);
+    const ok = await subirFotoInmediata(job.item, job.etiqueta);
+    if (ok){
+      okCount++;
+      try { await saveLocal(); } catch(e){}
+      if (job.cod) renderPhotos(job.cod);
+    } else {
+      failCount++;
+    }
+    updateSyncStatusBox();
+  }
+  subiendoFotosAhora = false;
+  if (okCount > 0 && failCount === 0){
+    subidaBanner('✓ ' + okCount + ' foto(s) subida(s) a Drive');
+    setTimeout(() => subidaBanner(null), 2200);
+  } else if (failCount > 0){
+    subidaBanner('⚠ ' + okCount + ' subida(s) · ' + failCount + ' pendiente(s) — se reintentará con la sincronización');
+    setTimeout(() => subidaBanner(null), 4500);
+  } else {
+    subidaBanner(null);
+  }
+  markDirty();
+  updateSyncStatusBox();
+  syncToCloud(true);
+}
+function encolarSubidaFoto(codigo, ref){
+  if (!ref || !ref.filename || !ref.data || ref.synced) return;
+  if (ref.__subiendo) return;
+  const cliente = getClientByCode(codigo);
+  ref.__subiendo = true;
+  const item = {
+    codigo: String(codigo).trim(),
+    nombre: cliente ? cliente.nombre : ('Cliente ' + codigo),
+    fechaVisita: ref.fechaVisita || hoyYMD(),
+    filename: ref.filename,
+    mime: (String(ref.filename).toLowerCase().endsWith('.png')) ? 'image/png' : 'image/jpeg',
+    base64: String(ref.data || '').split(',')[1] || '',
+    ref: ref
+  };
+  colaSubidaFotos.push({ cod: codigo, item: item, etiqueta: (colaSubidaFotos.length + 1) + ' de ' + (colaSubidaFotos.length + 1) });
+  procesarColaSubidaFotos();
+}
+function encolarPendientesExistentes(){
+  let n = 0;
+  for (const codigo in DB.photos){
+    const arr = safeArray(DB.photos[codigo]);
+    for (const p of arr){ if (p && p.data && !p.synced && !p.__subiendo && p.filename){ encolarSubidaFoto(codigo, p); n++; } }
+  }
+  for (const codigo in DB.visits){
+    const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : [];
+    for (const v of arr){
+      if (v && v.firma && v.firma.data && !v.firma.synced && !v.firma.__subiendo && v.firma.filename){ encolarSubidaFoto(codigo, v.firma); n++; }
+    }
+  }
+  return n;
+}
 function addPhotos(cod, input){
   const v = getCurrentVisit(cod);
   const fechaVisita = v && v.fecha ? v.fecha : hoyYMD();
@@ -2281,39 +2466,92 @@ function addPhotos(cod, input){
   input.value = '';
   if (!files.length) return;
   const total = files.length;
-  let procesadas = 0, pendientes = total;
-  const setToast = msg => { const t = document.getElementById('toast'); if (t){ t.textContent = msg; t.style.display = 'block'; } };
-  setToast('📷 Procesando fotos 0/' + total + '…');
+  let procesadas = 0;
+  const setToast = msg => { const t = document.getElementById('toast'); if (t){ t.textContent = msg; t.style.display = 'block'; clearTimeout(t.__h); t.__h = setTimeout(() => t.style.display = 'none', 4000); } };
   const alTerminar = () => {
     updateSyncStatusBox();
-    setToast('☁️ Subiendo ' + total + ' foto(s) a Drive…');
-    saveLocal().then(() => { markDirty(); syncToCloud(true); });
+    if (!subiendoFotosAhora) subidaBanner(null);
+    saveLocal().then(() => { markDirty(); });
   };
-  files.forEach(file => {
+  const procesarUno = (file, idx) => new Promise(resolve => {
     const reader = new FileReader();
+    reader.onprogress = e => {
+      if (e.lengthComputable) subidaBanner('🗜️ Comprimiendo foto ' + idx + '/' + total + ' — leyendo archivo', Math.round(e.loaded / e.total * 30), '#38bdf8');
+    };
     reader.onload = e => {
+      subidaBanner('🗜️ Comprimiendo foto ' + idx + '/' + total + ' — preparando imagen', 35, '#38bdf8');
       const img = new Image();
       img.onload = () => {
         const opt = COMP_OPTS[DB.comp || 'media'];
         const sc = Math.min(1, opt.max / Math.max(img.width, img.height));
         const cv = document.createElement('canvas');
         cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
-        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-        const dataUrl = cv.toDataURL('image/jpeg', opt.q);
-        const ahora = new Date();
-        DB.photos[cod] = DB.photos[cod] || [];
-        DB.photos[cod].push({ data: dataUrl, fecha: ahora.toLocaleString('es-VE'), fechaVisita: fechaVisita, visitId: visitId, filename: buildPhotoFilename(ahora), synced: false, fileId: null });
-        procesadas++;
-        setToast('📷 Procesando fotos ' + procesadas + '/' + total + '…');
-        renderPhotos(cod);
-        if (--pendientes === 0) alTerminar();
+        const ctx = cv.getContext('2d');
+        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        const wmFecha = new Date();
+        const wmDias = ['dom','lun','mar','mié','jue','vie','sáb'];
+        const wmPad = n => String(n).padStart(2, '0');
+        const wmGps = (typeof getGpsGuardada === 'function') ? getGpsGuardada(cod) : null;
+        const wmCoords = (wmGps && isFinite(Number(wmGps.lat)) && isFinite(Number(wmGps.lng)))
+          ? Number(wmGps.lat).toFixed(6) + ', ' + Number(wmGps.lng).toFixed(6)
+          : 'sin GPS';
+        const wmTexto = wmFecha.getFullYear() + '-' + wmPad(wmFecha.getMonth()+1) + '-' + wmPad(wmFecha.getDate())
+          + ' ' + wmPad(wmFecha.getHours()) + ':' + wmPad(wmFecha.getMinutes())
+          + ' ' + wmDias[wmFecha.getDay()] + ' · ' + wmCoords;
+        const wmSize = Math.max(11, Math.round(cv.width / 48));
+        ctx.font = '600 ' + wmSize + 'px Arial, sans-serif';
+        ctx.textBaseline = 'middle';
+        const wmAncho = Math.min(cv.width, ctx.measureText(wmTexto).width + wmSize * 2);
+        const wmAlto = Math.round(wmSize * 2.2);
+        ctx.fillStyle = 'rgba(0,0,0,0.62)';
+        ctx.fillRect(0, cv.height - wmAlto, wmAncho, wmAlto);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(wmTexto, wmSize, cv.height - wmAlto / 2);
+        subidaBanner('🗜️ Comprimiendo foto ' + idx + '/' + total + ' — reduciendo tamaño', 60, '#38bdf8');
+        const terminar = dataUrl => {
+          const despues = Math.max(1, Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 3 / 4));
+          const ahorro = file.size > 0 ? Math.max(0, Math.round((1 - despues / file.size) * 100)) : 0;
+          subidaBanner('✓ Foto ' + idx + '/' + total + ' comprimida ' + ahorro + '% — subiendo…', 100, '#22c55e');
+          const ahora = new Date();
+          DB.photos[cod] = DB.photos[cod] || [];
+          const nueva = { data: dataUrl, fecha: ahora.toLocaleString('es-VE'), fechaVisita: fechaVisita, visitId: visitId, filename: buildPhotoFilename(ahora), synced: false, fileId: null };
+          DB.photos[cod].push(nueva);
+          procesadas++;
+          setToast('📷 Foto ' + procesadas + '/' + total + ' lista — subiendo…');
+          renderPhotos(cod);
+          encolarSubidaFoto(cod, nueva);
+          saveLocal();
+          markDirty();
+          updateSyncStatusBox();
+          resolve();
+        };
+        if (cv.toBlob){
+          let mostrando = 65;
+          const t = setInterval(() => { if (mostrando < 84){ mostrando += 4; subidaBanner('🗜️ Comprimiendo foto ' + idx + '/' + total + ' — codificando', mostrando, '#38bdf8'); } }, 220);
+          cv.toBlob(blob => {
+            clearInterval(t);
+            subidaBanner('🗜️ Comprimiendo foto ' + idx + '/' + total + ' — finalizando', 90, '#38bdf8');
+            if (!blob){ terminar(cv.toDataURL('image/jpeg', opt.q)); return; }
+            const fr = new FileReader();
+            fr.onload = ev => terminar(ev.target.result);
+            fr.onerror = () => terminar(cv.toDataURL('image/jpeg', opt.q));
+            fr.readAsDataURL(blob);
+          }, 'image/jpeg', opt.q);
+        } else terminar(cv.toDataURL('image/jpeg', opt.q));
       };
-      img.onerror = () => { procesadas++; setToast('📷 Procesando fotos ' + procesadas + '/' + total + '…'); if (--pendientes === 0) alTerminar(); };
+      img.onerror = () => { procesadas++; setToast('⚠ No se pudo leer la foto ' + idx + '/' + total); resolve(); };
       img.src = e.target.result;
     };
-    reader.onerror = () => { procesadas++; setToast('📷 Procesando fotos ' + procesadas + '/' + total + '…'); if (--pendientes === 0) alTerminar(); };
+    reader.onerror = () => { procesadas++; setToast('⚠ No se pudo leer la foto ' + idx + '/' + total); resolve(); };
     reader.readAsDataURL(file);
   });
+  (async () => {
+    for (let i = 0; i < files.length; i++){
+      setToast('📷 Procesando fotos ' + (i + 1) + '/' + total + '…');
+      await procesarUno(files[i], i + 1);
+    }
+    alTerminar();
+  })();
 }
 function renderPhotos(cod){
   const box = document.getElementById('ph-' + cod); if (!box) return;
@@ -2335,7 +2573,7 @@ function renderPhotos(cod){
     if (p.fileId) src = driveThumbUrl(p.fileId, 200);
     else if (p.data) src = p.data;
     if (src) return `<div class="photo-box"><img src="${src}" loading="lazy" decoding="async"><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
-    return `<div class="photo-box"><div class="placeholder">⏳</div><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
+    return `<div class="photo-box"><div class="placeholder">${p.__subiendo ? '⬆️ ' + (p.__uploadPct || 0) + '%' : '⏳'}</div><button onclick="delPhoto('${cod}',${i})">✕</button></div>`;
   }).join('');
 }
 function delPhoto(cod, i){
@@ -3992,11 +4230,18 @@ async function initApp(){
     setSyncBadge('📥 Sync Drive…','info');
     loadFromCloud().catch(() => { driveStateReady = true; setSyncBadge('✓ Local','ok'); });
   }, 1500);
+  // Fotos que quedaron pilladas en "⏳" de visitas anteriores: se reintentan solas.
+  setTimeout(() => {
+    try {
+      const n = encolarPendientesExistentes();
+      if (n > 0) subidaBanner('☁️ Reintentando ' + n + ' subida(s) pendiente(s)…');
+    } catch(e){}
+  }, 6000);
 }
 initApp();
 setInterval(sendHeartbeat, 60000);
 setTimeout(sendHeartbeat, 5000);
-window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); setTimeout(() => { loadFromCloud().then(() => { if (isDirty()){ syncToCloud(true); } }); sendHeartbeat(); }, 5000); });
+window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); procesarColaSubidaFotos(); setTimeout(() => { encolarPendientesExistentes(); loadFromCloud().then(() => { if (isDirty()){ syncToCloud(true); } }); sendHeartbeat(); }, 5000); });
 window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','warn'); updateActiveUsersBadge(0); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on' && !syncInProgress) syncToCloud(true); } });
 setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 120000);

@@ -1200,27 +1200,7 @@ function callBackendWriteConProgreso(payload, onPct){
     if (onPct) onPct(100);
     return { ok: res.ok && data.ok !== false, fileId: data.fileId || '', folderId: data.folderId || '', data: data };
   };
-  // file://: XHR devuelve status 0 con Apps Script; fetch funciona y además da el fileId.
-  if (location.protocol === 'file:') return porFases();
-  return new Promise(resolve => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', APPS_SCRIPT_URL, true);
-    xhr.setRequestHeader('Content-Type', 'text/plain;charset=utf-8');
-    xhr.timeout = 60000;
-    const done = ok => {
-      if (onPct) onPct(100);
-      let data = {};
-      try { data = JSON.parse(xhr.responseText || '{}'); } catch(e){}
-      resolve({ ok: ok && data.ok !== false, fileId: data.fileId || '', folderId: data.folderId || '', data: data });
-    };
-    xhr.upload.onprogress = e => {
-      if (e.lengthComputable && onPct) onPct(Math.min(99, Math.round(e.loaded / e.total * 100)));
-    };
-    xhr.onload = () => done(true);
-    xhr.onerror = () => { if (xhr.status === 0) porFases().then(resolve).catch(e => resolve({ ok:false, error:String(e) })); else done(true); };
-    xhr.ontimeout = () => porFases().then(resolve).catch(e => resolve({ ok:false, error:String(e) }));
-    try { xhr.send(body); } catch(e){ porFases().then(resolve).catch(err => resolve({ ok:false, error:String(err) })); }
-  });
+  return porFases();
 }
 async function callBackendWriteAndRead(payload){
   await callBackendWrite(payload);

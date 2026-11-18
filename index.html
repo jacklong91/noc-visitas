@@ -1377,7 +1377,7 @@ function programarReintentoDrive(){
   if (colaSubidaFotos.length || subiendoFotosAhora || isDirty()) return;
   cloudRetryCount++;
   const espera = 10000 * cloudRetryCount;
-  setSyncBadge('⏳ Reintentando en ' + Math.round(espera / 1000) + 's…', 'warn');
+  setSyncBadge('✓ Local · reintentando Drive en ' + Math.round(espera / 1000) + 's', 'info');
   setTimeout(() => { if (isOnline() && !loadingFromCloud) loadFromCloud(); }, espera);
 }
 function applyRemoteIndex(remote){
@@ -1502,10 +1502,11 @@ async function loadFromCloud(){
 
     // Atajo: si el servidor no registra cambios desde la última carga, no se descarga el índice completo.
     const cachedTs = localStorage.getItem('nocRemoteTs') || '';
-    if (cachedTs && localHasData && !isDirty() && localDataCompleta()){
+    let meta = null;
+    if (localHasData && !isDirty() && localDataCompleta()){
       try {
         driveProgress(25, '☁️ Verificando cambios…', 'Consulta rápida a Drive', { limit: 55 });
-        const meta = await callBackendRead({ action:'getIndexMeta' }, 12000);
+        meta = await callBackendRead({ action:'getIndexMeta' }, 12000);
         if (meta && meta.ok && meta.exists && meta.updatedAt === cachedTs){
           clearTimeout(timeoutGlobal);
           driveStateReady = true;
@@ -1522,13 +1523,14 @@ async function loadFromCloud(){
 
     driveProgress(35, '☁️ Descargando índice…', 'Conectando con Google Apps Script', { limit: 70 });
     let res = null;
-    try { res = await callBackendRead({ action:'getIndex' }, 12000, 12000, true); }
+    try { res = await callBackendRead({ action:'getIndex' }, 25000, 25000, true); }
     catch(err){
-      clearTimeout(timeoutGlobal);
-      driveStateReady = true;
-      setSyncBadge('⚠ Error red','err');
+      clearTimeout(timeoutGlobal); clearTimeout(watchdogCarga);
+      driveStateReady = true; loadingFromCloud = false;
+      setSyncBadge('✓ Local (Drive lento)','ok');
       updateSyncStatusBox();
-      driveProgress(100, '⚠ No se pudo cargar Drive', 'Revisa tu conexión e inténtalo de nuevo', { error: true });
+      driveProgress(100, '✓ Trabajando con datos locales', 'Drive responderá en segundo plano', { done: true });
+      hideDriveBannerSoon(1800);
       programarReintentoDrive();
       return false;
     }
@@ -1539,11 +1541,12 @@ async function loadFromCloud(){
         driveProgress(100, '✓ Drive vacío', 'Aún no hay datos guardados en la nube', { done: true }); hideDriveBannerSoon(1500);
         return false;
       }
-      const detalle = res && res.error ? String(res.error).slice(0,60) : 'Sin respuesta del servidor';
-      driveStateReady = true;
-      setSyncBadge('⚠ ' + (res && res.error ? String(res.error).slice(0,25) : 'sin respuesta'),'err');
+      clearTimeout(watchdogCarga);
+      driveStateReady = true; loadingFromCloud = false;
+      setSyncBadge('✓ Local (Drive lento)','ok');
       updateSyncStatusBox();
-      driveProgress(100, '⚠ No se pudo cargar Drive', detalle, { error: true });
+      driveProgress(100, '✓ Trabajando con datos locales', 'Drive responderá en segundo plano', { done: true });
+      hideDriveBannerSoon(1800);
       programarReintentoDrive();
       return false;
     }

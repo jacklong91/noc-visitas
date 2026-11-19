@@ -382,6 +382,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
       <label>CÓDIGO DEL CLIENTE</label><input id="ncCodigo" placeholder="Ej.: 99123">
       <label>CLIENTE / RAZÓN SOCIAL</label><input id="ncNombre" placeholder="Nombre del cliente o negocio">
       <label>DIRECCIÓN</label><input id="ncDir" placeholder="Dirección completa">
+      <label>TIPO</label><select id="ncTipo"><option value="ZONA WIFI">ZONA WIFI</option><option value="DEDICADO">DEDICADO</option><option value="GUBERNAMENTAL">GUBERNAMENTAL</option><option value="PYME">PYME</option><option value="RESIDENCIAL">RESIDENCIAL</option></select>
       <div class="row2">
         <div><label>CÉDULA / RIF (opcional)</label><input id="ncCedula" placeholder="Ej.: V-12345678"></div>
         <div><label>TELÉFONO (opcional)</label><input id="ncTelefono" placeholder="Ej.: 0414-1234567"></div>
@@ -458,6 +459,10 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
       <label>📊 GRÁFICA GENERAL — ESTADO DE VISITAS</label>
       <canvas id="chartCanvas" style="width:100%;height:auto;display:block;border-radius:12px;background:rgba(0,0,0,0.3);border:1px solid #334155;margin-top:8px"></canvas>
       <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="downloadChart()">⬇️ Descargar gráfica (PNG)</button>
+    </div>
+    <div class="card" style="border-left:4px solid var(--purple)">
+      <label>📊 VISITAS SEPARADAS POR TIPO</label>
+      <div id="tiposResumenBox" style="margin-top:8px"></div>
     </div>
     <div class="card">
       <label>📊 DETALLE POR CATEGORÍA — VISITAS REALIZADAS (Master)</label>
@@ -622,7 +627,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 <div class="modal-bg" id="gpsModal"><div class="modal"><h3 style="margin-bottom:8px">📍 Ubicación no disponible</h3><p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">El GPS está apagado o sin permiso.</p><button class="btn btn-primary btn-block" onclick="tryOpenLocationSettings()">⚙️ Abrir ajustes</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="closeGpsHelp()">Cerrar</button></div></div>
 <div class="modal-bg" id="historialModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 id="historialTitle" style="font-size:1rem">Historial de visitas</h3><button class="btn btn-gray btn-sm" onclick="closeHistorial()">✕</button></div><div id="historialList"></div></div></div>
 <div class="modal-bg" id="debugMasterModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔍 Diagnóstico</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('debugMasterModal').classList.remove('open')">✕</button></div><div id="debugMasterContent" style="font-size:.78rem;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow-y:auto;font-family:monospace;line-height:1.4"></div></div></div>
-<div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre"><label>DIRECCIÓN</label><input id="ecDir"><div class="row2"><div><label>CÉDULA / RIF (opcional)</label><input id="ecCedula"></div><div><label>TELÉFONO (opcional)</label><input id="ecTelefono"></div></div><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
+<div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre"><label>DIRECCIÓN</label><input id="ecDir"><label>TIPO</label><select id="ecTipo"><option value="ZONA WIFI">ZONA WIFI</option><option value="DEDICADO">DEDICADO</option><option value="GUBERNAMENTAL">GUBERNAMENTAL</option><option value="PYME">PYME</option><option value="RESIDENCIAL">RESIDENCIAL</option></select><div class="row2"><div><label>CÉDULA / RIF (opcional)</label><input id="ecCedula"></div><div><label>TELÉFONO (opcional)</label><input id="ecTelefono"></div></div><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
 <div class="lightbox" id="lightbox"><button class="lb-close" onclick="closeLightbox()">✕</button><button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button><button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button><img id="lightboxImg" src=""><div class="lb-caption"><b id="lightboxTitle">—</b><small id="lightboxSubtitle">—</small></div></div>
 <div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><label>CLIENTE ORIGEN</label><select id="rpOrigen"></select><label>CLIENTE DESTINO</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
 <div class="modal-bg" id="compartirModal">
@@ -698,6 +703,13 @@ const DIAS = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MES_GENERAL = '__GENERAL__';
 const COMP_OPTS = { baja:{max:960,q:0.55}, media:{max:1280,q:0.72}, alta:{max:1600,q:0.82} };
+const TIPOS_CLIENTE = ['DEDICADO','GUBERNAMENTAL','ZONA WIFI','PYME','RESIDENCIAL'];
+const TIPOS_VISITA = ['Rutina','Evento','Instalación','Avería por reporte'];
+const PLURAL_TIPO_CLIENTE = { DEDICADO:'dedicados', GUBERNAMENTAL:'gubernamentales', 'ZONA WIFI':'zonas wifi', PYME:'pymes', RESIDENCIAL:'residenciales' };
+function normalizarTipoCliente(t){ const x = String(t == null ? '' : t).toUpperCase().replace(/\s+/g,' ').trim(); return TIPOS_CLIENTE.indexOf(x) >= 0 ? x : 'ZONA WIFI'; }
+function normalizarTipoVisita(t){ const x = String(t == null ? '' : t).trim(); return TIPOS_VISITA.indexOf(x) >= 0 ? x : 'Rutina'; }
+function tipoClienteDe(c){ return normalizarTipoCliente(c && c.tipo); }
+function tipoVisitaDe(v){ return normalizarTipoVisita(v && v.tipoVisita); }
 let DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
 let syncInProgress = false, syncTimer = null;
 let evidCurrentFolder = null, lightboxItems = [], lightboxIndex = 0, bannerDismissed = false;
@@ -767,14 +779,16 @@ function sanitizeDB(){
     DB.visits[cod].forEach(v => {
       if (!v.id) v.id = 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
       if (typeof v.fecha !== 'string') v.fecha = '';
-      if (typeof v.hora !== 'string') v.hora = '';
-      if (!v.estado) v.estado = 'Pendiente';
+       if (typeof v.hora !== 'string') v.hora = '';
+       v.tipoVisita = normalizarTipoVisita(v.tipoVisita);
+       if (!v.estado) v.estado = 'Pendiente';
       if (typeof v.obs !== 'string') v.obs = '';
       if (!Array.isArray(v.days)) v.days = [];
       if (v.firma && (typeof v.firma !== 'object' || !v.firma.filename)) delete v.firma;
     });
   }
   DB.customClients = DB.customClients.filter(c => c && typeof c === 'object' && c.codigo);
+  DB.customClients.forEach(c => { c.tipo = normalizarTipoCliente(c.tipo); });
   // Recupera coordenadas ya registradas para que queden fijas en el cliente.
   for (const cod in DB.visits){
     if (DB.clientGps[cod]) continue;
@@ -956,7 +970,7 @@ function migrateVisits(){
     const v = DB.visits[cod];
     if (v && !Array.isArray(v)){
       const sig = DB.evid[cod + '_sig'];
-      const newVisit = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: v.fecha || '', hora: v.hora || '', estado: v.estado || 'Pendiente', obs: v.obs || '', gps: v.gps || null, days: Array.isArray(v.days) ? v.days : [], updatedAt: new Date().toISOString() };
+      const newVisit = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: v.fecha || '', hora: v.hora || '', tipoVisita: v.tipoVisita || 'Rutina', estado: v.estado || 'Pendiente', obs: v.obs || '', gps: v.gps || null, days: Array.isArray(v.days) ? v.days : [], updatedAt: new Date().toISOString() };
       if (sig){ newVisit.firma = typeof sig === 'object' ? sig : { data: sig, filename: 'firma_cliente.png', synced: false }; delete DB.evid[cod + '_sig']; }
       DB.visits[cod] = (v.fecha || v.estado || v.obs) ? [newVisit] : [];
     } else if (!v){ DB.visits[cod] = []; }
@@ -1065,7 +1079,7 @@ function newVisit(cod){
   const arr = ensureVisitsArr(cod);
   const last = arr.length ? arr[arr.length - 1] : null;
   const gpsFija = getGpsGuardada(cod);
-  const nv = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: '', hora: '', estado: 'Pendiente', obs: '', gps: gpsFija ? { lat: gpsFija.lat, lng: gpsFija.lng, acc: gpsFija.acc || 0, time: gpsFija.time || '' } : null, days: last ? (last.days || []).slice() : [], updatedAt: new Date().toISOString() };
+  const nv = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: '', hora: '', tipoVisita: 'Rutina', estado: 'Pendiente', obs: '', gps: gpsFija ? { lat: gpsFija.lat, lng: gpsFija.lng, acc: gpsFija.acc || 0, time: gpsFija.time || '' } : null, days: last ? (last.days || []).slice() : [], updatedAt: new Date().toISOString() };
   arr.push(nv);
   editingVisitId[cod] = nv.id;
   formsAbiertos.add(cod);
@@ -1268,7 +1282,7 @@ function collectMasterUpdates(){
     if (latest.estado === 'Realizada') estadoHoja = 'Completado';
     else if (latest.estado === 'Pospuesta') estadoHoja = 'Reprogramado';
     else if (latest.estado === 'No Realizada') estadoHoja = 'No Realizada';
-    updates.push({ codigo: String(c.codigo).trim(), nombre: c.nombre, direccion: c.direccion || '', fechaVisita: todasFechas, fechasIndividuales, estado: estadoHoja, observaciones: latest.obs || '', tipo: latest.estado || 'Pendiente' });
+    updates.push({ codigo: String(c.codigo).trim(), nombre: c.nombre, direccion: c.direccion || '', fechaVisita: todasFechas, fechasIndividuales, estado: estadoHoja, observaciones: latest.obs || '', tipo: tipoClienteDe(c), tipoVisita: tipoVisitaDe(latest) });
   });
   return updates;
 }
@@ -1424,7 +1438,7 @@ function buildIndex(){
   const photosMeta = {};
   for (const codigo in DB.photos) photosMeta[codigo] = safeArray(DB.photos[codigo]).map(p => ({ filename: p.filename, fecha: p.fecha || '', fechaVisita: p.fechaVisita || '', visitId: p.visitId || null, fileId: p.fileId || null }));
   const visitsSerializable = {};
-  for (const codigo in DB.visits){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; visitsSerializable[codigo] = arr.filter(v => v && typeof v === 'object').map(v => { const vOut = { id: v.id, fecha: v.fecha||'', hora: v.hora||'', estado: v.estado||'Pendiente', obs: v.obs||'', gps: v.gps||null, days: v.days||[], updatedAt: v.updatedAt || '' }; if (v.firma && v.firma.filename) vOut.firma = { filename: v.firma.filename, fileId: v.firma.fileId || null, fechaVisita: v.firma.fechaVisita || v.fecha || '', synced: true }; return vOut; }); }
+  for (const codigo in DB.visits){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; visitsSerializable[codigo] = arr.filter(v => v && typeof v === 'object').map(v => { const vOut = { id: v.id, fecha: v.fecha||'', hora: v.hora||'', tipoVisita: tipoVisitaDe(v), estado: v.estado||'Pendiente', obs: v.obs||'', gps: v.gps||null, days: v.days||[], updatedAt: v.updatedAt || '' }; if (v.firma && v.firma.filename) vOut.firma = { filename: v.firma.filename, fileId: v.firma.fileId || null, fechaVisita: v.firma.fechaVisita || v.fecha || '', synced: true }; return vOut; }); }
   const evidMeta = {};
   const sup = DB.evid['super_sig'];
   if (sup && typeof sup === 'object' && sup.filename) evidMeta.super_sig = { filename: sup.filename, fileId: sup.fileId || null };
@@ -1681,7 +1695,7 @@ function buildDataResumenMes(mesAnio){
   allClients().forEach(c => {
     const arr = getVisits(c.codigo);
     const visitasMes = mesAnio ? arr.filter(v => v && visitaEnMesAnio(v, mesAnio)) : arr.slice();
-    if (visitasMes.length > 0){ data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', visitas: visitasMes }); }
+    if (visitasMes.length > 0){ data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', tipo: c.tipo || '', visitas: visitasMes }); }
   });
   return data;
 }
@@ -1695,7 +1709,7 @@ function buildDataFiltroFechas(){
       if (filtroHasta && v.fecha > filtroHasta) return false;
       return true;
     });
-    if (visitasRango.length > 0){ data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', visitas: visitasRango }); }
+    if (visitasRango.length > 0){ data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', tipo: c.tipo || '', visitas: visitasRango }); }
   });
   return data;
 }
@@ -1726,7 +1740,7 @@ function buildTextoResumen(clienteData, titulo){
     txt += '▸ #' + c.codigo + ' ' + c.nombre + '\n';
     c.visitas.forEach(v => {
       const fecha = v.fecha ? v.fecha.split('-').reverse().join('/') : 'Sin fecha';
-      txt += '   📅 ' + fecha + (v.hora ? ' ' + v.hora : '') + ' · ' + (v.estado || 'Pendiente') + '\n';
+      txt += '   📅 ' + fecha + (v.hora ? ' ' + v.hora : '') + ' · ' + (v.estado || 'Pendiente') + ' · ' + tipoVisitaDe(v) + ' (' + tipoClienteDe(c) + ')' + '\n';
       if (v.obs) txt += '   📝 ' + v.obs + '\n';
     });
     txt += '\n';
@@ -1744,15 +1758,15 @@ function buildExcelResumen(clienteData, titulo, nombreHoja){
   A.push(['Realizadas', st.realizadas, '', 'Pendientes', st.pendientes]);
   A.push(['No realizadas', st.noRealizadas, '', 'Pospuestas', st.pospuestas]);
   A.push(['']);
-  A.push(['Código','Cliente','Dirección','Fecha','Hora','Estado','Observaciones']);
+  A.push(['Código','Cliente','Dirección','Tipo cliente','Fecha','Hora','Estado','Tipo visita','Observaciones']);
   clienteData.forEach(c => {
     c.visitas.forEach(v => {
-      A.push([c.codigo, c.nombre, c.direccion, v.fecha || '', v.hora || '', v.estado || 'Pendiente', v.obs || '']);
+      A.push([c.codigo, c.nombre, c.direccion, tipoClienteDe(c), v.fecha || '', v.hora || '', v.estado || 'Pendiente', tipoVisitaDe(v), v.obs || '']);
     });
   });
   const ws = XLSX.utils.aoa_to_sheet(A);
-  ws['!cols'] = [{wch:12},{wch:38},{wch:45},{wch:13},{wch:8},{wch:14},{wch:60}];
-  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}},{s:{r:3,c:0},e:{r:3,c:6}}];
+  ws['!cols'] = [{wch:12},{wch:38},{wch:45},{wch:18},{wch:13},{wch:8},{wch:14},{wch:20},{wch:60}];
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:1,c:0},e:{r:1,c:8}},{s:{r:3,c:0},e:{r:3,c:8}}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, nombreHoja || 'Resumen');
   return wb;
@@ -1938,6 +1952,7 @@ function buildVisitFormHTML(cod, nombre, current){
   const gpsTxt = gpsFija ? (Number(gpsFija.lat).toFixed(6) + ', ' + Number(gpsFija.lng).toFixed(6)) : '';
   return `
         <div class="row2"><div><label>FECHA DE VISITA 📅</label><input type="date" id="f-${cod}" value="${current.fecha||''}" onchange="onFechaChange('${cod}')"></div><div><label>HORA</label><input type="time" id="h-${cod}" value="${current.hora||''}" onchange="saveVisit('${cod}')"></div></div>
+        <label>TIPO DE VISITA</label><select id="tv-${cod}" onchange="saveVisit('${cod}')">${TIPOS_VISITA.map(o=>`<option ${o===tipoVisitaDe(current)?'selected':''}>${o}</option>`).join('')}</select>
         <label>ESTADO</label><select id="e-${cod}" onchange="saveVisit('${cod}')">${['Pendiente','Realizada','No Realizada','Pospuesta'].map(o=>`<option ${o===current.estado?'selected':''}>${o}</option>`).join('')}</select>
         <label>OBSERVACIONES</label><textarea id="o-${cod}" placeholder="..." oninput="onObsInput('${cod}', this.value)">${current.obs||''}</textarea>
         <label>FIRMA DEL CLIENTE</label><canvas class="sig" id="sig-${cod}"></canvas>
@@ -2111,7 +2126,7 @@ function toggleForm(cod){
     formsAbiertos.delete(cod);
   }
 }
-function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; const fEl = document.getElementById('f-' + cod); if (fEl) v.fecha = fEl.value; const hEl = document.getElementById('h-' + cod); if (hEl) v.hora = hEl.value; const eEl = document.getElementById('e-' + cod); if (eEl) v.estado = eEl.value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
+function saveVisit(cod){ const v = getCurrentVisit(cod); if (!v) return; const fEl = document.getElementById('f-' + cod); if (fEl) v.fecha = fEl.value; const hEl = document.getElementById('h-' + cod); if (hEl) v.hora = hEl.value; const tvEl = document.getElementById('tv-' + cod); if (tvEl) v.tipoVisita = tvEl.value; const eEl = document.getElementById('e-' + cod); if (eEl) v.estado = eEl.value; const obsEl = document.getElementById('o-' + cod); if (obsEl) v.obs = obsEl.value; v.updatedAt = new Date().toISOString(); save(); updatePhotoReq(cod); }
 
 function addClient(){
   const cod = document.getElementById('ncCodigo').value.trim();
@@ -2119,9 +2134,10 @@ function addClient(){
   const dir = document.getElementById('ncDir').value.trim();
   const ced = document.getElementById('ncCedula').value.trim();
   const tel = document.getElementById('ncTelefono').value.trim();
+  const tipo = document.getElementById('ncTipo').value.trim();
   if (!cod || !nom){ toast('⚠ Código y nombre obligatorios'); return; }
   if (allClients().some(c => c.codigo === cod)){ toast('⚠ Ya existe'); return; }
-  DB.customClients.push({ codigo: cod, nombre: nom, direccion: dir || '—', cedula: ced, telefono: tel, custom: true });
+  DB.customClients.push({ codigo: cod, nombre: nom, direccion: dir || '—', cedula: ced, telefono: tel, tipo: normalizarTipoCliente(tipo), custom: true });
   DB.visits[cod] = [];
   save();
   document.getElementById('ncCodigo').value = '';
@@ -2129,6 +2145,7 @@ function addClient(){
   document.getElementById('ncDir').value = '';
   document.getElementById('ncCedula').value = '';
   document.getElementById('ncTelefono').value = '';
+  document.getElementById('ncTipo').value = 'ZONA WIFI';
   document.getElementById('addClientForm').style.display = 'none';
   renderAgenda();
   toast('✓ Cliente agregado');
@@ -2143,6 +2160,7 @@ function editClient(cod){
   document.getElementById('ecDir').value = c.direccion || '';
   document.getElementById('ecCedula').value = c.cedula || '';
   document.getElementById('ecTelefono').value = c.telefono || '';
+  const ecTipo = document.getElementById('ecTipo'); if (ecTipo) ecTipo.value = tipoClienteDe(c);
   document.getElementById('editClientModal').classList.add('open');
 }
 function deleteClient(cod){
@@ -2184,6 +2202,7 @@ async function saveClientEdit(){
   const newDir = document.getElementById('ecDir').value.trim();
   const newCed = document.getElementById('ecCedula').value.trim();
   const newTel = document.getElementById('ecTelefono').value.trim();
+  const ecTipo = document.getElementById('ecTipo'); const newTipo = normalizarTipoCliente(ecTipo ? ecTipo.value : '');
   if (!newCod || !newNom){ toast('⚠ Código y nombre son obligatorios'); return; }
   const cambioCodigo = (newCod !== oldCod);
   if (cambioCodigo){
@@ -2201,8 +2220,8 @@ async function saveClientEdit(){
     delete DB.photos[oldCod];
   }
   const isCustom = (DB.customClients || []).find(c => String(c.codigo).trim() === oldCod);
-  if (isCustom){ isCustom.codigo = newCod; isCustom.nombre = newNom; isCustom.direccion = newDir || '—'; isCustom.cedula = newCed; isCustom.telefono = newTel; }
-  else { if (!DB.hiddenClients.includes(oldCod)) DB.hiddenClients.push(oldCod); const dup = (DB.customClients || []).find(c => String(c.codigo).trim() === newCod); if (dup){ dup.nombre = newNom; dup.direccion = newDir || '—'; dup.cedula = newCed; dup.telefono = newTel; } else DB.customClients.push({ codigo: newCod, nombre: newNom, direccion: newDir || '—', cedula: newCed, telefono: newTel, custom: true }); }
+  if (isCustom){ isCustom.codigo = newCod; isCustom.nombre = newNom; isCustom.direccion = newDir || '—'; isCustom.cedula = newCed; isCustom.telefono = newTel; isCustom.tipo = newTipo; }
+  else { if (!DB.hiddenClients.includes(oldCod)) DB.hiddenClients.push(oldCod); const dup = (DB.customClients || []).find(c => String(c.codigo).trim() === newCod); if (dup){ dup.nombre = newNom; dup.direccion = newDir || '—'; dup.cedula = newCed; dup.telefono = newTel; dup.tipo = newTipo; } else DB.customClients.push({ codigo: newCod, nombre: newNom, direccion: newDir || '—', cedula: newCed, telefono: newTel, tipo: newTipo, custom: true }); }
   await save();
   renderAgenda();
   document.getElementById('editClientModal').classList.remove('open');
@@ -2823,6 +2842,40 @@ function lightboxNav(dir){
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') lightboxNav(-1); if (e.key === 'ArrowRight') lightboxNav(1); });
 document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
 
+function contarTiposResumen(mesFiltro){
+  const porCliente = {}, porVisita = {};
+  TIPOS_CLIENTE.forEach(t => { porCliente[t] = 0; });
+  TIPOS_VISITA.forEach(t => { porVisita[t] = 0; });
+  allClients().forEach(c => {
+    getVisits(c.codigo).forEach(v => {
+      if (!v) return;
+      if (mesFiltro && !visitaEnMesAnio(v, mesFiltro)) return;
+      porCliente[tipoClienteDe(c)]++;
+      porVisita[tipoVisitaDe(v)]++;
+    });
+  });
+  return { porCliente, porVisita };
+}
+function renderTiposResumen(mesFiltro){
+  const box = document.getElementById('tiposResumenBox');
+  if (!box) return;
+  const { porCliente, porVisita } = contarTiposResumen(mesFiltro);
+  const total = TIPOS_CLIENTE.reduce((s, t) => s + porCliente[t], 0);
+  if (!total){ box.innerHTML = '<span style="color:var(--muted);font-size:.8rem">Sin visitas en este período.</span>'; return; }
+  const frasesCliente = TIPOS_CLIENTE.filter(t => porCliente[t] > 0).map(t => porCliente[t] + ' ' + PLURAL_TIPO_CLIENTE[t]);
+  const frasesVisita = TIPOS_VISITA.filter(t => porVisita[t] > 0).map(t => porVisita[t] + ' ' + t.toLowerCase());
+  let html = '<div style="font-size:.8rem;line-height:1.6;margin-bottom:10px">✅ Se realizaron <b style="color:var(--accent2)">' + frasesCliente.join(', ') + '</b>.</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:.8rem;margin-bottom:12px">';
+  html += '<tr><th style="text-align:left;padding:5px;color:var(--accent);border-bottom:1px solid #334155">Tipo de cliente</th><th style="text-align:right;padding:5px;color:var(--accent);border-bottom:1px solid #334155">Visitas</th></tr>';
+  TIPOS_CLIENTE.forEach(t => { html += '<tr><td style="padding:4px 5px">' + t + '</td><td style="text-align:right;padding:4px 5px;font-weight:800">' + porCliente[t] + '</td></tr>'; });
+  html += '</table>';
+  html += '<div style="font-size:.8rem;line-height:1.6;margin-bottom:10px">🔧 Visitas por tipo: <b style="color:var(--accent)">' + (frasesVisita.length ? frasesVisita.join(', ') : 'sin datos') + '</b>.</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:.8rem">';
+  html += '<tr><th style="text-align:left;padding:5px;color:var(--purple);border-bottom:1px solid #334155">Tipo de visita</th><th style="text-align:right;padding:5px;color:var(--purple);border-bottom:1px solid #334155">Cantidad</th></tr>';
+  TIPOS_VISITA.forEach(t => { html += '<tr><td style="padding:4px 5px">' + t + '</td><td style="text-align:right;padding:4px 5px;font-weight:800">' + porVisita[t] + '</td></tr>'; });
+  html += '</table>';
+  box.innerHTML = html;
+}
 function renderResumen(){
   const sel = document.getElementById('mesAnio2');
   if (sel){
@@ -2869,6 +2922,7 @@ function renderResumen(){
   const cs = document.getElementById('compSelect'); if (cs) cs.value = DB.comp || 'media';
   const as = document.getElementById('autoSyncSelect'); if (as) as.value = DB.autoSync || 'on';
   updateStorageInfo();
+  renderTiposResumen(mesFiltro);
   document.getElementById('daysSummary').innerHTML = DIAS.map((d, i) => `<div style="flex:1;text-align:center"><div style="font-size:.62rem;color:var(--muted)">${d}</div><div style="font-size:1.2rem;font-weight:800;color:var(--accent)">${dayCount[i]}</div></div>`).join('');
   initSig('sigSuper');
   updateSyncStatusBox();
@@ -3101,6 +3155,8 @@ function generarTextoVisita(cliente, v, nFotos, cod){
   txt += '📅 Fecha: ' + fecha + '\n';
   txt += '⏰ Hora: ' + hora + '\n';
   txt += '✅ Estado: ' + estado + '\n';
+  txt += '🏷️ Tipo de cliente: ' + tipoClienteDe(cliente) + '\n';
+  txt += '🔧 Tipo de visita: ' + tipoVisitaDe(v) + '\n';
   if (nFotos > 0) txt += '📷 Fotos: ' + nFotos + '\n';
   txt += '\n📝 Observaciones:\n' + obs + '\n';
   return txt;
@@ -3388,10 +3444,10 @@ function buildDataReporteFotografico(usarRango, opts){
         porFecha[f].push(p);
       });
       Object.keys(porFecha).sort().forEach(f => {
-        items.push({ visita: { id: 'evid_' + f, fecha: (f === 'sin-fecha' ? '' : f), hora: '', estado: 'Realizada', obs: '', tipo: '', gps: getGpsGuardada(c.codigo) || null, days: [] }, fotos: porFecha[f] });
+        items.push({ visita: { id: 'evid_' + f, fecha: (f === 'sin-fecha' ? '' : f), hora: '', estado: 'Realizada', obs: '', tipo: tipoClienteDe(c), tipoVisita: 'Rutina', gps: getGpsGuardada(c.codigo) || null, days: [] }, fotos: porFecha[f] });
       });
     }
-    if (items.length) data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', cedula: c.cedula || '', telefono: c.telefono || '', items: items });
+    if (items.length) data.push({ codigo: c.codigo, nombre: c.nombre, direccion: c.direccion || '', cedula: c.cedula || '', telefono: c.telefono || '', tipo: c.tipo || '', items: items });
   });
   return data;
 }
@@ -3637,7 +3693,8 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
           { label: 'SERIAL DE ONU/ONT:', value: v.serialOnu || '—' },
           { label: 'FECHA:', value: fechaTxt },
           { label: 'CARPETA DRIVE:', value: '🔗 Abrir carpeta', isLink: true },
-          { label: 'TIPO DE PLAN', value: v.tipo || 'ZONA WIFI' }
+          { label: 'TIPO DE CLIENTE', value: tipoClienteDe(d) },
+          { label: 'TIPO DE VISITA', value: tipoVisitaDe(v) }
       ];
       dataRows.forEach(dr => {
           cell = ws.getCell(R, 3);
@@ -3752,7 +3809,7 @@ async function generarInformeIA(usarRango) {
   btn.textContent = '🧠 Redactando informe... (Espera)';
   let datosVisitas = '';
   let count = 0, totalR = 0, totalP = 0, totalN = 0, totalS = 0;
-  let tipoCount = {};
+  let tipoCount = {}, tipoVisitaCount = {};
   let visitasEnviadas = [];
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
@@ -3763,10 +3820,12 @@ async function generarInformeIA(usarRango) {
       else if (v.estado === 'Pendiente') totalP++; 
       else if (v.estado === 'No Realizada') totalN++; 
       else totalS++;
-      const tipo = v.tipo || 'ZONA WIFI';
+      const tipo = tipoClienteDe(c);
       tipoCount[tipo] = (tipoCount[tipo] || 0) + 1;
+      const tv = tipoVisitaDe(v);
+      tipoVisitaCount[tv] = (tipoVisitaCount[tv] || 0) + 1;
       if (v.obs && v.obs.length > 5) {
-        visitasEnviadas.push(`- Cliente: ${c.nombre} | Fecha: ${v.fecha} | Estado: ${v.estado} | Obs: ${v.obs}`);
+        visitasEnviadas.push(`- Cliente: ${c.nombre} | Fecha: ${v.fecha} | Estado: ${v.estado} | Tipo cliente: ${tipo} | Tipo visita: ${tv} | Obs: ${v.obs}`);
       }
     });
   });
@@ -3780,13 +3839,17 @@ async function generarInformeIA(usarRango) {
   const prompt = `Eres un Ingeniero de Redes NOC Nivel 2 de la empresa WAVE (Internet de Alta Velocidad). Redacta un informe técnico gerencial.
   PERÍODO: ${periodoTxt}
   TOTAL VISITAS: ${count}
-  - Realizadas: ${totalR}
-  - Pendientes: ${totalP}
-  MUESTRA DE OBSERVACIONES TÉCNICAS:
+   - Realizadas: ${totalR}
+   - Pendientes: ${totalP}
+   - No realizadas: ${totalN}
+   - Pospuestas: ${totalS}
+   VISITAS POR TIPO DE CLIENTE: ${JSON.stringify(tipoCount)}
+   VISITAS POR TIPO DE VISITA: ${JSON.stringify(tipoVisitaCount)}
+   MUESTRA DE OBSERVACIONES TÉCNICAS:
   ${datosVisitas}
   Responde ÚNICAMENTE con un objeto JSON válido (sin texto extra, sin \`\`\`json) con esta estructura exacta:
   {
-    "resumen_ejecutivo": "Redacta 4 o 5 párrafos largos y profesionales. Menciona que WAVE Internet de Alta Velocidad realizó el total de visitas (${count}), detalla el porcentaje de ejecución, los sectores atendidos (PYME, Zona WiFi, Residencial, Enlace Dedicado), el contexto general del período y la calidad operativa.",
+    "resumen_ejecutivo": "Redacta 4 o 5 párrafos largos y profesionales. Menciona que WAVE Internet de Alta Velocidad realizó el total de visitas (${count}), detalla el porcentaje de ejecución, los sectores atendidos según VISITAS POR TIPO DE CLIENTE (DEDICADO, GUBERNAMENTAL, ZONA WIFI, PYME, RESIDENCIAL, con sus cantidades reales), las visitas por TIPO DE VISITA (Rutina, Evento, Instalación, Avería por reporte, con sus cantidades reales), el contexto general del período y la calidad operativa.",
     "matriz_incidencias": "Genera una tabla HTML (<table style='border-collapse: collapse; width: 100%; border: 3px solid #8A2BE2;'>) con 4 columnas. Usa este estilo para las cabeceras: <th style='background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 8px;'>. Para las celdas: <td style='border: 2px solid #8A2BE2; padding: 8px;'>. Agrupa las fallas basándote en las observaciones (ej: Capa física GPON, Vulnerabilidad eléctrica, Enlace internacional).",
     "conclusiones": "Redacta una lista (usando etiquetas <ol> y <li>) con 6 conclusiones y recomendaciones profesionales detalladas para el próximo período."
   }`;
@@ -3823,7 +3886,7 @@ async function generarInformeIA(usarRango) {
     }
     let textoLimpio = data.choices[0].message.content.trim();
     await construirInformeWord(textoLimpio, periodoTxt, { 
-        total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS, tipos: tipoCount
+        total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS, tipos: tipoCount, tiposVisita: tipoVisitaCount
     }, usarRango);
     toast('✓ Informe generado con éxito');
   } catch (error) {
@@ -3865,13 +3928,14 @@ function generarSeccionDetallePorFecha(mes, usarRango) {
     html += `<h3 style="color:#333; margin-top:30px; border-bottom: 2px solid #FF1493; display: inline-block; padding-bottom: 5px;">${fechaBonita}</h3>`;
     html += `<p><b>Resumen de Visitas del Día:</b></p>`;
     html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:10pt;">';
-    html += '<tr><th style="background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 6px; text-align:left;">#</th><th style="background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 6px; text-align:left;">Abonado</th><th style="background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 6px; text-align:left;">Contrato</th><th style="background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 6px; text-align:left;">Tipo de Servicio</th></tr>';
+    html += '<tr><th style="background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 6px; text-align:left;">#</th><th style="background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 6px; text-align:left;">Abonado</th><th style="background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 6px; text-align:left;">Contrato</th><th style="background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 6px; text-align:left;">Tipo de Cliente</th><th style="background-color: #FF1493; color: white; border: 2px solid #8A2BE2; padding: 6px; text-align:left;">Tipo de Visita</th></tr>';
     items.forEach(item => {
       html += `<tr>
         <td style="border: 2px solid #8A2BE2; padding: 6px;">2.${contadorVisita++}</td>
         <td style="border: 2px solid #8A2BE2; padding: 6px;">${item.cliente.nombre}</td>
         <td style="border: 2px solid #8A2BE2; padding: 6px;">${item.cliente.codigo}</td>
-        <td style="border: 2px solid #8A2BE2; padding: 6px;">${item.visita.tipo || 'Zona WiFi / PYME'}</td>
+        <td style="border: 2px solid #8A2BE2; padding: 6px;">${tipoClienteDe(item.cliente)}</td>
+        <td style="border: 2px solid #8A2BE2; padding: 6px;">${tipoVisitaDe(item.visita)}</td>
       </tr>`;
     });
     html += '</table>';
@@ -3883,16 +3947,22 @@ function generarSeccionDetallePorFecha(mes, usarRango) {
       html += `<div style="margin-bottom:30px;">`;
       html += `<h4 style="color:#FF1493; margin-bottom:8px; font-size:12pt;">2.${numVisita}. ${c.nombre}</h4>`;
       html += `<table style="width:100%; border-collapse:collapse; margin-bottom:10px; font-size:9.5pt;">`;
-      html += `<tr><td style="width:15%; padding:5px; border: 2px solid #8A2BE2; background:#F8F0FF; font-weight:bold;">Contrato:</td><td style="width:35%; padding:5px; border: 2px solid #8A2BE2;">${c.codigo}</td><td style="width:15%; padding:5px; border: 2px solid #8A2BE2; background:#F8F0FF; font-weight:bold;">Tipo:</td><td style="width:35%; padding:5px; border: 2px solid #8A2BE2;">${v.tipo || 'Zona WiFi / PYME'}</td></tr>`;
-      html += `<tr><td style="padding:5px; border: 2px solid #8A2BE2; background:#F8F0FF; font-weight:bold;">Dirección:</td><td colspan="3" style="padding:5px; border: 2px solid #8A2BE2;">${c.direccion || 'No registrada'}</td></tr>`;
+      html += `<tr><td style="width:15%; padding:5px; border: 2px solid #8A2BE2; background:#F8F0FF; font-weight:bold;">Contrato:</td><td style="width:35%; padding:5px; border: 2px solid #8A2BE2;">${c.codigo}</td><td style="width:15%; padding:5px; border: 2px solid #8A2BE2; background:#F8F0FF; font-weight:bold;">Tipo de cliente:</td><td style="width:35%; padding:5px; border: 2px solid #8A2BE2;">${tipoClienteDe(c)}</td></tr>`;
+      html += `<tr><td style="width:15%; padding:5px; border: 2px solid #8A2BE2; background:#F8F0FF; font-weight:bold;">Tipo de visita:</td><td style="width:35%; padding:5px; border: 2px solid #8A2BE2;">${tipoVisitaDe(v)}</td><td style="width:15%; padding:5px; border: 2px solid #8A2BE2; background:#F8F0FF; font-weight:bold;">Dirección:</td><td style="width:35%; padding:5px; border: 2px solid #8A2BE2;">${c.direccion || 'No registrada'}</td></tr>`;
       html += `<tr><td style="padding:5px; border: 2px solid #8A2BE2; background:#F8F0FF; font-weight:bold;">Fecha/Hora:</td><td style="padding:5px; border: 2px solid #8A2BE2;">${v.fecha.split('-').reverse().join('/')} — ${v.hora || 'Sin registro'}</td><td style="padding:5px; border: 2px solid #8A2BE2; background:#F8F0FF; font-weight:bold;">Estatus:</td><td style="padding:5px; border: 2px solid #8A2BE2;">${v.estado}</td></tr>`;
       html += `</table>`;
+      const tvObjetivo = tipoVisitaDe(v);
       let objetivo = "Inspección de rutina y verificación integral del estado del servicio contratado.";
-      let obsText = (v.obs || '').toLowerCase();
-      if (obsText.includes('falla') || obsText.includes('lentitud') || obsText.includes('problema')) {
-        objetivo = "Diagnóstico y corrección de falla reportada en el servicio.";
-      } else if (obsText.includes('cambio') || obsText.includes('instalación') || obsText.includes('migración')) {
-        objetivo = "Aprovisionamiento, migración tecnológica o instalación de equipos.";
+      if (tvObjetivo === 'Instalación') objetivo = "Aprovisionamiento, instalación y puesta en marcha de equipos y servicios.";
+      else if (tvObjetivo === 'Evento') objetivo = "Soporte técnico presencial y garantía de conectividad durante evento.";
+      else if (tvObjetivo === 'Avería por reporte') objetivo = "Diagnóstico y corrección de avería reportada por el cliente.";
+      else {
+        let obsText = (v.obs || '').toLowerCase();
+        if (obsText.includes('falla') || obsText.includes('lentitud') || obsText.includes('problema')) {
+          objetivo = "Diagnóstico y corrección de falla reportada en el servicio.";
+        } else if (obsText.includes('cambio') || obsText.includes('instalación') || obsText.includes('migración')) {
+          objetivo = "Aprovisionamiento, migración tecnológica o instalación de equipos.";
+        }
       }
       html += `<p style="margin:2px 0; font-size:10pt;"><b>Objetivo:</b> ${objetivo}</p>`;
       html += `<p style="margin:5px 0; font-size:10pt;"><b>Actividades y Hallazgos:</b></p>`;
@@ -4002,13 +4072,14 @@ async function construirInformeWord(textoIA, mes, stats, usarRango) {
 }
 async function generarSeccionGraficos(mes, stats, usarRango) {
   const pieImg = generarPieBase64(stats);
-  const tipoCount = {};
+  const tipoCount = {}, tipoVisitaCount = {};
   allClients().forEach(c => {
     const visitas = getVisits(c.codigo);
     const visitasMes = visitas.filter(v => visitaDentroDePeriodo(v, mes, usarRango));
-    visitasMes.forEach(v => { const tipo = v.tipo || 'ZONA WIFI'; tipoCount[tipo] = (tipoCount[tipo] || 0) + 1; });
+    visitasMes.forEach(v => { const tipo = tipoClienteDe(c); tipoCount[tipo] = (tipoCount[tipo] || 0) + 1; const tv = tipoVisitaDe(v); tipoVisitaCount[tv] = (tipoVisitaCount[tv] || 0) + 1; });
   });
-  const barImg = generarBarBase64(tipoCount);
+  const barImg = generarBarBase64(tipoCount, 'Distribución por tipo de cliente');
+  const barVisitaImg = generarBarBase64(tipoVisitaCount, 'Distribución por tipo de visita');
   const fechaCount = {};
   const diaCount = [0,0,0,0,0,0,0];
   allClients().forEach(c => {
@@ -4039,6 +4110,7 @@ async function generarSeccionGraficos(mes, stats, usarRango) {
     + '<td>' + tablaEstatus + '</td>'
     + '</tr></table>';
   html += '<div style="text-align:center; margin-top:30px;"><img src="' + barImg + '" class="img-grafica"></div>';
+  html += '<div style="text-align:center; margin-top:30px;"><img src="' + barVisitaImg + '" class="img-grafica"></div>';
   html += '<div style="text-align:center; margin-top:30px;"><img src="' + lineImg + '" class="img-grafica"></div>';
   html += '<div style="text-align:center; margin-top:30px;"><img src="' + diaImg + '" class="img-grafica"></div>';
   return html;
@@ -4138,14 +4210,14 @@ function generarDiaBase64(diaCount) {
   });
   return c.toDataURL('image/png');
 }
-function generarBarBase64(counts) {
+function generarBarBase64(counts, titulo) {
   const W = 600, H = 400;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   ctx.fillStyle = '#1e293b'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
-  ctx.fillText('Distribución por tipo de servicio', W / 2, 25);
+  ctx.fillText(titulo || 'Distribución por tipo de cliente', W / 2, 25);
   if (!entries.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '14px Arial'; ctx.fillText('Sin datos', W / 2, 200); return c.toDataURL('image/png'); }
   const max = Math.max(...entries.map(e => e[1]));
   const padL = 200, padR = 40, padT = 50, padB = 30;

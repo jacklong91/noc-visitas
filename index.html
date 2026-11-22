@@ -736,8 +736,8 @@ function __reporteSinTiempo(){ return !!__reporteDeadline && Date.now() > __repo
 function isOnline(){ return navigator.onLine !== false; }
 function safeArray(arr, requireFilename){ if (!Array.isArray(arr)) return []; return arr.filter(item => { if (!item || typeof item !== 'object') return false; if (requireFilename && !item.filename) return false; return true; }); }
 function getMesAnioActual(){ const d = new Date(); return MESES_ES[d.getMonth()] + ' ' + d.getFullYear(); }
-function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 3600000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
-function getDeletionsList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}')); } catch(e){ return []; } }
+function markVisitDeleted(visitId){ if (!visitId) return; try { const now = Date.now(); const deleted = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); for (const id in deleted){ if (now - deleted[id] > 604800000) delete deleted[id]; } deleted[visitId] = now; localStorage.setItem('nocDeletedVisits', JSON.stringify(deleted)); } catch(e){} }
+function getDeletionsList(){ try { const now = Date.now(); const all = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}'); return Object.keys(all).filter(id => now - all[id] <= 604800000); } catch(e){ return []; } }
 function clearDeletionsList(){ try { localStorage.removeItem('nocDeletedVisits'); } catch(e){} }
 function markPhotoDeleted(codigo, filename){ if (!codigo || !filename) return; try { const key = String(codigo).trim() + '|' + filename; const deleted = JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}'); deleted[key] = Date.now(); localStorage.setItem('nocDeletedPhotos', JSON.stringify(deleted)); } catch(e){} }
 function getDeletedPhotosList(){ try { return Object.keys(JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}')); } catch(e){ return []; } }
@@ -1379,12 +1379,13 @@ function applyRemoteIndex(remote){
   const remoteVisits = remote.visits || {};
   const remotePhotos = remote.photosMeta || {};
   const allCodes = new Set([...Object.keys(remoteVisits), ...Object.keys(DB.visits || {})]);
+  const deletedVisitsSet = new Set(getDeletionsList());
   for (const cod of allCodes){
     const rArr = Array.isArray(remoteVisits[cod]) ? remoteVisits[cod] : [];
     const lArr = Array.isArray(DB.visits[cod]) ? DB.visits[cod] : [];
     const byId = {};
-    for (const v of lArr){ if (v && v.id) byId[v.id] = v; }
-    for (const v of rArr){ if (!v || !v.id) continue; const ex = byId[v.id]; if (!ex) { byId[v.id] = v; continue; } const rTs = v.updatedAt || ''; const lTs = ex.updatedAt || ''; if (rTs >= lTs) byId[v.id] = Object.assign({}, ex, v); }
+    for (const v of lArr){ if (v && v.id && !deletedVisitsSet.has(v.id)) byId[v.id] = v; }
+    for (const v of rArr){ if (!v || !v.id || deletedVisitsSet.has(v.id)) continue; const ex = byId[v.id]; if (!ex) { byId[v.id] = v; continue; } const rTs = v.updatedAt || ''; const lTs = ex.updatedAt || ''; if (rTs >= lTs) byId[v.id] = Object.assign({}, ex, v); }
     DB.visits[cod] = Object.values(byId);
   }
   const deletedPhotosSet = new Set(getDeletedPhotosList());
@@ -1404,7 +1405,7 @@ function applyRemoteIndex(remote){
   const ccMap = {}; for (const c of (DB.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = c; for (const c of (remote.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = c; DB.customClients = Object.values(ccMap);
   if (Array.isArray(remote.hiddenClients)){ const hs = new Set([...(DB.hiddenClients || []), ...remote.hiddenClients]); DB.hiddenClients = Array.from(hs); }
   DB.evidMeta = Object.assign({}, DB.evidMeta || {}, remote.evidMeta || {});
-  if (remote.month) DB.month = remote.month;
+  DB.month = getMesAnioActual();
   if (remote.resp) DB.resp = remote.resp;
   if (remote.comp) DB.comp = remote.comp;
   sanitizeDB(); renderActiveTab();

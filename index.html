@@ -1403,7 +1403,9 @@ function applyRemoteIndex(remote){
     DB.photos[cod] = Object.values(map);
   }
   const ccMap = {}; for (const c of (DB.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = c; for (const c of (remote.customClients || [])) if (c && c.codigo) ccMap[String(c.codigo)] = c; DB.customClients = Object.values(ccMap);
-  if (Array.isArray(remote.hiddenClients)){ const hs = new Set([...(DB.hiddenClients || []), ...remote.hiddenClients]); DB.hiddenClients = Array.from(hs); }
+  if (Array.isArray(remote.hiddenClients)){ const hs = new Set([...(DB.hiddenClients || []), ...remote.hiddenClients].map(x => String(x).trim())); DB.hiddenClients = Array.from(hs); }
+  const hiddenSet = new Set((DB.hiddenClients || []).map(x => String(x).trim()));
+  DB.customClients = (DB.customClients || []).filter(c => c && c.codigo && !hiddenSet.has(String(c.codigo).trim()));
   DB.evidMeta = Object.assign({}, DB.evidMeta || {}, remote.evidMeta || {});
   DB.month = getMesAnioActual();
   if (remote.resp) DB.resp = remote.resp;
@@ -1423,7 +1425,7 @@ async function pollForUpdates(){
     if (meta.updatedAt !== lastKnownRemoteTs){
       lastKnownRemoteTs = meta.updatedAt;
       if (meta.lastWriter === getDeviceId()) return;
-      await loadFromCloud();
+      await loadFromCloud(true);
     }
   } catch(e){}
 }
@@ -1468,11 +1470,11 @@ async function leerIndiceDrive(){
   } catch(e){}
   return await callBackendRead({ action:'getIndex' }, 25000, 25000, true);
 }
-async function loadFromCloud(){
+async function loadFromCloud(force){
   if (loadingFromCloud) return false;
   const lastLoad = parseInt(localStorage.getItem('nocLastLoadOk') || '0', 10);
   const MIN = 3 * 60 * 1000;
-  if (driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN) && localDataCompleta()){ setSyncBadge('✓ Drive reciente','ok'); updateSyncStatusBox(); return true; }
+  if (!force && driveStateReady && !isDirty() && (Date.now() - lastLoad < MIN) && localDataCompleta()){ setSyncBadge('✓ Drive reciente','ok'); updateSyncStatusBox(); return true; }
   loadingFromCloud = true;
   // Válvula de seguridad: si algo inesperado se cuelga, se libera la carga para poder reintentar.
   const watchdogCarga = setTimeout(() => {
@@ -1633,7 +1635,7 @@ async function downloadAllPending(silent){
 }
 async function downloadAllPhotos(){ await downloadAllPending(false); }
 async function downloadOne(codigo, filename, ev){ if (ev) ev.stopPropagation(); let itemRef = null; if (codigo === '_supervisor') itemRef = DB.evid['super_sig']; else { const lista = safeArray(DB.photos[codigo], true); itemRef = lista.find(p => p && p.filename === filename); if (!itemRef){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; for (const v of arr){ if (v && v.firma && typeof v.firma === 'object' && v.firma.filename === filename){ itemRef = v.firma; break; } } } } if (!itemRef){ toast('⚠ No encontrado'); return; } try { await fetchFileId(codigo, filename, itemRef); await saveLocal(); toast('✓ Lista'); if (evidCurrentFolder) renderEvidFolderContent(evidCurrentFolder); renderEvid(); } catch(err){ toast('⚠ ' + err.message); } }
-function allClients(){ const hidden = new Set(DB.hiddenClients || []); return CLIENTES.filter(c => !hidden.has(c.codigo)).concat(DB.customClients || []); }
+function allClients(){ const hidden = new Set((DB.hiddenClients || []).map(x => String(x).trim())); return CLIENTES.filter(c => !hidden.has(String(c.codigo).trim())).concat((DB.customClients || []).filter(c => !hidden.has(String(c.codigo).trim()))); }
 function statusClass(e){ return e === 'Realizada' ? 'r' : e === 'Pendiente' ? 'p' : e === 'No Realizada' ? 'n' : 's'; }
 function getClientByCode(cod){ const c = (DB.customClients || []).find(x => String(x.codigo).trim() === String(cod).trim()); if (c) return c; return CLIENTES.find(x => String(x.codigo).trim() === String(cod).trim()) || null; }
 function detectarFechaBusqueda(q){
@@ -2188,9 +2190,8 @@ function deleteClient(cod){
   const esCustom = (DB.customClients || []).find(x => String(x.codigo).trim() === String(cod).trim());
   if (esCustom){
     DB.customClients = DB.customClients.filter(x => String(x.codigo).trim() !== String(cod).trim());
-  } else if (!DB.hiddenClients.includes(cod)){
-    DB.hiddenClients.push(cod);
   }
+  if (!DB.hiddenClients.includes(cod)) DB.hiddenClients.push(cod);
   save();
   renderAgenda(); renderEvid(); renderResumen();
   toast('🗑️ Cliente eliminado: #' + cod);

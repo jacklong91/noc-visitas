@@ -4292,7 +4292,7 @@ async function initApp(){
   setTimeout(() => {
     if (!isOnline()) { setSyncBadge('📴 Sin conexión','warn'); return; }
     setSyncBadge('📥 Sync Drive…','info');
-    loadFromCloud().catch(() => { driveStateReady = true; setSyncBadge('✓ Local','ok'); });
+    loadFromCloud(true).catch(() => { driveStateReady = true; setSyncBadge('✓ Local','ok'); });
   }, 1500);
   // Fotos que quedaron pilladas en "⏳" de visitas anteriores: se reintentan solas.
   setTimeout(() => {

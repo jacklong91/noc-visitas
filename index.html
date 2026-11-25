@@ -3809,6 +3809,7 @@ async function generarInformeIA(usarRango) {
   if (btn.disabled) return;
   btn.disabled = true;
   btn.textContent = '🧠 Redactando informe... (Espera)';
+  driveProgress(5, '🧠 Generando informe…', 'Preparando datos de ' + periodoTxt, { limit: 20 });
   let datosVisitas = '';
   let count = 0, totalR = 0, totalP = 0, totalN = 0, totalS = 0;
   let tipoCount = {}, tipoVisitaCount = {};
@@ -3831,12 +3832,15 @@ async function generarInformeIA(usarRango) {
       }
     });
   });
-  datosVisitas = visitasEnviadas.slice(0, 50).join('\n'); 
-  if (count === 0) { 
-    toast('⚠ No hay visitas en este período'); 
-    btn.disabled = false; 
-    btn.textContent = '🧠 Redactar Informe (IA)'; 
-    return; 
+  datosVisitas = visitasEnviadas.slice(0, 50).join('\n');
+  driveProgress(25, '🧠 Generando informe…', count + ' visita(s) listas — enviando a la IA', { limit: 45 });
+  if (count === 0) {
+    toast('⚠ No hay visitas en este período');
+    driveProgress(100, '⚠ Sin visitas', 'No hay datos en el período seleccionado', { done: true });
+    hideDriveBannerSoon(1800);
+    btn.disabled = false;
+    btn.textContent = '🧠 Redactar Informe (IA)';
+    return;
   }
   const prompt = `Eres un Ingeniero de Redes NOC Nivel 2 de la empresa WAVE (Internet de Alta Velocidad). Redacta un informe técnico gerencial.
   PERÍODO: ${periodoTxt}
@@ -3870,6 +3874,7 @@ async function generarInformeIA(usarRango) {
     "max_tokens": 4096
   };
   try {
+    driveProgress(50, '🧠 Generando informe…', 'La IA está redactando (puede tardar 1-2 min)', { limit: 85 });
     const response = await fetch(URL, {
       method: "POST",
       headers: {
@@ -3887,12 +3892,17 @@ async function generarInformeIA(usarRango) {
       throw new Error("La IA devolvió una respuesta vacía.");
     }
     let textoLimpio = data.choices[0].message.content.trim();
-    await construirInformeWord(textoLimpio, periodoTxt, { 
+    driveProgress(90, '🧠 Generando informe…', 'Armando el documento Word', { limit: 96 });
+    await construirInformeWord(textoLimpio, periodoTxt, {
         total: count, realizadas: totalR, pendientes: totalP, noRealizadas: totalN, pospuestas: totalS, tipos: tipoCount, tiposVisita: tipoVisitaCount
     }, usarRango);
+    driveProgress(100, '✓ Informe listo', 'Descarga completada', { done: true });
+    hideDriveBannerSoon(2500);
     toast('✓ Informe generado con éxito');
   } catch (error) {
     console.error(error);
+    driveProgress(100, '⚠ No se pudo generar el informe', String(error && error.message || error).slice(0, 80), { error: true });
+    hideDriveBannerSoon(4000);
     toast('⚠ ' + error.message);
   } finally {
     btn.disabled = false;

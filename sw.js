@@ -1,5 +1,5 @@
 /* Service Worker — Registro de Visitas NOC N2 */
-const CACHE = 'noc-n2-v61';
+const CACHE = 'noc-n2-v62';
 const SHELL = [
   './',
   './index.html',
@@ -45,6 +45,17 @@ self.addEventListener('fetch', e => {
         }).catch(() => hit);
         return hit || net;
       })
+    );
+    return;
+  }
+
+  // HTML: siempre desde la red para no mostrar versiones antiguas
+  if (url.origin === location.origin && (url.pathname === '/' || url.pathname.endsWith('/index.html'))) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) { const clone = res.clone(); caches.open(CACHE).then(c => c.put(e.request, clone)); }
+        return res;
+      }).catch(() => caches.match(e.request) || caches.match('./index.html'))
     );
     return;
   }

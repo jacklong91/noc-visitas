@@ -147,16 +147,36 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .btn-photo{display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border:2px dashed rgba(255,255,255,0.2);border-radius:10px;color:var(--muted);font-size:.65rem;cursor:pointer;gap:3px}
 .btn-photo input{display:none}
 .btn-photo span{font-size:1.3rem}
-.mat-options{display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow-y:auto;padding:8px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08)}
+.mat-select{position:relative}
+.mat-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.3);color:var(--text);font-size:.88rem;cursor:pointer}
+.mat-toggle:hover{border-color:var(--accent)}
+.mat-toggle span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mat-toggle .mat-count{flex:0 0 auto;background:var(--accent);color:#04121f;border-radius:20px;padding:2px 8px;font-size:.68rem;font-weight:800}
+.mat-panel{display:none;position:absolute;z-index:60;left:0;right:0;top:calc(100% + 4px);padding:10px;border-radius:12px;background:#101728;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 34px rgba(0,0,0,.65)}
+.mat-panel.open{display:block}
+.mat-tools{display:flex;gap:6px;margin-bottom:8px}
+.mat-tools button{flex:1;padding:6px 4px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--text);font-size:.68rem;cursor:pointer}
+.mat-tools button:hover{border-color:var(--accent)}
+.mat-options{display:flex;flex-wrap:wrap;gap:6px;max-height:190px;overflow-y:auto;padding:6px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08)}
 .mat-chip{display:flex;align-items:center;gap:5px;padding:6px 9px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--muted);font-size:.72rem;cursor:pointer;user-select:none;-webkit-user-select:none}
 .mat-chip input{width:auto;accent-color:var(--accent);margin:0}
 .mat-chip.sel{background:rgba(56,189,248,.18);border-color:var(--accent);color:var(--text);font-weight:700}
+.mat-chip .u{font-size:.6rem;opacity:.65}
 .mat-empty{font-size:.75rem;color:var(--muted);padding:6px 2px}
 .mat-item{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;padding:8px;border-radius:10px;background:rgba(255,255,255,.04);margin-top:6px}
 .mat-item>div{flex:1;min-width:90px}
 .mat-item label{margin:0 0 4px;font-size:.68rem}
 .mat-item input{padding:8px 9px;font-size:.85rem}
 .mat-item>button{flex:0 0 auto;background:var(--danger);color:#fff;border:none;border-radius:8px;padding:0 10px;font-size:.75rem;cursor:pointer;height:36px}
+.inf-kpis{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.inf-kpi{flex:1;min-width:105px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px;text-align:center}
+.inf-kpi b{display:block;font-size:1.15rem;color:var(--accent2)}
+.inf-kpi small{font-size:.64rem;color:var(--muted)}
+.inf-wrap{max-height:48vh;overflow:auto;border-radius:10px;border:1px solid rgba(255,255,255,.1)}
+.tab-inf{width:100%;border-collapse:collapse;font-size:.72rem}
+.tab-inf th,.tab-inf td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;white-space:nowrap}
+.tab-inf th{position:sticky;top:0;background:#1b2138;color:var(--accent);z-index:1;font-size:.68rem}
+.tab-inf tr:hover td{background:rgba(255,255,255,.04)}
 .stat{display:flex;justify-content:space-between;padding:12px 4px;border-bottom:1px solid rgba(255,255,255,0.1);font-size:.9rem}
 .stat b{font-size:1rem}
 .big{font-size:2.2rem;font-weight:800;color:var(--accent2);text-align:center;padding:18px}
@@ -464,6 +484,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
         <button class="btn btn-primary" style="flex:1" onclick="generarReporteFotografico()">📸 Reporte Fotográfico (Excel)</button>
         <button class="btn btn-warn" style="flex:1" onclick="generarInformeIA()" id="btnIA">🧠 Redactar Informe (IA)</button>
       </div>
+      <button class="btn btn-green btn-block" style="margin-top:8px" onclick="abrirInformeMateriales()">🧰 Informe de materiales usados por visita</button>
     </div>
     <div class="card">
       <label>📊 GRÁFICA GENERAL — ESTADO DE VISITAS</label>
@@ -522,11 +543,9 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
       <div class="progress" style="margin-top:8px"><div id="syncProgress" style="width:0%"></div></div>
       <button class="btn btn-green btn-block" style="margin-top:12px" onclick="forceSyncNow()">🔄 Sincronizar ahora</button>
       <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="downloadAllPhotos()">⬇️ Preparar todas las imágenes</button>
-      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="liberarEspacioManual()">🧹 Liberar espacio</button>
       <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="testBackend()">🔬 Probar conexión al backend</button>
       <button class="btn btn-warn btn-block" style="margin-top:8px" onclick="reorganizeDrive()">🗂️ Reorganizar Drive</button>
       <button class="btn btn-warn btn-block" style="margin-top:8px" onclick="rescanDriveNow()">🔍 Reconstruir índice desde Drive</button>
-      <button class="btn btn-gray btn-block" style="margin-top:8px" onclick="cleanOrphanPhotos()">🧹 Limpiar fotos huérfanas</button>
       <button class="btn btn-red btn-block" style="margin-top:8px" onclick="forceDownloadFromDrive()">⬇️ Forzar descarga de Drive</button>
       <div id="driveStatus" style="font-size:.75rem;color:var(--muted);margin-top:8px"></div>
       <label style="margin-top:12px">Sincronización automática</label>
@@ -540,6 +559,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
     📂 Importar<input type="file" accept=".xlsx, .xls, .zip, .json" style="display:none" onchange="importarDatos(this)">
   </label>
   <button class="btn btn-green" onclick="exportExcel()">⬇️ Excel</button>
+  <button class="btn btn-primary" onclick="abrirInformeMateriales()">🧰 Materiales</button>
   <button class="btn btn-primary" onclick="exportPhotos()">📷 ZIP</button>
   <button class="btn btn-primary" id="syncBarBtn" onclick="forceSyncNow()">☁️ Sync</button>
   <button class="btn btn-red" onclick="resetAll()">🗑️ Eliminar</button>
@@ -658,6 +678,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
   </div>
 </div>
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
+<div class="modal-bg" id="materialesModal"><div class="modal" style="max-width:760px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🧰 Informe de materiales usados por visita</h3><button class="btn btn-gray btn-sm" onclick="cerrarInformeMateriales()">✕</button></div><div class="row2" style="align-items:end;margin-bottom:12px"><div><label>PERIODO</label><select id="matInfMes" onchange="renderInformeMateriales()"></select></div><div style="font-size:.72rem;color:var(--muted);line-height:1.5">Detalle por visita, cantidades y totales por material.</div></div><div id="materialesKpis" class="inf-kpis"></div><div class="inf-wrap" id="materialesPreview"></div><div class="row2" style="margin-top:14px"><button class="btn btn-green" style="flex:2" onclick="descargarInformeMaterialesExcel()">📥 Descargar Excel</button><button class="btn btn-gray" style="flex:1" onclick="cerrarInformeMateriales()">Cerrar</button></div></div></div>
 <div class="toast" id="toast"></div>
 <script src="./jszip.min.js"></script>
 <script>
@@ -1138,20 +1159,30 @@ function newVisit(cod){
 }
 
 function deleteVisit(cod, visitId){
-  if (!confirm('¿Eliminar esta VISITA del índice?\n\n• Solo se elimina del listado\n• Las FOTOS y FIRMAS NO se borran de Drive\n\n¿Continuar?')) return;
+  if (!confirm('¿Eliminar esta VISITA y sus FOTOS?\n\n• Se borran del listado y del dispositivo\n• Las fotos y firmas se eliminan de Drive al sincronizar\n\n¿Continuar?')) return;
   if (!DB.visits[cod] || !Array.isArray(DB.visits[cod])){ toast('⚠ No se pudo encontrar la lista de visitas'); return; }
   const arr = DB.visits[cod];
   const i = arr.findIndex(v => v && v.id === visitId);
   if (i < 0){ toast('⚠ Visita no encontrada'); return; }
+  const v = arr[i];
+  const fecha = v && v.fecha ? v.fecha : '';
+  const otraMismaFecha = arr.some(x => x && x !== v && x.fecha === fecha);
+  const fotos = safeArray(DB.photos[cod]).filter(p => p && (p.visitId === visitId || (!p.visitId && fecha && p.fechaVisita === fecha && !otraMismaFecha)));
   arr.splice(i, 1);
   if (editingVisitId[cod] === visitId) editingVisitId[cod] = arr.length ? arr[arr.length - 1].id : null;
   markVisitDeleted(visitId);
+  if (fotos.length){
+    const borrar = new Set(fotos.map(p => p.filename).filter(Boolean));
+    DB.photos[cod] = safeArray(DB.photos[cod]).filter(p => !borrar.has(p.filename));
+    fotos.forEach(p => { if (p.filename){ markPhotoDeleted(cod, p.filename); if (p.synced) callBackendWrite({ action:'deletePhoto', codigo:cod, filename:p.filename, fecha:p.fechaVisita || '' }).catch(()=>{}); } });
+  }
+  try { localStorage.setItem('nocAutoOrphan', '1'); } catch(e){}
   const scrollY = window.scrollY;
   save();
   renderAgenda();
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
   closeHistorial();
-  toast('🗑️ Visita eliminada');
+  toast('🗑️ Visita y fotos eliminadas');
 }
 
 function switchVisit(cod, visitId){
@@ -1390,6 +1421,7 @@ async function syncToCloud(silent){
       localStorage.setItem('nocLastSync', new Date().toISOString());
       setSyncBadge('✓ Sincronizado','ok');
       if (!silent) toast('✓ Sincronizado');
+      try { if (localStorage.getItem('nocAutoOrphan') === '1'){ localStorage.removeItem('nocAutoOrphan'); setTimeout(() => cleanOrphanPhotos(true), 2000); } } catch(e){}
     } else {
       const restantes = pending.length - done;
       setSyncBadge('⚠ ' + restantes + ' pendiente(s)','warn');
@@ -1649,7 +1681,17 @@ async function forceDownloadFromDrive(){ if (!confirm('¿Reemplazar TODOS los da
 async function forceSyncNow(){ if (!driveStateReady){ if (!confirm('⚠ Drive NO se ha cargado. ¿Continuar?')) return; driveStateReady = true; } markDirty(); await syncToCloud(false); }
 async function reorganizeDrive(){ if (!confirm('¿Reorganizar carpetas y fechas en Drive?')) return; const clientesMap = {}; allClients().forEach(c => { clientesMap[String(c.codigo).trim()] = c.nombre; }); clientesMap['_supervisor'] = 'Supervisor NOC'; toast('🗂️ Reorganizando…'); try { await callBackendWrite({ action:'reorganizeAll', clientesMap }); await new Promise(r => setTimeout(r, 3000)); await callBackendWrite({ action:'fixDates', index: JSON.stringify(buildIndex()) }); await new Promise(r => setTimeout(r, 3000)); localStorage.removeItem('nocLastLoadOk'); await loadFromCloud(); toast('✓ Reorganización completa'); } catch(err){ toast('⚠ ' + err.message); } }
 async function rescanDriveNow(){ if (!confirm('¿Escanear Drive y agregar fotos nuevas?')) return; toast('🔍 Escaneando…'); try { await callBackendWrite({ action: 'rescanDrivePhotos' }); await new Promise(r => setTimeout(r, 5000)); if (typeof localForage !== 'undefined') await localForage.removeItem('nocVisitasDB'); localStorage.removeItem('nocDirty'); localStorage.removeItem('nocLastLoadOk'); DB = { visits:{}, photos:{}, evid:{}, month:getMesAnioActual(), resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' }; driveStateReady = false; await loadFromCloud(); toast('✓ Índice reconstruido'); } catch(err){ toast('⚠ ' + err.message); } }
-async function cleanOrphanPhotos(){ if (!confirm('¿Limpiar fotos huérfanas?')) return; try { await callBackendWrite({ action:'cleanOrphans' }); await new Promise(r => setTimeout(r, 3000)); localStorage.removeItem('nocLastLoadOk'); await loadFromCloud(); toast('✓ Limpiado'); } catch(err){ toast('⚠ ' + err.message); } }
+async function cleanOrphanPhotos(auto){
+  if (!auto && !confirm('¿Limpiar fotos huérfanas?')) return;
+  if (auto) toast('🧹 Eliminando fotos borradas…');
+  try {
+    await callBackendWrite({ action:'cleanOrphans' });
+    await new Promise(r => setTimeout(r, 2500));
+    localStorage.removeItem('nocLastLoadOk');
+    await loadFromCloud();
+    if (!auto) toast('✓ Limpiado');
+  } catch(err){ if (!auto) toast('⚠ ' + err.message); }
+}
 async function fetchFileId(codigo, filename, itemRef){ 
   if (!itemRef) throw new Error('Ref inválida'); 
   const fecha = itemRef.fechaVisita || ''; 
@@ -2004,8 +2046,14 @@ function buildVisitFormHTML(cod, nombre, current){
         <label>ESTADO</label><select id="e-${cod}" onchange="saveVisit('${cod}')">${['Pendiente','Realizada','No Realizada','Pospuesta'].map(o=>`<option ${o===current.estado?'selected':''}>${o}</option>`).join('')}</select>
         <label>OBSERVACIONES</label><textarea id="o-${cod}" placeholder="..." oninput="onObsInput('${cod}', this.value)">${current.obs||''}</textarea>
         <label>MATERIALES USADOS</label>
-        <input id="matBuscar-${cod}" placeholder="🔍 Buscar material (ej.: UTP, APC, MikroTik)" oninput="filtrarMateriales('${cod}')" autocomplete="off">
-        <div class="mat-options" id="matOpts-${cod}"></div>
+        <div class="mat-select">
+          <button type="button" class="mat-toggle" id="matToggle-${cod}" aria-expanded="false" onclick="toggleMatPanel('${cod}')"><span id="matToggleLabel-${cod}">Seleccionar materiales…</span><span class="mat-count" id="matCount-${cod}">0</span></button>
+          <div class="mat-panel" id="matPanel-${cod}">
+            <div class="mat-tools"><button type="button" onclick="seleccionarMaterialesVisibles('${cod}',true)">✓ Seleccionar visibles</button><button type="button" onclick="seleccionarMaterialesVisibles('${cod}',false)">✕ Quitar visibles</button><button type="button" onclick="toggleMatPanel('${cod}',false)">Cerrar</button></div>
+            <input id="matBuscar-${cod}" placeholder="🔍 Buscar material (ej.: UTP, APC, MikroTik)" oninput="filtrarMateriales('${cod}')" autocomplete="off">
+            <div class="mat-options" id="matOpts-${cod}" style="margin-top:8px"></div>
+          </div>
+        </div>
         <div id="matSel-${cod}"></div>
         <label>FIRMA DEL CLIENTE</label><canvas class="sig" id="sig-${cod}"></canvas>
         <button class="btn btn-gray" style="margin:6px 0" onclick="clearSig('sig-${cod}')">Limpiar firma</button>
@@ -2025,13 +2073,18 @@ function renderMateriales(cod){
   const sel = document.getElementById('matSel-' + cod);
   const buscar = document.getElementById('matBuscar-' + cod);
   const q = buscar ? buscar.value.trim().toLowerCase() : '';
-  const actuales = materialesDe(v).map(m => m.key);
+  const items = materialesDe(v).filter(m => MATERIALES_POR_KEY[m.key]);
+  const actuales = items.map(m => m.key);
+  const label = document.getElementById('matToggleLabel-' + cod);
+  const count = document.getElementById('matCount-' + cod);
+  if (label) label.textContent = items.length ? items.map(m => MATERIALES_POR_KEY[m.key].label).join(', ') : 'Seleccionar materiales…';
+  if (count) count.textContent = String(items.length);
   if (opts){
     const visibles = MATERIALES.filter(m => !q || m.label.toLowerCase().indexOf(q) >= 0 || m.key.toLowerCase().indexOf(q) >= 0);
-    opts.innerHTML = visibles.length ? visibles.map(m => `<label class="mat-chip ${actuales.indexOf(m.key)>=0?'sel':''}"><input type="checkbox" ${actuales.indexOf(m.key)>=0?'checked':''} onchange="toggleMaterial('${cod}','${m.key}',this.checked)">${escapeHtml(m.label)}</label>`).join('') : '<div class="mat-empty">No hay materiales que coincidan con la búsqueda.</div>';
+    opts.innerHTML = visibles.length ? visibles.map(m => `<label class="mat-chip ${actuales.indexOf(m.key)>=0?'sel':''}" title="${m.unit === 'm' ? 'Metros' : 'Unidades'}"><input type="checkbox" ${actuales.indexOf(m.key)>=0?'checked':''} onchange="toggleMaterial('${cod}','${m.key}',this.checked)">${escapeHtml(m.label)} <span class="u">${m.unit}</span></label>`).join('') : '<div class="mat-empty">No hay materiales que coincidan con la búsqueda.</div>';
   }
   if (sel){
-    sel.innerHTML = materialesDe(v).filter(m => MATERIALES_POR_KEY[m.key]).map(m => {
+    sel.innerHTML = items.map(m => {
       const def = MATERIALES_POR_KEY[m.key];
       const id = 'mat-' + cod + '-' + m.key.replace(/[^A-Za-z0-9]/g,'_');
       let html = '<div class="mat-item"><div><label>CANTIDAD (' + def.unit + ')</label><input type="number" min="0" step="any" id="' + id + '-cant" value="' + escapeHtml(m.cantidad||'') + '" placeholder="0" oninput="setDatoMaterial(\'' + cod + '\',\'' + m.key + '\',\'cantidad\',this.value)"></div>';
@@ -2040,6 +2093,29 @@ function renderMateriales(cod){
       return html + '<button type="button" onclick="toggleMaterial(\'' + cod + '\',\'' + m.key + '\',false)" title="Quitar">✕</button></div>';
     }).join('');
   }
+}
+function toggleMatPanel(cod, force){
+  const panel = document.getElementById('matPanel-' + cod); if (!panel) return;
+  const open = force === undefined ? !panel.classList.contains('open') : !!force;
+  panel.classList.toggle('open', open);
+  const btn = document.getElementById('matToggle-' + cod);
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open){ const input = document.getElementById('matBuscar-' + cod); if (input) setTimeout(() => { input.focus(); input.select(); }, 30); }
+}
+function seleccionarMaterialesVisibles(cod, add){
+  const v = getCurrentVisit(cod); if (!v) return;
+  const buscar = document.getElementById('matBuscar-' + cod);
+  const q = buscar ? buscar.value.trim().toLowerCase() : '';
+  const visibles = MATERIALES.filter(m => !q || m.label.toLowerCase().indexOf(q) >= 0 || m.key.toLowerCase().indexOf(q) >= 0);
+  if (!Array.isArray(v.materiales)) v.materiales = [];
+  visibles.forEach(m => {
+    if (add && !v.materiales.some(x => x && x.key === m.key)) v.materiales.push({ key:m.key, cantidad:'', modelo:'', voltaje:'' });
+    if (!add) v.materiales = v.materiales.filter(x => !x || x.key !== m.key);
+  });
+  v.updatedAt = new Date().toISOString();
+  renderMateriales(cod);
+  save();
+  toast(add ? '✓ Materiales visibles agregados' : '✓ Materiales visibles quitados');
 }
 function toggleMaterial(cod, key, add){
   const v = getCurrentVisit(cod); if (!v) return;
@@ -2059,6 +2135,83 @@ function setDatoMaterial(cod, key, campo, valor){
   markDirty(); saveLocal(); scheduleSync();
 }
 function filtrarMateriales(cod){ renderMateriales(cod); }
+
+function abrirInformeMateriales(){
+  const menu = document.getElementById('moreActionsMenu'); if (menu) menu.classList.remove('open');
+  const sel = document.getElementById('matInfMes');
+  if (sel && !sel.options.length){
+    const meses = (typeof getListaMesesDisponibles === 'function') ? getListaMesesDisponibles() : [];
+    sel.innerHTML = '<option value="__ALL__">Todas las visitas</option>' + meses.map(m => '<option value="' + escapeHtml(m) + '">' + escapeHtml(m) + '</option>').join('');
+  }
+  renderInformeMateriales();
+  document.getElementById('materialesModal').classList.add('open');
+}
+function cerrarInformeMateriales(){ document.getElementById('materialesModal').classList.remove('open'); }
+function datosInformeMateriales(){
+  const sel = document.getElementById('matInfMes');
+  const mes = sel ? sel.value : '__ALL__';
+  const rows = [];
+  allClients().forEach(c => {
+    getVisits(c.codigo).forEach(v => {
+      if (mes !== '__ALL__' && !visitaEnMesAnio(v, mes)) return;
+      materialesDe(v).filter(m => MATERIALES_POR_KEY[m.key]).forEach(m => {
+        const def = MATERIALES_POR_KEY[m.key];
+        const n = parseFloat(String(m.cantidad == null ? '' : m.cantidad).replace(',', '.'));
+        rows.push({ codigo:c.codigo, cliente:c.nombre, fecha: v.fecha ? v.fecha.split('-').reverse().join('/') : 'SIN FECHA', hora:v.hora||'', tipo:tipoVisitaDe(v), estado:v.estado||'Pendiente', tipoCliente:tipoClienteDe(c), key:m.key, material:def.label, cantidad:isFinite(n)?n:0, cantidadTxt:m.cantidad||'', unidad:def.unit, modelo:m.modelo||'', voltaje:m.voltaje||'' });
+      });
+    });
+  });
+  return rows;
+}
+function renderInformeMateriales(){
+  const rows = datosInformeMateriales();
+  const totales = {};
+  const visitas = new Set();
+  rows.forEach(r => {
+    const t = totales[r.key] || (totales[r.key] = { label:r.material, unit:r.unidad, total:0, items:0 });
+    t.total += r.cantidad; t.items++;
+    visitas.add(r.codigo + '|' + r.fecha);
+  });
+  const kpis = document.getElementById('materialesKpis');
+  const prev = document.getElementById('materialesPreview');
+  if (!kpis || !prev) return;
+  kpis.innerHTML = '<div class="inf-kpi"><b>' + visitas.size + '</b><small>VISITAS CON MATERIALES</small></div><div class="inf-kpi"><b>' + rows.length + '</b><small>REGISTROS</small></div><div class="inf-kpi"><b>' + Object.keys(totales).length + '</b><small>TIPOS DE MATERIAL</small></div>';
+  if (!rows.length){ prev.innerHTML = '<div class="empty">No hay materiales registrados en este periodo.</div>'; return; }
+  let html = '<table class="tab-inf"><thead><tr><th>#</th><th>CÓDIGO</th><th>CLIENTE</th><th>FECHA</th><th>TIPO VISITA</th><th>ESTADO</th><th>MATERIAL</th><th>CANT.</th><th>UN.</th><th>MODELO / VOLTAJE</th></tr></thead><tbody>';
+  rows.forEach((r,i) => { html += '<tr><td>' + (i+1) + '</td><td>' + escapeHtml(r.codigo) + '</td><td>' + escapeHtml(r.cliente) + '</td><td>' + escapeHtml(r.fecha) + '</td><td>' + escapeHtml(r.tipo) + '</td><td>' + escapeHtml(r.estado) + '</td><td>' + escapeHtml(r.material) + '</td><td><b>' + escapeHtml(r.cantidadTxt || String(r.cantidad)) + '</b></td><td>' + escapeHtml(r.unidad) + '</td><td>' + escapeHtml([r.modelo,r.voltaje].filter(Boolean).join(' / ')) + '</td></tr>'; });
+  html += '</tbody></table>';
+  html += '<table class="tab-inf" style="margin-top:12px"><thead><tr><th colspan="4" style="background:#243049;color:var(--accent2)">TOTALES POR MATERIAL</th></tr><tr><th>MATERIAL</th><th>UNIDAD</th><th>REGISTROS</th><th>TOTAL</th></tr></thead><tbody>';
+  Object.values(totales).forEach(t => { html += '<tr><td>' + escapeHtml(t.label) + '</td><td>' + escapeHtml(t.unit) + '</td><td>' + t.items + '</td><td><b>' + t.total + '</b></td></tr>'; });
+  html += '</tbody></table>';
+  prev.innerHTML = html;
+}
+async function descargarInformeMaterialesExcel(){
+  const rows = datosInformeMateriales();
+  if (!rows.length){ toast('⚠ No hay materiales registrados en este periodo'); return; }
+  try { toast('⏳ Preparando informe…'); await loadLibTimeout('xlsx', 60000); }
+  catch(e){ toast('⚠ No se pudo cargar Excel (revisa tu conexión)'); return; }
+  try {
+    const sel = document.getElementById('matInfMes');
+    const mes = sel && sel.value !== '__ALL__' ? sel.value : 'Todas las visitas';
+    const wb = XLSX.utils.book_new();
+    const A = [['N°','CÓDIGO','CLIENTE','FECHA','HORA','TIPO DE VISITA','ESTADO','TIPO DE CLIENTE','MATERIAL','CANTIDAD','UNIDAD','MODELO','VOLTAJE']];
+    rows.forEach((r,i) => A.push([i+1, r.codigo, r.cliente, r.fecha, r.hora, r.tipo, r.estado, r.tipoCliente, r.material, r.cantidadTxt || r.cantidad, r.unidad, r.modelo, r.voltaje]));
+    const ws = XLSX.utils.aoa_to_sheet(A);
+    ws['!cols'] = [{wch:5},{wch:10},{wch:34},{wch:12},{wch:8},{wch:18},{wch:14},{wch:16},{wch:28},{wch:10},{wch:8},{wch:18},{wch:12}];
+    for (let c = 0; c < A[0].length; c++){ const cell = ws[XLSX.utils.encode_cell({r:0,c:c})]; if (cell) cell.s = { font:{ bold:true, color:{ rgb:'FFFFFF' } }, fill:{ patternType:'solid', fgColor:{ rgb:'1D4ED8' } }, alignment:{ horizontal:'center', vertical:'center' } }; }
+    XLSX.utils.book_append_sheet(wb, ws, 'Materiales por visita');
+    const totales = {};
+    rows.forEach(r => { const t = totales[r.key] || (totales[r.key] = { label:r.material, unit:r.unidad, total:0, items:0 }); t.total += r.cantidad; t.items++; });
+    const B = [['MATERIAL','UNIDAD','REGISTROS','TOTAL CANTIDAD']];
+    Object.values(totales).forEach(t => B.push([t.label, t.unit, t.items, t.total]));
+    const ws2 = XLSX.utils.aoa_to_sheet(B);
+    ws2['!cols'] = [{wch:34},{wch:10},{wch:12},{wch:16}];
+    for (let c = 0; c < B[0].length; c++){ const cell = ws2[XLSX.utils.encode_cell({r:0,c:c})]; if (cell) cell.s = { font:{ bold:true, color:{ rgb:'FFFFFF' } }, fill:{ patternType:'solid', fgColor:{ rgb:'047857' } }, alignment:{ horizontal:'center' } }; }
+    XLSX.utils.book_append_sheet(wb, ws2, 'Totales por material');
+    XLSX.writeFile(wb, 'Informe_Materiales_' + String(mes).replace(/\s+/g,'_') + '.xlsx', { cellStyles:true });
+    toast('✓ Informe descargado (' + rows.length + ' registros)');
+  } catch(e){ toast('⚠ Error al generar el informe: ' + (e && e.message ? e.message : 'intenta de nuevo')); }
+}
 
 function renderAgenda(){
   const q = (document.getElementById('search').value || '').toLowerCase();
@@ -3453,7 +3606,6 @@ function liberarEspacio(){
   limpiar(DB.evid['super_sig']);
   return freed;
 }
-function liberarEspacioManual(){ const bytes = liberarEspacio(); save(); updateStorageInfo(); renderAgenda(); renderEvid(); toast(bytes > 0 ? ('🧹 Liberados ' + (bytes / 1048576).toFixed(1) + ' MB') : '✓ Nada que liberar'); }
 function retryPendingUploads(){ document.getElementById('partialSyncModal').classList.remove('open'); syncToCloud(false); }
 let pendingGPS = null;
 function openGpsHelp(cod){ pendingGPS = cod; document.getElementById('gpsModal').classList.add('open'); }
@@ -4426,6 +4578,8 @@ async function initApp(){
 initApp();
 setInterval(sendHeartbeat, 60000);
 setTimeout(sendHeartbeat, 5000);
+document.addEventListener('click', e => { document.querySelectorAll('.mat-panel.open').forEach(p => { if (!p.parentElement.contains(e.target)){ p.classList.remove('open'); const b = p.parentElement.querySelector('.mat-toggle'); if (b) b.setAttribute('aria-expanded','false'); } }); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.mat-panel.open').forEach(p => { p.classList.remove('open'); const b = p.parentElement.querySelector('.mat-toggle'); if (b) b.setAttribute('aria-expanded','false'); }); });
 window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); procesarColaSubidaFotos(); setTimeout(() => { encolarPendientesExistentes(); loadFromCloud().then(() => { if (isDirty()){ syncToCloud(true); } }); sendHeartbeat(); }, 5000); });
 window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','warn'); updateActiveUsersBadge(0); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on' && !syncInProgress) syncToCloud(true); } });

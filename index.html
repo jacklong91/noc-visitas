@@ -2597,7 +2597,9 @@ function delPhoto(cod, i){
   if (p.filename) markPhotoDeleted(cod, p.filename);
   if (p.filename && p.synced) callBackendWrite({ action:'deletePhoto', codigo:cod, filename:p.filename, fecha: p.fechaVisita || '' }).catch(()=>{});
   arr.splice(i, 1);
-  save(); renderPhotos(cod); renderAgenda();
+  save();
+  try { syncToCloud(true); } catch(e){}
+  renderPhotos(cod); renderAgenda();
   toast('🗑️ Foto eliminada');
 }
 
@@ -3423,6 +3425,7 @@ function buildDataReporteFotografico(usarRango, opts){
   const incluirHuerfanas = !!opts.incluirHuerfanas;
   const data = [];
   const codigosVistos = new Set();
+  const deletedFotosSet = new Set(getDeletedPhotosList());
   const mesRef = usarRangoEf ? null : ((mesResumenFiltro === MES_GENERAL || !mesResumenFiltro) ? 'General' : mesResumenFiltro);
   allClients().forEach(c => {
     if (codFiltro && String(c.codigo).trim() !== codFiltro) return;
@@ -3431,7 +3434,7 @@ function buildDataReporteFotografico(usarRango, opts){
     codigosVistos.add(codKey);
     const items = [];
     const usadas = new Set();
-    const todas = safeArray(DB.photos[c.codigo]);
+    const todas = safeArray(DB.photos[c.codigo]).filter(p => !p || !p.filename || !deletedFotosSet.has(codKey + '|' + p.filename));
     getVisits(c.codigo).forEach(v => {
       if (!visitaDentroDePeriodo(v, mesRef, usarRangoEf, desde, hasta)) return;
       const fotos = todas.filter(p => p && p.filename && ((p.visitId && p.visitId === v.id) || (!p.visitId && p.fechaVisita === v.fecha)));
@@ -3568,7 +3571,7 @@ async function generarReporteFotografico(usarRango, opts){
   const hasta = (opts.hasta !== undefined) ? opts.hasta : (usarRango ? filtroHasta : '');
   const usarRangoEf = !!usarRango;
   if (usarRangoEf && !desde && !hasta){ toast('⚠ Primero aplica un filtro de fechas'); return; }
-  const data = buildDataReporteFotografico(usarRangoEf, Object.assign({}, opts, { desde: desde, hasta: hasta, incluirHuerfanas: true }));
+  const data = buildDataReporteFotografico(usarRangoEf, Object.assign({}, opts, { desde: desde, hasta: hasta }));
   if (!data.length){ toast('⚠ No hay visitas en este período'); return; }
   const periodo = usarRangoEf
     ? ('RANGO ' + (desde ? desde.split('-').reverse().join('-') : 'INICIO') + ' A ' + (hasta ? hasta.split('-').reverse().join('-') : 'HOY'))
@@ -3769,8 +3772,8 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
               const imgId = wb.addImage({ base64: b64, extension: 'jpeg' });
               const colStart = 4 + (f * 2);
                ws.addImage(imgId, {
-                   tl: { col: colStart, row: dataStartRow - 1 },
-                   ext: { width: 230, height: 150 },
+                   tl: { col: colStart, row: dataStartRow - 1 }, 
+                   br: { col: colStart + 2, row: dataEndRow }, 
                    editAs: 'oneCell'
                });
               if (foto && foto.fileId){ try { __imgB64Cache.delete('f:' + foto.fileId + ':900'); } catch(e){} }

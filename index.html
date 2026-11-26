@@ -168,6 +168,10 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .mat-item label{margin:0 0 4px;font-size:.68rem}
 .mat-item input{padding:8px 9px;font-size:.85rem}
 .mat-item>button{flex:0 0 auto;background:var(--danger);color:#fff;border:none;border-radius:8px;padding:0 10px;font-size:.75rem;cursor:pointer;height:36px}
+.mat-item>button.editar{background:var(--accent);color:#04121f;font-weight:800}
+.mat-presets{display:flex;gap:6px;margin-top:8px}
+.mat-presets button{flex:1;padding:7px 4px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:var(--text);font-size:.72rem;font-weight:700;cursor:pointer}
+.mat-presets button:hover{border-color:var(--accent);color:var(--accent)}
 .inf-kpis{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .inf-kpi{flex:1;min-width:105px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px;text-align:center}
 .inf-kpi b{display:block;font-size:1.15rem;color:var(--accent2)}
@@ -677,6 +681,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 </div>
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
 <div class="modal-bg" id="materialesModal"><div class="modal" style="max-width:760px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🧰 Informe de materiales usados por visita</h3><button class="btn btn-gray btn-sm" onclick="cerrarInformeMateriales()">✕</button></div><div class="row2" style="align-items:end;margin-bottom:12px"><div><label>PERIODO</label><select id="matInfMes" onchange="renderInformeMateriales()"></select></div><div style="font-size:.72rem;color:var(--muted);line-height:1.5">Detalle por visita, cantidades y totales por material.</div></div><div id="materialesKpis" class="inf-kpis"></div><div class="inf-wrap" id="materialesPreview"></div><div class="row2" style="margin-top:14px"><button class="btn btn-green" style="flex:2" onclick="descargarInformeMaterialesExcel()">📥 Descargar Excel</button><button class="btn btn-gray" style="flex:1" onclick="cerrarInformeMateriales()">Cerrar</button></div></div></div>
+<div class="modal-bg" id="materialModal"><div class="modal" style="max-width:420px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem" id="matModalTitle">🧰 Material</h3><button class="btn btn-gray btn-sm" onclick="cerrarMaterialModal()">✕</button></div><div id="matModalFields"></div><div class="row2" style="margin-top:14px"><button class="btn btn-green" style="flex:2" onclick="guardarMaterialModal()">✓ Guardar</button><button class="btn btn-gray" style="flex:1" onclick="cerrarMaterialModal()">Cancelar</button></div></div></div>
 <div class="toast" id="toast"></div>
 <script src="./jszip.min.js"></script>
 <script>
@@ -774,6 +779,7 @@ function tipoVisitaDe(v){ return normalizarTipoVisita(v && v.tipoVisita); }
 let DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
 let antiTajada = []; try { antiTajada = JSON.parse(localStorage.getItem('nocAntiTajada') || '[]'); if (!Array.isArray(antiTajada)) antiTajada = []; } catch(e){ antiTajada = []; }
 function esAntiTajada(cod){ const x = String(cod == null ? '' : cod).trim(); return x === '2025' || antiTajada.indexOf(x) >= 0; }
+let materialModalCtx = { cod:null, key:null };
 let syncInProgress = false, syncTimer = null;
 let evidCurrentFolder = null, lightboxItems = [], lightboxIndex = 0, bannerDismissed = false;
 let downloadState = { active:false, total:0, done:0, failed:0, currentFile:'', errors:[] };
@@ -2115,7 +2121,7 @@ function renderMateriales(cod){
       let html = '<div class="mat-item"><div><label>CANTIDAD (' + def.unit + ')</label><input type="number" min="0" step="any" id="' + id + '-cant" value="' + escapeHtml(m.cantidad||'') + '" placeholder="0" oninput="setDatoMaterial(\'' + cod + '\',\'' + m.key + '\',\'cantidad\',this.value)"></div>';
       if (def.modelo) html += '<div><label>MODELO</label><input type="text" value="' + escapeHtml(m.modelo||'') + '" placeholder="Ej.: RB5009" oninput="setDatoMaterial(\'' + cod + '\',\'' + m.key + '\',\'modelo\',this.value)"></div>';
       if (def.voltaje) html += '<div><label>VOLTAJE</label><input type="text" value="' + escapeHtml(m.voltaje||'') + '" placeholder="Ej.: 12V" oninput="setDatoMaterial(\'' + cod + '\',\'' + m.key + '\',\'voltaje\',this.value)"></div>';
-      return html + '<button type="button" onclick="toggleMaterial(\'' + cod + '\',\'' + m.key + '\',false)" title="Quitar">✕</button></div>';
+      return html + '<button type="button" class="editar" onclick="abrirMaterialModal(\'' + cod + '\',\'' + m.key + '\')" title="Editar">✎</button><button type="button" onclick="toggleMaterial(\'' + cod + '\',\'' + m.key + '\',false)" title="Quitar">✕</button></div>';
     }).join('');
   }
 }
@@ -2146,11 +2152,13 @@ function toggleMaterial(cod, key, add){
   const v = getCurrentVisit(cod); if (!v) return;
   if (!Array.isArray(v.materiales)) v.materiales = [];
   if (add && !MATERIALES_POR_KEY[key]) return;
-  if (add && !v.materiales.some(m => m && m.key === key)) v.materiales.push({ key:key, cantidad:'', modelo:'', voltaje:'' });
+  const esNuevo = add && !v.materiales.some(m => m && m.key === key);
+  if (esNuevo) v.materiales.push({ key:key, cantidad:'', modelo:'', voltaje:'' });
   else if (!add) v.materiales = v.materiales.filter(m => !m || m.key !== key);
   v.updatedAt = new Date().toISOString();
   renderMateriales(cod);
   save();
+  if (esNuevo) setTimeout(() => abrirMaterialModal(cod, key), 120);
 }
 function setDatoMaterial(cod, key, campo, valor){
   const v = getCurrentVisit(cod); if (!v) return;
@@ -2160,6 +2168,57 @@ function setDatoMaterial(cod, key, campo, valor){
   markDirty(); saveLocal(); scheduleSync();
 }
 function filtrarMateriales(cod){ renderMateriales(cod); }
+
+function abrirMaterialModal(cod, key){
+  const v = getCurrentVisit(cod); if (!v) return;
+  const def = MATERIALES_POR_KEY[key]; if (!def) return;
+  const m = getMaterial(v, key); if (!m) return;
+  materialModalCtx = { cod:cod, key:key };
+  const title = document.getElementById('matModalTitle');
+  if (title) title.textContent = '🧰 ' + def.label;
+  const fields = document.getElementById('matModalFields');
+  if (!fields) return;
+  let html = '<label>CANTIDAD (' + (def.unit === 'm' ? 'METROS' : 'UNIDADES') + ')</label><input type="number" id="matM_Cant" min="0" step="any" value="' + escapeHtml(m.cantidad||'') + '" placeholder="0">';
+  html += '<div class="mat-presets">' + [1,2,5,10,20].map(n => '<button type="button" onclick="ponerCantidadModal(' + n + ')">' + n + '</button>').join('') + '</div>';
+  if (def.modelo) html += '<label>MODELO</label><input type="text" id="matM_Modelo" value="' + escapeHtml(m.modelo||'') + '" placeholder="Ej.: RB5009">';
+  if (def.voltaje) html += '<label>VOLTAJE</label><input type="text" id="matM_Voltaje" value="' + escapeHtml(m.voltaje||'') + '" placeholder="Ej.: 12V">';
+  fields.innerHTML = html;
+  document.getElementById('materialModal').classList.add('open');
+  setTimeout(() => { const el = document.getElementById('matM_Cant'); if (el){ el.focus(); el.select(); } }, 80);
+}
+function cerrarMaterialModal(){
+  const mm = document.getElementById('materialModal'); if (mm) mm.classList.remove('open');
+  materialModalCtx = { cod:null, key:null };
+}
+function ponerCantidadModal(n){
+  const el = document.getElementById('matM_Cant'); if (el){ el.value = String(n); el.focus(); }
+}
+function guardarMaterialModal(){
+  const ctx = materialModalCtx; if (!ctx || !ctx.cod || !ctx.key) return;
+  const v = getCurrentVisit(ctx.cod); if (!v) return;
+  const m = getMaterial(v, ctx.key); if (!m) return;
+  const def = MATERIALES_POR_KEY[ctx.key];
+  const cantEl = document.getElementById('matM_Cant');
+  const cant = cantEl ? String(cantEl.value || '').trim() : '';
+  const numero = Number(cant.replace(',', '.'));
+  if (cant && (!isFinite(numero) || numero < 0)){ toast('⚠ Cantidad inválida'); return; }
+  const modEl = document.getElementById('matM_Modelo');
+  const volEl = document.getElementById('matM_Voltaje');
+  m.cantidad = cant.slice(0,40);
+  if (modEl) m.modelo = modEl.value.trim().slice(0,80);
+  if (volEl) m.voltaje = volEl.value.trim().slice(0,40);
+  v.updatedAt = new Date().toISOString();
+  cerrarMaterialModal();
+  renderMateriales(ctx.cod);
+  save();
+  toast('✓ ' + def.label + (cant ? ': ' + cant + ' ' + def.unit : ' guardado'));
+}
+document.addEventListener('keydown', e => {
+  const mm = document.getElementById('materialModal');
+  if (!mm || !mm.classList.contains('open')) return;
+  if (e.key === 'Enter') guardarMaterialModal();
+  else if (e.key === 'Escape') cerrarMaterialModal();
+});
 
 function abrirInformeMateriales(){
   const menu = document.getElementById('moreActionsMenu'); if (menu) menu.classList.remove('open');
@@ -5231,7 +5290,7 @@ marciActualizarTagIA();
 </script>
 <script>
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js?v=62').catch(function(){}); });
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js?v=63').catch(function(){}); });
 }
 </script>
 </body>

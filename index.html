@@ -147,6 +147,16 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 .btn-photo{display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:72px;border:2px dashed rgba(255,255,255,0.2);border-radius:10px;color:var(--muted);font-size:.65rem;cursor:pointer;gap:3px}
 .btn-photo input{display:none}
 .btn-photo span{font-size:1.3rem}
+.mat-options{display:flex;flex-wrap:wrap;gap:6px;max-height:150px;overflow-y:auto;padding:8px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08)}
+.mat-chip{display:flex;align-items:center;gap:5px;padding:6px 9px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:var(--muted);font-size:.72rem;cursor:pointer;user-select:none;-webkit-user-select:none}
+.mat-chip input{width:auto;accent-color:var(--accent);margin:0}
+.mat-chip.sel{background:rgba(56,189,248,.18);border-color:var(--accent);color:var(--text);font-weight:700}
+.mat-empty{font-size:.75rem;color:var(--muted);padding:6px 2px}
+.mat-item{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;padding:8px;border-radius:10px;background:rgba(255,255,255,.04);margin-top:6px}
+.mat-item>div{flex:1;min-width:90px}
+.mat-item label{margin:0 0 4px;font-size:.68rem}
+.mat-item input{padding:8px 9px;font-size:.85rem}
+.mat-item>button{flex:0 0 auto;background:var(--danger);color:#fff;border:none;border-radius:8px;padding:0 10px;font-size:.75rem;cursor:pointer;height:36px}
 .stat{display:flex;justify-content:space-between;padding:12px 4px;border-bottom:1px solid rgba(255,255,255,0.1);font-size:.9rem}
 .stat b{font-size:1rem}
 .big{font-size:2.2rem;font-weight:800;color:var(--accent2);text-align:center;padding:18px}
@@ -382,7 +392,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
       <label>CÓDIGO DEL CLIENTE</label><input id="ncCodigo" placeholder="Ej.: 99123">
       <label>CLIENTE / RAZÓN SOCIAL</label><input id="ncNombre" placeholder="Nombre del cliente o negocio">
       <label>DIRECCIÓN</label><input id="ncDir" placeholder="Dirección completa">
-      <label>TIPO</label><select id="ncTipo"><option value="PYME">PYME</option><option value="RESIDENCIAL">RESIDENCIAL</option><option value="GUBERNAMENTAL">GUBERNAMENTAL</option><option value="ANTENA">ANTENA</option><option value="NODO">NODO</option><option value="ZONA WIFI">ZONA WIFI</option><option value="DEDICADO/ZONA WIFI">DEDICADO/ZONA WIFI</option></select>
+      <label>TIPO</label><select id="ncTipo"><option value="PYME">PYME</option><option value="RESIDENCIAL">RESIDENCIAL</option><option value="GUBERNAMENTAL">GUBERNAMENTAL</option><option value="ANTENA">ANTENA</option><option value="NODO">NODO</option><option value="ZONA WIFI">ZONA WIFI</option><option value="DEDICADO">DEDICADO</option><option value="DEDICADO/ZONA WIFI">DEDICADO/ZONA WIFI</option></select>
       <div class="row2">
         <div><label>CÉDULA / RIF (opcional)</label><input id="ncCedula" placeholder="Ej.: V-12345678"></div>
         <div><label>TELÉFONO (opcional)</label><input id="ncTelefono" placeholder="Ej.: 0414-1234567"></div>
@@ -627,7 +637,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 <div class="modal-bg" id="gpsModal"><div class="modal"><h3 style="margin-bottom:8px">📍 Ubicación no disponible</h3><p style="font-size:.85rem;color:var(--muted);margin-bottom:10px">El GPS está apagado o sin permiso.</p><button class="btn btn-primary btn-block" onclick="tryOpenLocationSettings()">⚙️ Abrir ajustes</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="closeGpsHelp()">Cerrar</button></div></div>
 <div class="modal-bg" id="historialModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 id="historialTitle" style="font-size:1rem">Historial de visitas</h3><button class="btn btn-gray btn-sm" onclick="closeHistorial()">✕</button></div><div id="historialList"></div></div></div>
 <div class="modal-bg" id="debugMasterModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔍 Diagnóstico</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('debugMasterModal').classList.remove('open')">✕</button></div><div id="debugMasterContent" style="font-size:.78rem;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow-y:auto;font-family:monospace;line-height:1.4"></div></div></div>
-<div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre"><label>DIRECCIÓN</label><input id="ecDir"><label>TIPO</label><select id="ecTipo"><option value="PYME">PYME</option><option value="RESIDENCIAL">RESIDENCIAL</option><option value="GUBERNAMENTAL">GUBERNAMENTAL</option><option value="ANTENA">ANTENA</option><option value="NODO">NODO</option><option value="ZONA WIFI">ZONA WIFI</option><option value="DEDICADO/ZONA WIFI">DEDICADO/ZONA WIFI</option></select><div class="row2"><div><label>CÉDULA / RIF (opcional)</label><input id="ecCedula"></div><div><label>TELÉFONO (opcional)</label><input id="ecTelefono"></div></div><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
+<div class="modal-bg" id="editClientModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🔧 Editar cliente</h3><button class="btn btn-gray btn-sm" onclick="document.getElementById('editClientModal').classList.remove('open')">✕</button></div><input type="hidden" id="ecCodigoOld"><label>CÓDIGO DEL CLIENTE</label><input id="ecCodigo"><small style="color:var(--muted);font-size:.7rem;display:block;margin-top:4px">⚠ Solo se permite cambiar a un código que NO exista.</small><label>CLIENTE / RAZÓN SOCIAL</label><input id="ecNombre"><label>DIRECCIÓN</label><input id="ecDir"><label>TIPO</label><select id="ecTipo"><option value="PYME">PYME</option><option value="RESIDENCIAL">RESIDENCIAL</option><option value="GUBERNAMENTAL">GUBERNAMENTAL</option><option value="ANTENA">ANTENA</option><option value="NODO">NODO</option><option value="ZONA WIFI">ZONA WIFI</option><option value="DEDICADO">DEDICADO</option><option value="DEDICADO/ZONA WIFI">DEDICADO/ZONA WIFI</option></select><div class="row2"><div><label>CÉDULA / RIF (opcional)</label><input id="ecCedula"></div><div><label>TELÉFONO (opcional)</label><input id="ecTelefono"></div></div><div class="row2" style="margin-top:16px"><button class="btn btn-green" style="flex:2" onclick="saveClientEdit()">💾 Guardar cambios</button><button class="btn btn-gray" style="flex:1" onclick="document.getElementById('editClientModal').classList.remove('open')">Cancelar</button></div></div></div>
 <div class="lightbox" id="lightbox"><button class="lb-close" onclick="closeLightbox()">✕</button><button class="lb-nav lb-prev" onclick="lightboxNav(-1)">‹</button><button class="lb-nav lb-next" onclick="lightboxNav(1)">›</button><img id="lightboxImg" src=""><div class="lb-caption"><b id="lightboxTitle">—</b><small id="lightboxSubtitle">—</small></div></div>
 <div class="modal-bg" id="repairModal"><div class="modal"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:1rem">🛠️ Reparar ID</h3><button class="btn btn-gray btn-sm" onclick="closeRepairModal()">✕</button></div><label>CLIENTE ORIGEN</label><select id="rpOrigen"></select><label>CLIENTE DESTINO</label><select id="rpDestino" onchange="onRepairDestChange()"></select><div id="rpNewCodeWrap" style="display:none"><label>CÓDIGO NUEVO</label><input id="rpNewCode"></div><div class="row2" style="margin-top:16px"><button class="btn btn-warn" style="flex:2" onclick="ejecutarRepararID()">🛠️ Reparar ahora</button><button class="btn btn-gray" style="flex:1" onclick="closeRepairModal()">Cancelar</button></div></div></div>
 <div class="modal-bg" id="compartirModal">
@@ -705,10 +715,39 @@ const DIAS = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM'];
 const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MES_GENERAL = '__GENERAL__';
 const COMP_OPTS = { baja:{max:960,q:0.55}, media:{max:1280,q:0.72}, alta:{max:1600,q:0.82} };
-const TIPOS_CLIENTE = ['PYME','RESIDENCIAL','GUBERNAMENTAL','ANTENA','NODO','ZONA WIFI','DEDICADO/ZONA WIFI'];
+const TIPOS_CLIENTE = ['PYME','RESIDENCIAL','GUBERNAMENTAL','ANTENA','NODO','ZONA WIFI','DEDICADO','DEDICADO/ZONA WIFI'];
 const TIPOS_VISITA = ['Rutina','Evento','Instalación','Avería por reporte'];
-const PLURAL_TIPO_CLIENTE = { PYME:'pymes', RESIDENCIAL:'residenciales', GUBERNAMENTAL:'gubernamentales', ANTENA:'antenas', NODO:'nodos', 'ZONA WIFI':'zonas wifi', 'DEDICADO/ZONA WIFI':'dedicados/zona wifi' };
-function normalizarTipoCliente(t){ let x = String(t == null ? '' : t).toUpperCase().replace(/\s+/g,' ').trim(); if (x === 'DEDICADO' || x === 'DEDICADO - ZONA WIFI') x = 'DEDICADO/ZONA WIFI'; return TIPOS_CLIENTE.indexOf(x) >= 0 ? x : 'ZONA WIFI'; }
+const MATERIALES = [
+  { key:'TEIPE', label:'Teipe', unit:'m' },
+  { key:'TIRRAP', label:'Tirrap', unit:'m' },
+  { key:'CABLE UTP', label:'Cable UTP', unit:'m' },
+  { key:'PUNTAS UTP', label:'Puntas UTP', unit:'m' },
+  { key:'TORNILLOS', label:'Tornillos', unit:'u' },
+  { key:'CONECTORES APC', label:'Conectores APC', unit:'u' },
+  { key:'CONECTOR UPC', label:'Conector UPC', unit:'u' },
+  { key:'PATCHCORD FIBRA', label:'Patchcord de fibra', unit:'u' },
+  { key:'PROTECTOR', label:'Protector', unit:'u', voltaje:true },
+  { key:'AP', label:'AP', unit:'u', modelo:true },
+  { key:'REGLETA', label:'Regleta', unit:'u' },
+  { key:'CABLE THW N12', label:'Cable THW N12', unit:'u' },
+  { key:'TOMACORRIENTE DOBLE', label:'Tomacorriente doble', unit:'u' },
+  { key:'CAJA METALICA INTERPERIE', label:'Caja metálica intemperie', unit:'u' },
+  { key:'CAJETINES 4X2', label:'Cajetines 4x2', unit:'u' },
+  { key:'ONUROUTER GN630V', label:'ONU Router GN630V', unit:'u' },
+  { key:'ONUBRIDGE GN114V', label:'ONU Bridge GN114V', unit:'u' },
+  { key:'ROUTER MESH', label:'Router Mesh', unit:'u' },
+  { key:'MIKROTIK', label:'MikroTik', unit:'u', modelo:true },
+  { key:'POE', label:'PoE', unit:'u' },
+  { key:'ROSETA', label:'Roseta', unit:'u' },
+  { key:'CAJA EMPALME COUPLER', label:'Caja de empalme con coupler', unit:'u' },
+  { key:'FIBRA DROP', label:'Fibra drop', unit:'m' }
+];
+const MATERIALES_POR_KEY = {}; MATERIALES.forEach(m => { MATERIALES_POR_KEY[m.key] = m; });
+function materialesDe(v){ return Array.isArray(v && v.materiales) ? v.materiales : []; }
+function getMaterial(v,key){ return materialesDe(v).find(m => m && m.key === key) || null; }
+function textoMaterial(m){ const def = m && MATERIALES_POR_KEY[m.key]; if (!def) return ''; let s = def.label; if (m.modelo) s += ' ' + m.modelo; if (m.voltaje) s += ' ' + m.voltaje; return s + ': ' + (m.cantidad || '0') + ' ' + def.unit; }
+const PLURAL_TIPO_CLIENTE = { PYME:'pymes', RESIDENCIAL:'residenciales', GUBERNAMENTAL:'gubernamentales', ANTENA:'antenas', NODO:'nodos', 'ZONA WIFI':'zonas wifi', DEDICADO:'dedicados', 'DEDICADO/ZONA WIFI':'dedicados/zona wifi' };
+function normalizarTipoCliente(t){ let x = String(t == null ? '' : t).toUpperCase().replace(/\s+/g,' ').trim(); if (x === 'DEDICADO - ZONA WIFI') x = 'DEDICADO/ZONA WIFI'; return TIPOS_CLIENTE.indexOf(x) >= 0 ? x : 'ZONA WIFI'; }
 function normalizarTipoVisita(t){ const x = String(t == null ? '' : t).trim(); return TIPOS_VISITA.indexOf(x) >= 0 ? x : 'Rutina'; }
 function tipoClienteDe(c){ return normalizarTipoCliente(c && c.tipo); }
 function tipoVisitaDe(v){ return normalizarTipoVisita(v && v.tipoVisita); }
@@ -786,6 +825,8 @@ function sanitizeDB(){
        if (!v.estado) v.estado = 'Pendiente';
       if (typeof v.obs !== 'string') v.obs = '';
       if (!Array.isArray(v.days)) v.days = [];
+      if (!Array.isArray(v.materiales)) v.materiales = [];
+      v.materiales = v.materiales.filter(m => m && MATERIALES_POR_KEY[m.key]).map(m => ({ key:m.key, cantidad:String(m.cantidad == null ? '' : m.cantidad).slice(0,40), modelo:String(m.modelo == null ? '' : m.modelo).slice(0,80), voltaje:String(m.voltaje == null ? '' : m.voltaje).slice(0,40) }));
       if (v.firma && (typeof v.firma !== 'object' || !v.firma.filename)) delete v.firma;
     });
   }
@@ -972,7 +1013,7 @@ function migrateVisits(){
     const v = DB.visits[cod];
     if (v && !Array.isArray(v)){
       const sig = DB.evid[cod + '_sig'];
-      const newVisit = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: v.fecha || '', hora: v.hora || '', tipoVisita: v.tipoVisita || 'Rutina', estado: v.estado || 'Pendiente', obs: v.obs || '', gps: v.gps || null, days: Array.isArray(v.days) ? v.days : [], updatedAt: new Date().toISOString() };
+      const newVisit = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: v.fecha || '', hora: v.hora || '', tipoVisita: v.tipoVisita || 'Rutina', estado: v.estado || 'Pendiente', obs: v.obs || '', gps: v.gps || null, days: Array.isArray(v.days) ? v.days : [], materiales: Array.isArray(v.materiales) ? v.materiales : [], updatedAt: new Date().toISOString() };
       if (sig){ newVisit.firma = typeof sig === 'object' ? sig : { data: sig, filename: 'firma_cliente.png', synced: false }; delete DB.evid[cod + '_sig']; }
       DB.visits[cod] = (v.fecha || v.estado || v.obs) ? [newVisit] : [];
     } else if (!v){ DB.visits[cod] = []; }
@@ -1081,7 +1122,7 @@ function newVisit(cod){
   const arr = ensureVisitsArr(cod);
   const last = arr.length ? arr[arr.length - 1] : null;
   const gpsFija = getGpsGuardada(cod);
-  const nv = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: '', hora: '', tipoVisita: 'Rutina', estado: 'Pendiente', obs: '', gps: gpsFija ? { lat: gpsFija.lat, lng: gpsFija.lng, acc: gpsFija.acc || 0, time: gpsFija.time || '' } : null, days: last ? (last.days || []).slice() : [], updatedAt: new Date().toISOString() };
+  const nv = { id: 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,6), fecha: '', hora: '', tipoVisita: 'Rutina', estado: 'Pendiente', obs: '', gps: gpsFija ? { lat: gpsFija.lat, lng: gpsFija.lng, acc: gpsFija.acc || 0, time: gpsFija.time || '' } : null, days: last ? (last.days || []).slice() : [], materiales: [], updatedAt: new Date().toISOString() };
   arr.push(nv);
   editingVisitId[cod] = nv.id;
   formsAbiertos.add(cod);
@@ -1091,6 +1132,7 @@ function newVisit(cod){
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
   const form = document.getElementById('form-' + cod);
   if (form) form.classList.add('open');
+  renderMateriales(cod);
   requestAnimationFrame(() => { setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); });
   toast('✓ Visita nueva — completa los datos');
 }
@@ -1120,6 +1162,7 @@ function switchVisit(cod, visitId){
   requestAnimationFrame(() => window.scrollTo(0, scrollY));
   const form = document.getElementById('form-' + cod);
   if (form) form.classList.add('open');
+  renderMateriales(cod);
   requestAnimationFrame(() => { setTimeout(() => initSig('sig-' + cod), 80); setTimeout(() => initSig('sig-' + cod), 400); });
 }
 function showVisitsHistory(cod){
@@ -1443,7 +1486,7 @@ function buildIndex(){
   const photosMeta = {};
   for (const codigo in DB.photos) photosMeta[codigo] = safeArray(DB.photos[codigo]).map(p => ({ filename: p.filename, fecha: p.fecha || '', fechaVisita: p.fechaVisita || '', visitId: p.visitId || null, fileId: p.fileId || null }));
   const visitsSerializable = {};
-  for (const codigo in DB.visits){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; visitsSerializable[codigo] = arr.filter(v => v && typeof v === 'object').map(v => { const vOut = { id: v.id, fecha: v.fecha||'', hora: v.hora||'', tipoVisita: tipoVisitaDe(v), estado: v.estado||'Pendiente', obs: v.obs||'', gps: v.gps||null, days: v.days||[], updatedAt: v.updatedAt || '' }; if (v.firma && v.firma.filename) vOut.firma = { filename: v.firma.filename, fileId: v.firma.fileId || null, fechaVisita: v.firma.fechaVisita || v.fecha || '', synced: true }; return vOut; }); }
+  for (const codigo in DB.visits){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; visitsSerializable[codigo] = arr.filter(v => v && typeof v === 'object').map(v => { const vOut = { id: v.id, fecha: v.fecha||'', hora: v.hora||'', tipoVisita: tipoVisitaDe(v), estado: v.estado||'Pendiente', obs: v.obs||'', gps: v.gps||null, days: v.days||[], materiales: materialesDe(v).filter(m => MATERIALES_POR_KEY[m.key]).map(m => ({ key:m.key, cantidad:m.cantidad||'', modelo:m.modelo||'', voltaje:m.voltaje||'' })), updatedAt: v.updatedAt || '' }; if (v.firma && v.firma.filename) vOut.firma = { filename: v.firma.filename, fileId: v.firma.fileId || null, fechaVisita: v.firma.fechaVisita || v.fecha || '', synced: true }; return vOut; }); }
   const evidMeta = {};
   const sup = DB.evid['super_sig'];
   if (sup && typeof sup === 'object' && sup.filename) evidMeta.super_sig = { filename: sup.filename, fileId: sup.fileId || null };
@@ -1960,6 +2003,10 @@ function buildVisitFormHTML(cod, nombre, current){
         <label>TIPO DE VISITA</label><select id="tv-${cod}" onchange="saveVisit('${cod}')">${TIPOS_VISITA.map(o=>`<option ${o===tipoVisitaDe(current)?'selected':''}>${o}</option>`).join('')}</select>
         <label>ESTADO</label><select id="e-${cod}" onchange="saveVisit('${cod}')">${['Pendiente','Realizada','No Realizada','Pospuesta'].map(o=>`<option ${o===current.estado?'selected':''}>${o}</option>`).join('')}</select>
         <label>OBSERVACIONES</label><textarea id="o-${cod}" placeholder="..." oninput="onObsInput('${cod}', this.value)">${current.obs||''}</textarea>
+        <label>MATERIALES USADOS</label>
+        <input id="matBuscar-${cod}" placeholder="🔍 Buscar material (ej.: UTP, APC, MikroTik)" oninput="filtrarMateriales('${cod}')" autocomplete="off">
+        <div class="mat-options" id="matOpts-${cod}"></div>
+        <div id="matSel-${cod}"></div>
         <label>FIRMA DEL CLIENTE</label><canvas class="sig" id="sig-${cod}"></canvas>
         <button class="btn btn-gray" style="margin:6px 0" onclick="clearSig('sig-${cod}')">Limpiar firma</button>
         <div style="font-size:.75rem;color:#4ade80">${current.firma && current.firma.filename ? '✓ Firma guardada' : ''}</div>
@@ -1971,6 +2018,47 @@ function buildVisitFormHTML(cod, nombre, current){
         <div class="row2" style="margin-top:8px"><label class="btn-photo" style="flex:1">📷 <span>Tomar foto</span><input type="file" accept="image/*" capture="environment" onchange="addPhotos('${cod}',this)"></label><label class="btn-photo" style="flex:1">🖼️ <span>Galería</span><input type="file" accept="image/*" multiple onchange="addPhotos('${cod}',this)"></label></div>
         <div class="row2" style="margin-top:12px"><button class="btn btn-green" style="flex:2" onclick="guardarVisita('${cod}','${nombreSafe}')">💾 GUARDAR</button><button class="btn btn-red" style="flex:1" onclick="deleteVisit('${cod}','${current.id}')">🗑️ Borrar</button></div>`;
 }
+
+function renderMateriales(cod){
+  const v = getCurrentVisit(cod); if (!v) return;
+  const opts = document.getElementById('matOpts-' + cod);
+  const sel = document.getElementById('matSel-' + cod);
+  const buscar = document.getElementById('matBuscar-' + cod);
+  const q = buscar ? buscar.value.trim().toLowerCase() : '';
+  const actuales = materialesDe(v).map(m => m.key);
+  if (opts){
+    const visibles = MATERIALES.filter(m => !q || m.label.toLowerCase().indexOf(q) >= 0 || m.key.toLowerCase().indexOf(q) >= 0);
+    opts.innerHTML = visibles.length ? visibles.map(m => `<label class="mat-chip ${actuales.indexOf(m.key)>=0?'sel':''}"><input type="checkbox" ${actuales.indexOf(m.key)>=0?'checked':''} onchange="toggleMaterial('${cod}','${m.key}',this.checked)">${escapeHtml(m.label)}</label>`).join('') : '<div class="mat-empty">No hay materiales que coincidan con la búsqueda.</div>';
+  }
+  if (sel){
+    sel.innerHTML = materialesDe(v).filter(m => MATERIALES_POR_KEY[m.key]).map(m => {
+      const def = MATERIALES_POR_KEY[m.key];
+      const id = 'mat-' + cod + '-' + m.key.replace(/[^A-Za-z0-9]/g,'_');
+      let html = '<div class="mat-item"><div><label>CANTIDAD (' + def.unit + ')</label><input type="number" min="0" step="any" id="' + id + '-cant" value="' + escapeHtml(m.cantidad||'') + '" placeholder="0" oninput="setDatoMaterial(\'' + cod + '\',\'' + m.key + '\',\'cantidad\',this.value)"></div>';
+      if (def.modelo) html += '<div><label>MODELO</label><input type="text" value="' + escapeHtml(m.modelo||'') + '" placeholder="Ej.: RB5009" oninput="setDatoMaterial(\'' + cod + '\',\'' + m.key + '\',\'modelo\',this.value)"></div>';
+      if (def.voltaje) html += '<div><label>VOLTAJE</label><input type="text" value="' + escapeHtml(m.voltaje||'') + '" placeholder="Ej.: 12V" oninput="setDatoMaterial(\'' + cod + '\',\'' + m.key + '\',\'voltaje\',this.value)"></div>';
+      return html + '<button type="button" onclick="toggleMaterial(\'' + cod + '\',\'' + m.key + '\',false)" title="Quitar">✕</button></div>';
+    }).join('');
+  }
+}
+function toggleMaterial(cod, key, add){
+  const v = getCurrentVisit(cod); if (!v) return;
+  if (!Array.isArray(v.materiales)) v.materiales = [];
+  if (add && !MATERIALES_POR_KEY[key]) return;
+  if (add && !v.materiales.some(m => m && m.key === key)) v.materiales.push({ key:key, cantidad:'', modelo:'', voltaje:'' });
+  else if (!add) v.materiales = v.materiales.filter(m => !m || m.key !== key);
+  v.updatedAt = new Date().toISOString();
+  renderMateriales(cod);
+  save();
+}
+function setDatoMaterial(cod, key, campo, valor){
+  const v = getCurrentVisit(cod); if (!v) return;
+  const m = getMaterial(v, key); if (!m) return;
+  m[campo] = String(valor == null ? '' : valor).slice(0,80);
+  v.updatedAt = new Date().toISOString();
+  markDirty(); saveLocal(); scheduleSync();
+}
+function filtrarMateriales(cod){ renderMateriales(cod); }
 
 function renderAgenda(){
   const q = (document.getElementById('search').value || '').toLowerCase();
@@ -2123,6 +2211,7 @@ function toggleForm(cod){
     if (!f.firstElementChild){
       const cliente = getClientByCode(cod);
       f.innerHTML = buildVisitFormHTML(cod, cliente ? cliente.nombre : '', getCurrentVisit(cod));
+      renderMateriales(cod);
       renderPhotos(cod);
       updatePhotoReq(cod);
     }
@@ -3163,6 +3252,8 @@ function generarTextoVisita(cliente, v, nFotos, cod){
   txt += '✅ Estado: ' + estado + '\n';
   txt += '🏷️ Tipo de cliente: ' + tipoClienteDe(cliente) + '\n';
   txt += '🔧 Tipo de visita: ' + tipoVisitaDe(v) + '\n';
+  const mats = materialesDe(v).map(textoMaterial).filter(Boolean);
+  if (mats.length) txt += '🧰 Materiales usados:\n' + mats.map(m => '• ' + m).join('\n') + '\n';
   if (nFotos > 0) txt += '📷 Fotos: ' + nFotos + '\n';
   txt += '\n📝 Observaciones:\n' + obs + '\n';
   return txt;
@@ -3715,7 +3806,8 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
           { label: 'FECHA:', value: fechaTxt },
           { label: 'CARPETA DRIVE:', value: '🔗 Abrir carpeta', isLink: true },
           { label: 'TIPO DE CLIENTE', value: tipoClienteDe(d) },
-          { label: 'TIPO DE VISITA', value: tipoVisitaDe(v) }
+          { label: 'TIPO DE VISITA', value: tipoVisitaDe(v) },
+          { label: 'MATERIALES USADOS', value: materialesDe(v).map(textoMaterial).filter(Boolean).join(' | ') || '—' }
       ];
       dataRows.forEach(dr => {
           cell = ws.getCell(R, 3);
@@ -4338,7 +4430,7 @@ window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); pr
 window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','warn'); updateActiveUsersBadge(0); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on' && !syncInProgress) syncToCloud(true); } });
 setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 120000);
-const CATS = [['PYME','#f97316'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['ANTENA','#14b8a6'],['NODO','#60a5fa'],['ZONA WIFI','#3b82f6'],['DEDICADO/ZONA WIFI','#ef4444']];
+const CATS = [['PYME','#f97316'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['ANTENA','#14b8a6'],['NODO','#60a5fa'],['ZONA WIFI','#3b82f6'],['DEDICADO','#a855f7'],['DEDICADO/ZONA WIFI','#ef4444']];
 async function renderMasterStats(){
   const box = document.getElementById('masterStatsBox'); if (!box) return;
   // No pedir datos al backend mientras la pestaña Resumen está oculta.

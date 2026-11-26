@@ -2744,7 +2744,7 @@ async function descargarReporteEvidencias(soloCarpeta){
   const codigo = soloCarpeta ? evidCurrentFolder : null;
   if (soloCarpeta && !codigo){ toast('⚠ Abre una carpeta primero'); return; }
   const desde = evidDesde, hasta = evidHasta;
-  const data = buildDataReporteFotografico(true, { codigo: codigo, desde: desde, hasta: hasta, incluirHuerfanas: true });
+  const data = buildDataReporteFotografico(true, { codigo: codigo, desde: desde, hasta: hasta });
   if (!data.length){ toast('⚠ No hay fotos en ' + evidRangoTxt()); return; }
   const periodo = (desde || hasta)
     ? ('RANGO ' + (desde ? desde.split('-').reverse().join('-') : 'INICIO') + ' A ' + (hasta ? hasta.split('-').reverse().join('-') : 'HOY'))
@@ -4666,7 +4666,7 @@ function marciReporte(texto){
     return '📸 Generando el reporte fotográfico de ' + mesAnio + '… Te aviso con la barra de progreso.';
   }
   const r = marciRangoFechas(texto) || { desde: marciYMD(new Date()), hasta: marciYMD(new Date()), etiqueta: 'hoy' };
-  const data = buildDataReporteFotografico(true, { desde: r.desde, hasta: r.hasta, incluirHuerfanas: true });
+  const data = buildDataReporteFotografico(true, { desde: r.desde, hasta: r.hasta });
   if (!data.length) return '⚠ No hay visitas ni fotos en ' + r.etiqueta + '.';
   const periodo = 'RANGO ' + r.desde.split('-').reverse().join('-') + ' A ' + r.hasta.split('-').reverse().join('-');
   const nombre = 'Reporte_Fotografico_NOC_' + periodo.replace(/[^A-Za-z0-9]+/g, '_');

@@ -812,6 +812,7 @@ function sanitizeDB(){
   if (!DB.evid || typeof DB.evid !== 'object') DB.evid = {};
   if (!Array.isArray(DB.customClients)) DB.customClients = [];
   if (!Array.isArray(DB.hiddenClients)) DB.hiddenClients = [];
+  DB.hiddenClients = DB.hiddenClients.filter(c => String(c).trim() !== '2025');
   if (!DB.comp) DB.comp = 'media';
   if (!DB.autoSync) DB.autoSync = 'on';
   if (typeof DB.month !== 'string' || !DB.month) DB.month = getMesAnioActual();
@@ -1652,6 +1653,7 @@ async function loadFromCloud(force){
       if (remote.updatedAt) localStorage.setItem('nocRemoteTs', remote.updatedAt);
       migrateVisits();
       sanitizeDB();
+      restaurarUnisa();
       driveProgress(93, '💾 Guardando en el equipo…', 'Un momento…', { limit: 97 });
       await saveLocal();
       localStorage.setItem('nocLastSync', new Date().toISOString());
@@ -1720,7 +1722,21 @@ async function downloadAllPending(silent){
 }
 async function downloadAllPhotos(){ await downloadAllPending(false); }
 async function downloadOne(codigo, filename, ev){ if (ev) ev.stopPropagation(); let itemRef = null; if (codigo === '_supervisor') itemRef = DB.evid['super_sig']; else { const lista = safeArray(DB.photos[codigo], true); itemRef = lista.find(p => p && p.filename === filename); if (!itemRef){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; for (const v of arr){ if (v && v.firma && typeof v.firma === 'object' && v.firma.filename === filename){ itemRef = v.firma; break; } } } } if (!itemRef){ toast('⚠ No encontrado'); return; } try { await fetchFileId(codigo, filename, itemRef); await saveLocal(); toast('✓ Lista'); if (evidCurrentFolder) renderEvidFolderContent(evidCurrentFolder); renderEvid(); } catch(err){ toast('⚠ ' + err.message); } }
-function allClients(){ const hidden = new Set((DB.hiddenClients || []).map(x => String(x).trim())); return CLIENTES.filter(c => !hidden.has(String(c.codigo).trim())).concat((DB.customClients || []).filter(c => !hidden.has(String(c.codigo).trim()))); }
+function allClients(){ const hidden = new Set((DB.hiddenClients || []).map(x => String(x).trim()).filter(x => x !== '2025')); return CLIENTES.filter(c => !hidden.has(String(c.codigo).trim())).concat((DB.customClients || []).filter(c => !hidden.has(String(c.codigo).trim()))); }
+function restaurarUnisa(){
+  DB.hiddenClients = (DB.hiddenClients || []).filter(c => String(c).trim() !== '2025');
+  try {
+    if (!localStorage.getItem('nocUnisaRestored')){
+      const dv = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}');
+      getVisits('2025').forEach(v => { if (v && v.id) delete dv[v.id]; });
+      localStorage.setItem('nocDeletedVisits', JSON.stringify(dv));
+      const dp = JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}');
+      Object.keys(dp).forEach(k => { if (String(k).indexOf('2025|') === 0) delete dp[k]; });
+      localStorage.setItem('nocDeletedPhotos', JSON.stringify(dp));
+      localStorage.setItem('nocUnisaRestored', '1');
+    }
+  } catch(e){}
+}
 function statusClass(e){ return e === 'Realizada' ? 'r' : e === 'Pendiente' ? 'p' : e === 'No Realizada' ? 'n' : 's'; }
 function getClientByCode(cod){ const c = (DB.customClients || []).find(x => String(x.codigo).trim() === String(cod).trim()); if (c) return c; return CLIENTES.find(x => String(x.codigo).trim() === String(cod).trim()) || null; }
 function detectarFechaBusqueda(q){
@@ -2409,6 +2425,7 @@ function editClient(cod){
   document.getElementById('editClientModal').classList.add('open');
 }
 function deleteClient(cod){
+  if (String(cod).trim() === '2025'){ toast('⚠ UNISA está restaurado y protegido'); return; }
   const c = getClientByCode(cod);
   const nombre = c ? c.nombre : cod;
   if (!confirm('¿ELIMINAR CLIENTE "' + nombre + '" (# ' + cod + ')?\n\n• Se quita de la agenda\n• Se eliminan sus visitas e índice\n• Las FOTOS/FIRMAS se borran también de Drive\n\n⚠ Esta acción NO se puede deshacer.\n\n¿Continuar?')) return;
@@ -4569,6 +4586,7 @@ async function initApp(){
   sanitizeDB();
   try { migrateVisits(); } catch(e){}
   sanitizeDB();
+  restaurarUnisa();
   try { renderAgenda(); } catch(e){}
   // El resumen (gráficas + red) se calcula en tiempo ocioso para no retrasar el primer render.
   const renderResumenDiferido = () => { try { renderResumen(); } catch(e){} };

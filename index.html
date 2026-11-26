@@ -557,7 +557,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
   </label>
   <button class="btn btn-green" onclick="exportExcel()">⬇️ Excel</button>
   <button class="btn btn-primary" onclick="abrirInformeMateriales()">🧰 Materiales</button>
-  <button class="btn btn-primary" onclick="restaurarUnisaManual()">🧑‍🏫 Restaurar UNISA</button>
+  <button class="btn btn-primary" onclick="antiTajadaManual()" title="Restaura clientes ocultos o borrados por error">🛡️ Anti TAJADA</button>
   <button class="btn btn-primary" onclick="exportPhotos()">📷 ZIP</button>
   <button class="btn btn-primary" id="syncBarBtn" onclick="forceSyncNow()">☁️ Sync</button>
   <button class="btn btn-red" onclick="resetAll()">🗑️ Eliminar</button>
@@ -772,6 +772,8 @@ function normalizarTipoVisita(t){ const x = String(t == null ? '' : t).trim(); r
 function tipoClienteDe(c){ return normalizarTipoCliente(c && c.tipo); }
 function tipoVisitaDe(v){ return normalizarTipoVisita(v && v.tipoVisita); }
 let DB = { visits:{}, photos:{}, evid:{}, month:'', resp:'', customClients:[], hiddenClients:[], comp:'media', autoSync:'on' };
+let antiTajada = []; try { antiTajada = JSON.parse(localStorage.getItem('nocAntiTajada') || '[]'); if (!Array.isArray(antiTajada)) antiTajada = []; } catch(e){ antiTajada = []; }
+function esAntiTajada(cod){ const x = String(cod == null ? '' : cod).trim(); return x === '2025' || antiTajada.indexOf(x) >= 0; }
 let syncInProgress = false, syncTimer = null;
 let evidCurrentFolder = null, lightboxItems = [], lightboxIndex = 0, bannerDismissed = false;
 let downloadState = { active:false, total:0, done:0, failed:0, currentFile:'', errors:[] };
@@ -813,7 +815,7 @@ function sanitizeDB(){
   if (!DB.evid || typeof DB.evid !== 'object') DB.evid = {};
   if (!Array.isArray(DB.customClients)) DB.customClients = [];
   if (!Array.isArray(DB.hiddenClients)) DB.hiddenClients = [];
-  DB.hiddenClients = DB.hiddenClients.filter(c => String(c).trim() !== '2025');
+  DB.hiddenClients = DB.hiddenClients.filter(c => !esAntiTajada(c));
   if (!DB.comp) DB.comp = 'media';
   if (!DB.autoSync) DB.autoSync = 'on';
   if (typeof DB.month !== 'string' || !DB.month) DB.month = getMesAnioActual();
@@ -1654,7 +1656,7 @@ async function loadFromCloud(force){
       if (remote.updatedAt) localStorage.setItem('nocRemoteTs', remote.updatedAt);
       migrateVisits();
       sanitizeDB();
-      restaurarUnisa();
+      aplicarAntiTajada();
       driveProgress(93, '💾 Guardando en el equipo…', 'Un momento…', { limit: 97 });
       await saveLocal();
       localStorage.setItem('nocLastSync', new Date().toISOString());
@@ -1723,28 +1725,27 @@ async function downloadAllPending(silent){
 }
 async function downloadAllPhotos(){ await downloadAllPending(false); }
 async function downloadOne(codigo, filename, ev){ if (ev) ev.stopPropagation(); let itemRef = null; if (codigo === '_supervisor') itemRef = DB.evid['super_sig']; else { const lista = safeArray(DB.photos[codigo], true); itemRef = lista.find(p => p && p.filename === filename); if (!itemRef){ const arr = Array.isArray(DB.visits[codigo]) ? DB.visits[codigo] : []; for (const v of arr){ if (v && v.firma && typeof v.firma === 'object' && v.firma.filename === filename){ itemRef = v.firma; break; } } } } if (!itemRef){ toast('⚠ No encontrado'); return; } try { await fetchFileId(codigo, filename, itemRef); await saveLocal(); toast('✓ Lista'); if (evidCurrentFolder) renderEvidFolderContent(evidCurrentFolder); renderEvid(); } catch(err){ toast('⚠ ' + err.message); } }
-function allClients(){ const hidden = new Set((DB.hiddenClients || []).map(x => String(x).trim()).filter(x => x !== '2025')); return CLIENTES.filter(c => !hidden.has(String(c.codigo).trim())).concat((DB.customClients || []).filter(c => !hidden.has(String(c.codigo).trim()))); }
-function restaurarUnisa(){
-  DB.hiddenClients = (DB.hiddenClients || []).filter(c => String(c).trim() !== '2025');
+function allClients(){ const hidden = new Set((DB.hiddenClients || []).map(x => String(x).trim()).filter(x => !esAntiTajada(x))); return CLIENTES.filter(c => !hidden.has(String(c.codigo).trim())).concat((DB.customClients || []).filter(c => !hidden.has(String(c.codigo).trim()))); }
+function aplicarAntiTajada(){
+  DB.hiddenClients = (DB.hiddenClients || []).filter(c => !esAntiTajada(c));
   try {
-    if (!localStorage.getItem('nocUnisaRestored')){
-      const dv = JSON.parse(localStorage.getItem('nocDeletedVisits') || '{}');
-      getVisits('2025').forEach(v => { if (v && v.id) delete dv[v.id]; });
-      localStorage.setItem('nocDeletedVisits', JSON.stringify(dv));
-      const dp = JSON.parse(localStorage.getItem('nocDeletedPhotos') || '{}');
-      Object.keys(dp).forEach(k => { if (String(k).indexOf('2025|') === 0) delete dp[k]; });
-      localStorage.setItem('nocDeletedPhotos', JSON.stringify(dp));
-      localStorage.setItem('nocUnisaRestored', '1');
+    if (!localStorage.getItem('nocAntiTajadaAplicado')){
+      localStorage.setItem('nocDeletedVisits', '{}');
+      localStorage.setItem('nocDeletedPhotos', '{}');
+      localStorage.setItem('nocAntiTajadaAplicado', '1');
     }
   } catch(e){}
 }
-async function restaurarUnisaManual(){
-  try { localStorage.removeItem('nocUnisaRestored'); } catch(e){}
-  restaurarUnisa();
+async function antiTajadaManual(){
+  const ocultos = (DB.hiddenClients || []).map(x => String(x).trim());
+  antiTajada = Array.from(new Set(ocultos.concat(antiTajada).filter(Boolean)));
+  try { localStorage.setItem('nocAntiTajada', JSON.stringify(antiTajada)); localStorage.removeItem('nocAntiTajadaAplicado'); } catch(e){}
+  DB.hiddenClients = [];
+  aplicarAntiTajada();
   try { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); } catch(e){}
   save();
-  renderAgenda();
-  toast('✓ UNISA restaurado (#2025). Recargando…');
+  renderAgenda(); renderEvid(); renderResumen();
+  toast('🛡️ Anti TAJADA: ' + antiTajada.length + ' cliente(s) protegido(s). Recargando…');
   setTimeout(() => location.reload(), 1200);
 }
 function statusClass(e){ return e === 'Realizada' ? 'r' : e === 'Pendiente' ? 'p' : e === 'No Realizada' ? 'n' : 's'; }
@@ -2435,7 +2436,7 @@ function editClient(cod){
   document.getElementById('editClientModal').classList.add('open');
 }
 function deleteClient(cod){
-  if (String(cod).trim() === '2025'){ toast('⚠ UNISA está restaurado y protegido'); return; }
+  if (esAntiTajada(cod)){ toast('⚠ Cliente protegido por Anti TAJADA'); return; }
   const c = getClientByCode(cod);
   const nombre = c ? c.nombre : cod;
   if (!confirm('¿ELIMINAR CLIENTE "' + nombre + '" (# ' + cod + ')?\n\n• Se quita de la agenda\n• Se eliminan sus visitas e índice\n• Las FOTOS/FIRMAS se borran también de Drive\n\n⚠ Esta acción NO se puede deshacer.\n\n¿Continuar?')) return;
@@ -4596,7 +4597,7 @@ async function initApp(){
   sanitizeDB();
   try { migrateVisits(); } catch(e){}
   sanitizeDB();
-  restaurarUnisa();
+  aplicarAntiTajada();
   try { renderAgenda(); } catch(e){}
   // El resumen (gráficas + red) se calcula en tiempo ocioso para no retrasar el primer render.
   const renderResumenDiferido = () => { try { renderResumen(); } catch(e){} };
@@ -5230,7 +5231,7 @@ marciActualizarTagIA();
 </script>
 <script>
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js?v=60').catch(function(){}); });
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js?v=61').catch(function(){}); });
 }
 </script>
 </body>

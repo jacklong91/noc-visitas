@@ -3552,7 +3552,7 @@ async function generarReporteFotografico(usarRango, opts){
   const hasta = (opts.hasta !== undefined) ? opts.hasta : (usarRango ? filtroHasta : '');
   const usarRangoEf = !!usarRango;
   if (usarRangoEf && !desde && !hasta){ toast('⚠ Primero aplica un filtro de fechas'); return; }
-  const data = buildDataReporteFotografico(usarRangoEf, Object.assign({}, opts, { desde: desde, hasta: hasta }));
+  const data = buildDataReporteFotografico(usarRangoEf, Object.assign({}, opts, { desde: desde, hasta: hasta, incluirHuerfanas: true }));
   if (!data.length){ toast('⚠ No hay visitas en este período'); return; }
   const periodo = usarRangoEf
     ? ('RANGO ' + (desde ? desde.split('-').reverse().join('-') : 'INICIO') + ' A ' + (hasta ? hasta.split('-').reverse().join('-') : 'HOY'))
@@ -3752,11 +3752,11 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
           if (b64) {
               const imgId = wb.addImage({ base64: b64, extension: 'jpeg' });
               const colStart = 4 + (f * 2);
-              ws.addImage(imgId, {
-                  tl: { col: colStart, row: dataStartRow - 1 }, 
-                  br: { col: colStart + 2, row: dataEndRow }, 
-                  editAs: 'oneCell'
-              });
+               ws.addImage(imgId, {
+                   tl: { col: colStart, row: dataStartRow - 1 },
+                   ext: { width: 230, height: 150 },
+                   editAs: 'oneCell'
+               });
               if (foto && foto.fileId){ try { __imgB64Cache.delete('f:' + foto.fileId + ':900'); } catch(e){} }
           }
       }

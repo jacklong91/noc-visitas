@@ -494,11 +494,8 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
     <div class="card" style="border-left:4px solid var(--purple)">
       <label>📊 VISITAS SEPARADAS POR TIPO</label>
       <div id="tiposResumenBox" style="margin-top:8px"></div>
-    </div>
-    <div class="card">
-      <label>📊 DETALLE POR CATEGORÍA — VISITAS REALIZADAS (Master)</label>
-      <div id="masterStatsBox" style="margin-top:6px">Cargando datos del Master…</div>
-      <canvas id="chartCategorias" style="width:100%;border-radius:12px;background:rgba(0,0,0,0.3);border:1px solid #334155;margin-top:10px"></canvas>
+      <canvas id="chartTipos" style="width:100%;height:auto;display:block;border-radius:12px;background:rgba(0,0,0,0.3);border:1px solid #334155;margin-top:10px"></canvas>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="downloadChartTipos()">⬇️ Descargar gráfica (PNG)</button>
     </div>
     <div class="card">
       <label>Visitas programadas por día</label>
@@ -768,6 +765,7 @@ function materialesDe(v){ return Array.isArray(v && v.materiales) ? v.materiales
 function getMaterial(v,key){ return materialesDe(v).find(m => m && m.key === key) || null; }
 function textoMaterial(m){ const def = m && MATERIALES_POR_KEY[m.key]; if (!def) return ''; let s = def.label; if (m.modelo) s += ' ' + m.modelo; if (m.voltaje) s += ' ' + m.voltaje; return s + ': ' + (m.cantidad || '0') + ' ' + def.unit; }
 const PLURAL_TIPO_CLIENTE = { PYME:'pymes', RESIDENCIAL:'residenciales', GUBERNAMENTAL:'gubernamentales', ANTENA:'antenas', NODO:'nodos', 'ZONA WIFI':'zonas wifi', DEDICADO:'dedicados', 'DEDICADO/ZONA WIFI':'dedicados/zona wifi' };
+const CATS = [['PYME','#f97316'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['ANTENA','#14b8a6'],['NODO','#60a5fa'],['ZONA WIFI','#3b82f6'],['DEDICADO','#a855f7'],['DEDICADO/ZONA WIFI','#ef4444']];
 function normalizarTipoCliente(t){ let x = String(t == null ? '' : t).toUpperCase().replace(/\s+/g,' ').trim(); if (x === 'DEDICADO - ZONA WIFI') x = 'DEDICADO/ZONA WIFI'; return TIPOS_CLIENTE.indexOf(x) >= 0 ? x : 'ZONA WIFI'; }
 function normalizarTipoVisita(t){ const x = String(t == null ? '' : t).trim(); return TIPOS_VISITA.indexOf(x) >= 0 ? x : 'Rutina'; }
 function tipoClienteDe(c){ return normalizarTipoCliente(c && c.tipo); }
@@ -3109,13 +3107,22 @@ function renderTiposResumen(mesFiltro){
   if (!box) return;
   const { porCliente, porVisita } = contarTiposResumen(mesFiltro);
   const total = TIPOS_CLIENTE.reduce((s, t) => s + porCliente[t], 0);
-  if (!total){ box.innerHTML = '<span style="color:var(--muted);font-size:.8rem">Sin visitas en este período.</span>'; return; }
+  const colores = {}; CATS.forEach(c => { colores[c[0]] = c[1]; });
+  if (!total){
+    box.innerHTML = '<span style="color:var(--muted);font-size:.8rem">Sin visitas en este período.</span>';
+    const cvVacio = document.getElementById('chartTipos'); if (cvVacio) cvVacio.style.display = 'none';
+    return;
+  }
+  const cv = document.getElementById('chartTipos'); if (cv) cv.style.display = 'block';
   const frasesCliente = TIPOS_CLIENTE.filter(t => porCliente[t] > 0).map(t => porCliente[t] + ' ' + PLURAL_TIPO_CLIENTE[t]);
   const frasesVisita = TIPOS_VISITA.filter(t => porVisita[t] > 0).map(t => porVisita[t] + ' ' + t.toLowerCase());
   let html = '<div style="font-size:.8rem;line-height:1.6;margin-bottom:10px">✅ Se realizaron <b style="color:var(--accent2)">' + frasesCliente.join(', ') + '</b>.</div>';
   html += '<table style="width:100%;border-collapse:collapse;font-size:.8rem;margin-bottom:12px">';
   html += '<tr><th style="text-align:left;padding:5px;color:var(--accent);border-bottom:1px solid #334155">Tipo de cliente</th><th style="text-align:right;padding:5px;color:var(--accent);border-bottom:1px solid #334155">Visitas</th></tr>';
-  TIPOS_CLIENTE.forEach(t => { html += '<tr><td style="padding:4px 5px">' + t + '</td><td style="text-align:right;padding:4px 5px;font-weight:800">' + porCliente[t] + '</td></tr>'; });
+  TIPOS_CLIENTE.forEach(t => {
+    const color = colores[t] || '#94a3b8';
+    html += '<tr><td style="padding:4px 5px"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' + color + ';margin-right:7px"></span><span style="color:' + color + ';font-weight:700">' + t + '</span></td><td style="text-align:right;padding:4px 5px;font-weight:800">' + porCliente[t] + '</td></tr>';
+  });
   html += '</table>';
   html += '<div style="font-size:.8rem;line-height:1.6;margin-bottom:10px">🔧 Visitas por tipo: <b style="color:var(--accent)">' + (frasesVisita.length ? frasesVisita.join(', ') : 'sin datos') + '</b>.</div>';
   html += '<table style="width:100%;border-collapse:collapse;font-size:.8rem">';
@@ -3123,6 +3130,15 @@ function renderTiposResumen(mesFiltro){
   TIPOS_VISITA.forEach(t => { html += '<tr><td style="padding:4px 5px">' + t + '</td><td style="text-align:right;padding:4px 5px;font-weight:800">' + porVisita[t] + '</td></tr>'; });
   html += '</table>';
   box.innerHTML = html;
+  drawChartCategorias(CATS.map(c => [c[0], porCliente[c[0]] || 0, c[1]]), 'chartTipos', 'Visitas por tipo de cliente');
+}
+function downloadChartTipos(){
+  const cv = document.getElementById('chartTipos'); if (!cv) return;
+  const a = document.createElement('a');
+  a.href = cv.toDataURL('image/png');
+  a.download = 'Visitas_por_tipo_' + (mesResumenFiltro === MES_GENERAL || !mesResumenFiltro ? 'General' : String(mesResumenFiltro).replace(/\s+/g,'_')) + '.png';
+  a.click();
+  toast('✓ Gráfica descargada');
 }
 function renderResumen(){
   const sel = document.getElementById('mesAnio2');
@@ -3175,7 +3191,6 @@ function renderResumen(){
   initSig('sigSuper');
   updateSyncStatusBox();
   renderMasterInfo();
-  renderMasterStats();
   renderPreviewMes(mesFiltro);
 }
 function updateStorageInfo(){
@@ -4584,38 +4599,14 @@ window.addEventListener('online', () => { toast('🌐 Conexión restaurada'); pr
 window.addEventListener('offline', () => { setSyncBadge('📴 Sin conexión','warn'); updateActiveUsersBadge(0); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && isOnline() && driveStateReady){ pollForUpdates(); sendHeartbeat(); if (isDirty() && DB.autoSync === 'on' && !syncInProgress) syncToCloud(true); } });
 setInterval(() => { if (isDirty() && DB.autoSync === 'on' && !syncInProgress && driveStateReady && isOnline()) syncToCloud(true); }, 120000);
-const CATS = [['PYME','#f97316'],['RESIDENCIAL','#eab308'],['GUBERNAMENTAL','#22c55e'],['ANTENA','#14b8a6'],['NODO','#60a5fa'],['ZONA WIFI','#3b82f6'],['DEDICADO','#a855f7'],['DEDICADO/ZONA WIFI','#ef4444']];
-async function renderMasterStats(){
-  const box = document.getElementById('masterStatsBox'); if (!box) return;
-  // No pedir datos al backend mientras la pestaña Resumen está oculta.
-  const tabRes = document.getElementById('tab-res');
-  if (tabRes && tabRes.style.display === 'none') return;
-  let cached = null;
-  try { cached = JSON.parse(localStorage.getItem('nocMasterStats') || 'null'); } catch(e){}
-  const pintar = data => {
-    const cv = document.getElementById('chartCategorias');
-    if (!data || !data.stats){ box.innerHTML = '<span style="color:var(--muted)">⚠ Master no disponible aún.</span>'; if (cv) cv.style.display = 'none'; return; }
-    if (cv) cv.style.display = 'block';
-    const map = {};
-    (data.stats || []).forEach(s => { map[s.tipo] = s.count; });
-    box.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.85rem">' + CATS.map(c => '<tr><td style="padding:6px 8px;color:' + c[1] + ';font-weight:700">' + c[0] + '</td><td style="text-align:right;padding:6px 8px;font-weight:800">' + (map[c[0]] || 0) + '</td></tr>').join('') + '<tr style="border-top:1px solid #334155"><td style="padding:6px 8px;font-weight:800">TOTAL VISITAS</td><td style="text-align:right;padding:6px 8px;font-weight:800;color:var(--accent)">' + (data.total || 0) + '</td></tr></table>';
-    drawChartCategorias(CATS.map(c => [c[0], map[c[0]] || 0, c[1]]));
-  };
-  // Pinta de inmediato lo último guardado (sensación de instantaneidad) y refresca en segundo plano.
-  if (cached && cached.stats) pintar(cached);
-  let data = null;
-  try { const r = await callBackendRead({ action:'getMasterStats', mesAnio: DB.month }, 20000); if (r && r.ok && r.stats){ data = r; try{ localStorage.setItem('nocMasterStats', JSON.stringify(r)); }catch(e){} } } catch(e){}
-  if (!data) data = cached;
-  pintar(data);
-}
-function drawChartCategorias(data){
-  const cv = document.getElementById('chartCategorias'); if (!cv) return;
+function drawChartCategorias(data, canvasId, titulo){
+  const cv = document.getElementById(canvasId || 'chartTipos'); if (!cv) return;
   const dpr = window.devicePixelRatio || 1; const W = 640, H = 340;
   cv.width = W * dpr; cv.height = H * dpr;
   const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
   ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 13px Segoe UI'; ctx.textAlign = 'left';
-  ctx.fillText('Visitas realizadas por categoría (Master)', 16, 22);
+  ctx.fillText(titulo || 'Visitas por tipo de cliente', 16, 22);
   const max = Math.max(1, ...data.map(d => d[1]));
   const padL = 36, padR = 16, padT = 44, padB = 80;
   const plotW = W - padL - padR, plotH = H - padT - padB;

@@ -1,9 +1,10 @@
 /* Service Worker — Registro de Visitas NOC N2 */
-const CACHE = 'noc-n2-v52';
+const CACHE = 'noc-n2-v53';
 const SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './jszip.min.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',

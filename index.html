@@ -649,6 +649,7 @@ canvas.sig{width:100%;height:150px;background:#fff;border-radius:10px;touch-acti
 </div>
 <div class="modal-bg" id="partialSyncModal"><div class="modal"><h3 style="font-size:1rem;margin-bottom:10px">☁️ Carga parcial</h3><div id="partialSyncMsg" style="font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:14px"></div><button class="btn btn-green btn-block" onclick="retryPendingUploads()">🔄 Reintentar ahora</button><button class="btn btn-gray btn-block" style="margin-top:8px" onclick="document.getElementById('partialSyncModal').classList.remove('open')">Después</button></div></div>
 <div class="toast" id="toast"></div>
+<script src="./jszip.min.js"></script>
 <script>
 /* ---- Carga diferida de librerías (evita ~2.5 MB de JS bloqueante al inicio) ---- */
 const LIBS = {
@@ -660,6 +661,7 @@ const LIBS = {
 const libPromises = {};
 function loadLib(name){
   if (!LIBS[name]) return Promise.reject(new Error('Librería desconocida: ' + name));
+  if (name === 'jszip' && typeof window.JSZip !== 'undefined') return Promise.resolve();
   if (libPromises[name]) return libPromises[name];
   libPromises[name] = new Promise((resolve, reject) => {
     const s = document.createElement('script');
@@ -3499,6 +3501,20 @@ async function fotoABase64(foto, opts){
   try {
     if (!foto) return null;
     if (foto.data){ const partes = String(foto.data).split(','); return partes.length > 1 ? partes[1] : partes[0]; }
+    if (!foto.fileId && opts.codigo && foto.filename){
+      const claveId = 'id:' + opts.codigo + '|' + foto.filename + '|' + (foto.fechaVisita || '');
+      if (!__imgB64Cache.has(claveId)){
+        try {
+          const info = await callBackendRead({ action:'getFileId', codigo:opts.codigo, filename:foto.filename, fecha:foto.fechaVisita || '' }, 12000);
+          if (info && info.ok && info.fileId){
+            foto.fileId = info.fileId;
+            foto.folderId = info.folderId || foto.folderId || null;
+            try { await saveLocal(); } catch(e){}
+          }
+        } catch(e){}
+        __imgB64Cache.set(claveId, true);
+      }
+    }
     if (!foto.fileId) return null;
     const clave = 'f:' + foto.fileId + ':' + (opts.ancho || 900);
     if (__imgB64Cache.has(clave)) return __imgB64Cache.get(clave);
@@ -3521,7 +3537,7 @@ function actualizarProgresoReporte(hechos, total, fase){
   driveProgress(pct, '📸 Reporte fotográfico', (fase || 'Imágenes') + ' ' + hechos + ' de ' + total, { limit: Math.min(99, pct + 3) });
 }
 
-async function prefetchImagenesItems(items, ancho, etiquetaCliente){
+async function prefetchImagenesItems(items, ancho, etiquetaCliente, codigo){
   const uniq = new Map();
   items.forEach(it => (it.fotos || []).slice(0, 5).forEach(f => { if (f && f.fileId && !f.data && !uniq.has(f.fileId)) uniq.set(f.fileId, f); }));
   const lista = Array.from(uniq.values());
@@ -3534,7 +3550,7 @@ async function prefetchImagenesItems(items, ancho, etiquetaCliente){
     while (idx < lista.length){
       if (__reporteSinTiempo()) return;
       const f = lista[idx++];
-      const b64 = await fotoABase64(f, { ancho: ancho || 900 });
+      const b64 = await fotoABase64(f, { ancho: ancho || 900, codigo: codigo });
       hechos++;
       if (b64) ok++;
       actualizarProgresoReporte(hechos, total, etiqueta);
@@ -3620,7 +3636,7 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
       { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }
     ];
     // Descarga las imágenes de esta hoja en paralelo (antes eran secuenciales y podían tardar horas).
-    await prefetchImagenesItems(d.items, 900, d.nombre);
+    await prefetchImagenesItems(d.items, 900, d.nombre, d.codigo);
     for (let i = 0; i < d.items.length; i++){
       const item = d.items[i];
       const v = item.visita;
@@ -3746,7 +3762,7 @@ async function construirReporteFotograficoExcel(data, periodo, nombreArchivo){
           let b64 = null;
           if (foto) {
               setToast('📷 Colocando imágenes ' + imgListas + '/' + totalImg + '…');
-              b64 = await fotoABase64(foto, { ancho: 900 });
+              b64 = await fotoABase64(foto, { ancho: 900, codigo: d.codigo });
               if (b64) imgListas++;
           }
           if (b64) {
